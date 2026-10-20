@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/jctanner/markov/pkg/jsonvalue"
 )
 
 type HTTPRequest struct {
@@ -82,8 +84,7 @@ func (e *HTTPRequest) Execute(ctx context.Context, params map[string]any) (*Resu
 		"body":        string(respBody),
 	}
 
-	var parsed any
-	if err := json.Unmarshal(respBody, &parsed); err == nil {
+	if parsed, err := jsonvalue.Decode(respBody); err == nil {
 		output["body"] = parsed
 	}
 

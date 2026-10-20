@@ -105,8 +105,8 @@ func TestFromJSON_Number(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
-	if result != "42" && result != "42.000000" {
-		t.Errorf("result = %q, want '42' or '42.000000'", result)
+	if result != "42" {
+		t.Errorf("result = %q, want '42'", result)
 	}
 }
 
@@ -182,8 +182,8 @@ func TestFromJSONAliasParsesScalarInRenderMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RenderMap: %v", err)
 	}
-	if rendered["value"] != float64(42) {
-		t.Fatalf("value = %#v, want float64(42)", rendered["value"])
+	if rendered["value"] != 42 {
+		t.Fatalf("value = %#v, want int 42", rendered["value"])
 	}
 }
 
@@ -250,5 +250,18 @@ func TestRenderMapMixedTemplateStillRendersString(t *testing.T) {
 	}
 	if rendered["message"] != `config={"foo":"bar"}` {
 		t.Fatalf("message = %q, want JSON string interpolation", rendered["message"])
+	}
+}
+
+func TestFromJSON_WholeNumbersRenderAsIntegers(t *testing.T) {
+	eng := New()
+	ctx := map[string]any{"raw": `{"ids": [50163277, 7], "score": 1.5}`}
+
+	result, err := eng.Render("{% set d = raw | fromjson %}{{ d.ids.0 }}/{{ d.ids.1 }}/{{ d.score }}", ctx)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if result != "50163277/7/1.500000" {
+		t.Errorf("result = %q, want %q", result, "50163277/7/1.500000")
 	}
 }

@@ -102,7 +102,7 @@ for_each: "repeats | seq"                    # 3 -> [1, 2, 3]
 
 ### `from_json` / `fromjson`
 
-Defined in `pkg/template/template.go`. Parses a JSON string into a native Go value (map, list, number, bool, etc.).
+Defined in `pkg/template/template.go`. Parses a JSON string into a native Go value (map, list, number, bool, etc.). Whole numbers become integers, so an ID such as `50163277` renders as `50163277` rather than `50163277.000000`; numbers with a fraction or exponent stay floats. The same applies to JSON response bodies from `http_request` and to JSON parsed by `set_fact` and `for_each`.
 
 ```yaml
 vars:

@@ -1,12 +1,16 @@
 package engine
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/jctanner/markov/pkg/jsonvalue"
 )
 
+// evalFacts evaluates every fact against runCtx as it was before the step and leaves runCtx
+// unchanged. Facts in one step cannot see each other: vars is a Go map with no order, so letting
+// each fact see the ones evaluated before it made the result depend on map iteration order.
 func (e *Engine) evalFacts(vars map[string]any, runCtx map[string]any) (map[string]any, error) {
 	result := make(map[string]any)
 
@@ -16,7 +20,6 @@ func (e *Engine) evalFacts(vars map[string]any, runCtx map[string]any) (map[stri
 			return nil, fmt.Errorf("fact %q: %w", k, err)
 		}
 		result[k] = val
-		runCtx[k] = val
 	}
 
 	return result, nil
@@ -30,8 +33,8 @@ func (e *Engine) evalFact(v any, runCtx map[string]any) (any, error) {
 				raw := resolveContextPath(path, runCtx)
 				if raw != nil {
 					if s, ok := raw.(string); ok {
-						var parsed any
-						if err := json.Unmarshal([]byte(strings.TrimSpace(s)), &parsed); err != nil {
+						parsed, err := jsonvalue.Decode([]byte(strings.TrimSpace(s)))
+						if err != nil {
 							return nil, fmt.Errorf("fromjson: %w", err)
 						}
 						return parsed, nil
@@ -186,8 +189,7 @@ func coerceString(s string) any {
 		return f
 	}
 	if len(s) > 0 && (s[0] == '[' || s[0] == '{') {
-		var parsed any
-		if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+		if parsed, err := jsonvalue.Decode([]byte(s)); err == nil {
 			return parsed
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jctanner/markov/pkg/callback"
 	"github.com/jctanner/markov/pkg/executor"
@@ -537,4 +538,107 @@ func searchString(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// slowEcho returns its command as output, finishing later items first: item N sleeps (5-N)*10ms.
+type slowEcho struct{}
+
+func (slowEcho) Execute(ctx context.Context, params map[string]any) (*executor.Result, error) {
+	n, _ := params["command"].(int)
+	time.Sleep(time.Duration(5-n) * 10 * time.Millisecond)
+	return &executor.Result{Output: map[string]any{"value": n}}, nil
+}
+
+// captureExec records the params it was given.
+type captureExec struct {
+	mu     sync.Mutex
+	params map[string]any
+}
+
+func (c *captureExec) Execute(ctx context.Context, params map[string]any) (*executor.Result, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.params = params
+	return &executor.Result{Output: map[string]any{}}, nil
+}
+
+func registeredValues(t *testing.T, got any, path ...string) []any {
+	t.Helper()
+	list, ok := got.([]map[string]any)
+	if !ok {
+		t.Fatalf("registered = %#v (%T), want []map[string]any", got, got)
+	}
+	var values []any
+	for _, item := range list {
+		var v any = item
+		for _, key := range path {
+			m, ok := v.(map[string]any)
+			if !ok {
+				t.Fatalf("no %q in %#v", key, v)
+			}
+			v = m[key]
+		}
+		values = append(values, v)
+	}
+	return values
+}
+
+func TestDirectForEachRegisterCollectsOutputsInInputOrder(t *testing.T) {
+	wfFile := &parser.WorkflowFile{
+		Entrypoint: "main",
+		Vars:       map[string]any{"items": []any{1, 2, 3, 4}},
+		Workflows: []parser.Workflow{{
+			Name: "main",
+			Steps: []parser.Step{
+				{
+					Name: "echo", ForEach: "items", As: "item", Type: "slow", Concurrency: 4,
+					Params: map[string]any{"command": "{{ item }}"}, Register: "echoed",
+				},
+				{Name: "capture", Type: "capture", Params: map[string]any{"got": "{{ echoed }}"}},
+			},
+		}},
+	}
+	capture := &captureExec{}
+	eng, _ := newTestEngine(t, wfFile, map[string]executor.Executor{"slow": slowEcho{}, "capture": capture})
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := registeredValues(t, capture.params["got"], "echoed", "value")
+	if fmt.Sprint(got) != "[1 2 3 4]" {
+		t.Fatalf("registered outputs = %v, want [1 2 3 4] (input order, with each step's output)", got)
+	}
+}
+
+func TestSubWorkflowForEachRegisterKeepsInputOrder(t *testing.T) {
+	wfFile := &parser.WorkflowFile{
+		Entrypoint: "main",
+		Vars:       map[string]any{"items": []any{1, 2, 3, 4}},
+		Workflows: []parser.Workflow{
+			{
+				Name: "main",
+				Steps: []parser.Step{
+					{
+						Name: "each", ForEach: "items", As: "item", Workflow: "one", Concurrency: 4,
+						Vars: map[string]any{"n": "{{ item }}"}, Register: "results",
+					},
+					{Name: "capture", Type: "capture", Params: map[string]any{"got": "{{ results }}"}},
+				},
+			},
+			{
+				Name: "one",
+				Steps: []parser.Step{
+					{Name: "echo", Type: "slow", Params: map[string]any{"command": "{{ n }}"}, Register: "out"},
+				},
+			},
+		},
+	}
+	capture := &captureExec{}
+	eng, _ := newTestEngine(t, wfFile, map[string]executor.Executor{"slow": slowEcho{}, "capture": capture})
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := registeredValues(t, capture.params["got"], "out", "value")
+	if fmt.Sprint(got) != "[1 2 3 4]" {
+		t.Fatalf("registered outputs = %v, want [1 2 3 4]", got)
+	}
 }

@@ -41,10 +41,15 @@
 
 ## Open Bugs
 
-- [Direct for_each iterations collide in step state](bugs/fixed/direct-foreach-step-dedup.md)
+- None
 
 ## Fixed Bugs
 
+- [set_fact facts see siblings in random order](bugs/fixed/set-fact-sibling-order.md)
+- [JSON integers from http_request render as floats](bugs/fixed/json-integers-render-as-floats.md)
+- [Direct for_each with register drops each iteration's output](bugs/fixed/direct-foreach-register-drops-output.md)
+- [for_each register collects results in completion order](bugs/fixed/foreach-register-completion-order.md)
+- [Direct for_each iterations collide in step state](bugs/fixed/direct-foreach-step-dedup.md)
 - [Template map values render as Go strings in HTTP bodies](bugs/fixed/template-map-values-render-as-go-strings.md)
 - [CLI `--var false` remains a truthy string](bugs/fixed/cli-var-false-remains-truthy-string.md)
 

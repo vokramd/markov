@@ -147,7 +147,9 @@ steps:
 
 ## register with for_each
 
-When `register` is set, **all** iteration contexts are collected into a list and stored at `ctx[register_name]`. This includes contexts from iterations that ran but failed.
+When `register` is set, **all** iteration contexts are collected into a list and stored at `ctx[register_name]`, in the order of the input list whatever the `concurrency`. This includes contexts from iterations that ran but failed; items skipped by `for_each_when`, or not started after a failure, are left out.
+
+For a sub-workflow, each element is the child's variables, including what its steps registered. For a typed step, the step registers its output in its own iteration's context under the same name, so each element holds the item and the output:
 
 ```yaml
 steps:
@@ -158,6 +160,12 @@ steps:
     params:
       url: "{{ host }}/health"
     register: health_checks    # List of per-iteration context maps
+
+  - name: report
+    type: shell_exec
+    params:
+      command: >
+        echo '{% for c in health_checks %}{{ c.host }}={{ c.health_checks.status_code }} {% endfor %}'
 ```
 
 ## Error handling

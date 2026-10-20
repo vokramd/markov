@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jctanner/markov/pkg/callback"
 	"github.com/jctanner/markov/pkg/executor"
+	"github.com/jctanner/markov/pkg/jsonvalue"
 	"github.com/jctanner/markov/pkg/parser"
 	"github.com/jctanner/markov/pkg/source"
 	"github.com/jctanner/markov/pkg/state"
@@ -1226,7 +1227,9 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 
 	sem := make(chan struct{}, concurrency)
 	var mu sync.Mutex
-	var results []map[string]any
+	// One slot per item, so registered results keep the input order whatever order the
+	// iterations finish in; items that were skipped or never started leave their slot nil.
+	slots := make([]map[string]any, len(listVal))
 	var firstErr error
 	var errOnce sync.Once
 	// failed is set with firstErr, so the loop can check it without a data race.
@@ -1394,12 +1397,13 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 				e.store.UpdateRun(ctx, subRun)
 
 				mu.Lock()
-				results = append(results, subVars)
+				slots[idx] = subVars
 				mu.Unlock()
 			} else {
+				// The step keeps its register: it registers its output in this item's own
+				// context, which is what the loop's register collects.
 				subStep := step
 				subStep.ForEach = ""
-				subStep.Register = ""
 
 				forEachKey := fmt.Sprintf("%d", idx)
 				if step.ForEachKey != "" {
@@ -1417,7 +1421,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 				}
 
 				mu.Lock()
-				results = append(results, itemCtx)
+				slots[idx] = itemCtx
 				mu.Unlock()
 			}
 		}(i, item)
@@ -1426,6 +1430,12 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 	wg.Wait()
 
 	if step.Register != "" {
+		var results []map[string]any
+		for _, r := range slots {
+			if r != nil {
+				results = append(results, r)
+			}
+		}
 		runCtx[step.Register] = results
 	}
 
@@ -1464,8 +1474,9 @@ func (e *Engine) resolveForEachList(expr string, ctx map[string]any) ([]any, err
 		return nil, err
 	}
 
-	var list []any
-	if err := json.Unmarshal([]byte(rendered), &list); err != nil {
+	parsed, err := jsonvalue.Decode([]byte(rendered))
+	list, ok := parsed.([]any)
+	if err != nil || !ok {
 		return nil, fmt.Errorf("for_each expression %q did not resolve to a list", expr)
 	}
 	return list, nil
@@ -1520,30 +1531,7 @@ func decodeState(data string, out *map[string]any) {
 	if err := dec.Decode(&raw); err != nil {
 		return
 	}
-	*out, _ = normalizeNumbers(raw).(map[string]any)
-}
-
-func normalizeNumbers(v any) any {
-	switch val := v.(type) {
-	case json.Number:
-		if i, err := val.Int64(); err == nil {
-			return int(i)
-		}
-		f, _ := val.Float64()
-		return f
-	case map[string]any:
-		for k, item := range val {
-			val[k] = normalizeNumbers(item)
-		}
-		return val
-	case []any:
-		for i, item := range val {
-			val[i] = normalizeNumbers(item)
-		}
-		return val
-	default:
-		return v
-	}
+	*out, _ = jsonvalue.Normalize(raw).(map[string]any)
 }
 
 // asList accepts any slice value, such as the []any or []string a filter returns.

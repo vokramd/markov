@@ -209,6 +209,26 @@ func TestSetFactKeepsNativeValuesAndRendersMaps(t *testing.T) {
 	}
 }
 
+func TestSetFactFactsSeeContextBeforeTheStep(t *testing.T) {
+	eng, _ := newTestEngine(t, &parser.WorkflowFile{Entrypoint: "main"}, nil)
+	// Go map order is random, so repeat: a fact must never see a sibling's new value.
+	for i := 0; i < 50; i++ {
+		runCtx := map[string]any{"a": "old"}
+		facts, err := eng.evalFacts(map[string]any{
+			"a": "new", "b": "{{ a }}-b", "c": "{{ a }}-c", "d": "{{ a }}-d",
+		}, runCtx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if facts["b"] != "old-b" || facts["c"] != "old-c" || facts["d"] != "old-d" {
+			t.Fatalf("facts = %#v, want b, c and d rendered from a = old", facts)
+		}
+		if runCtx["a"] != "old" {
+			t.Fatalf("evalFacts changed the context: %#v", runCtx)
+		}
+	}
+}
+
 func TestFailedWhen(t *testing.T) {
 	cases := []struct {
 		name       string

@@ -231,3 +231,17 @@ func testCertificatePEM(t *testing.T) []byte {
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
 }
+
+func TestHTTPRequestDecodesWholeNumbersAsInt(t *testing.T) {
+	transport := &captureTransport{statusCode: http.StatusOK, body: `[50163277, 1.5]`}
+	exec := &HTTPRequest{client: &http.Client{Transport: transport}}
+
+	result, err := exec.Execute(context.Background(), map[string]any{"url": "https://example.test/topstories.json"})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	body, ok := result.Output["body"].([]any)
+	if !ok || len(body) != 2 || body[0] != 50163277 || body[1] != 1.5 {
+		t.Fatalf("body = %#v, want []any{50163277, 1.5}", result.Output["body"])
+	}
+}

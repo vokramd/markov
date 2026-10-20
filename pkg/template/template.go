@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/flosch/pongo2/v6"
+	"github.com/jctanner/markov/pkg/jsonvalue"
 )
 
 func init() {
@@ -31,8 +32,8 @@ func init() {
 
 func filterFromJSON(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	raw := in.String()
-	var parsed any
-	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+	parsed, err := jsonvalue.Decode([]byte(raw))
+	if err != nil {
 		return nil, &pongo2.Error{
 			Sender:    "filter:fromjson",
 			OrigError: err,
@@ -336,12 +337,7 @@ func parseJSONValue(value any) (any, error) {
 	if !ok {
 		return value, nil
 	}
-	s = strings.TrimSpace(s)
-	var parsed any
-	if err := json.Unmarshal([]byte(s), &parsed); err != nil {
-		return nil, err
-	}
-	return parsed, nil
+	return jsonvalue.Decode([]byte(strings.TrimSpace(s)))
 }
 
 func parseJSONObjectOrArrayString(value any) (any, error) {

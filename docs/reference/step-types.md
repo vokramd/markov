@@ -719,7 +719,7 @@ Either `url` or `base_url` must be specified. When both `base_url` and `path` ar
 | Variable | Type | Description |
 |----------|------|-------------|
 | `status_code` | int | HTTP response status code |
-| `body` | any | Response body. Auto-parsed as JSON if the response is valid JSON; otherwise returned as a string. |
+| `body` | any | Response body. Auto-parsed as JSON if the response is valid JSON (whole numbers become integers); otherwise returned as a string. |
 
 ### Failure Conditions
 
@@ -940,6 +940,8 @@ Computes and stores variables in the workflow context. Unlike other step types, 
 | `vars` | map[string]any | yes | Key-value pairs to evaluate and store in the context |
 
 ### Evaluation Rules
+
+Every value is evaluated against the context as it was before the step, so facts in one step cannot refer to each other (`vars` is unordered). To build one fact from another, use two `set_fact` steps.
 
 Each value in the `vars` map is evaluated according to its type:
 
