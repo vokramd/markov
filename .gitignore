@@ -8,3 +8,5 @@ references/cosim-workflow-poc/chain-dag-visualizer/
 references/cosim-workflow-poc/claude-k8s-workflow-poc/
 references/cosim-workflow-poc/claude-skill-chain-poc/
 references/cosim-workflow-poc/yaml-agent-chain-poc/
+examples/codification/*.codify/
+__pycache__/

@@ -1,0 +1,10 @@
+hn_base_url: https://hacker-news.firebaseio.com/v0
+out_dir: /tmp/hn-top10
+
+# Set by codify.sh for the codify driver.
+codify_dir: ""
+iteration_dir: ""
+task_events: ""
+project_dir: ""
+markov_bin: markov
+markov_docs: ""

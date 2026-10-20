@@ -1,0 +1,34 @@
+name: task
+description: >
+  Write the current Hacker News top 10 to out_dir/hn-top10.md as a markdown
+  list. v0: one agent prompt does all of it. The codify driver rewrites this
+  file; it may only change this file, workflows/task_*.yaml and scripts/task/.
+steps:
+  - name: prepare_out_dir
+    type: shell_exec
+    params:
+      command: "mkdir -p '{{ out_dir }}'"
+
+  - name: do_task
+    type: claude
+    register: do_task
+    params:
+      chdir: "{{ out_dir }}"
+      prompt: |
+        Write the current top 10 Hacker News stories to the file hn-top10.md
+        in the current directory.
+
+        Use the Hacker News API at {{ hn_base_url }}, fetching with curl:
+        - {{ hn_base_url }}/topstories.json returns story IDs, best first.
+        - {{ hn_base_url }}/item/<id>.json returns one item.
+
+        Format: exactly 10 lines, in the order of topstories.json, each
+        "- [<title>](<url>)". Use the title exactly as given. Use the item's
+        url, or https://news.ycombinator.com/item?id=<id> when it has none.
+        No other text in the file.
+      allowed_tools: ["Bash(curl:*)", Write]
+      permission_mode: acceptEdits
+      limits:
+        max_turns: 30
+        max_tokens: 300000
+        max_duration: 600
