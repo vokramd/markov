@@ -18,10 +18,10 @@ type gateResult struct {
 	Facts      map[string]any
 }
 
-func (e *Engine) evaluateGate(runID string, ruleNames []string, gateFacts map[string]any, runCtx map[string]any) (*gateResult, error) {
+func (e *Engine) evaluateGate(file *parser.WorkflowFile, runID string, ruleNames []string, gateFacts map[string]any, runCtx map[string]any) (*gateResult, error) {
 	rules := make([]parser.Rule, 0, len(ruleNames))
 	for _, name := range ruleNames {
-		r := e.file.GetRule(name)
+		r := file.GetRule(name)
 		if r == nil {
 			return nil, fmt.Errorf("rule %q not found", name)
 		}

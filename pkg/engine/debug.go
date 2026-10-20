@@ -67,6 +67,8 @@ type DebugCommand struct {
 	Iteration   string       `json:"iteration,omitempty"`
 	ID          string       `json:"id,omitempty"`
 	Expression  string       `json:"expression,omitempty"`
+	// Source is the workflow source a `reload` command loads instead of the step's own.
+	Source string `json:"source,omitempty"`
 }
 
 // debugPoint says where the run is.
@@ -83,13 +85,14 @@ type debugPoint struct {
 type pausedState struct {
 	resume chan DebugCommand
 	vars   map[string]any
+	// reload marks a reload_workflow step waiting for `reload` or `reject_reload`.
+	reload bool
 }
 
 // Debugger holds the breakpoints and the pause state for one engine.
 type Debugger struct {
-	file *parser.WorkflowFile
-
 	mu       sync.Mutex
+	file     *parser.WorkflowFile
 	bps      []*Breakpoint
 	stepMode bool
 	until    *Breakpoint
@@ -133,6 +136,44 @@ func (e *Engine) SetDebugger(d *Debugger) {
 }
 
 // ---- resolving breakpoints against the workflow file ----
+
+func (d *Debugger) currentFile() *parser.WorkflowFile {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.file
+}
+
+// rebind switches the debugger to a reloaded workflow file and resolves the breakpoints again:
+// those whose step still exists keep their hit counts, the rest are dropped and reported.
+func (d *Debugger) rebind(file *parser.WorkflowFile) {
+	d.mu.Lock()
+	d.file = file
+	old := d.bps
+	d.mu.Unlock()
+
+	var list []*Breakpoint
+	resolved := []Breakpoint{}
+	var rejected []map[string]any
+	for _, bp := range old {
+		r, err := d.resolve(*bp)
+		if err != nil {
+			rejected = append(rejected, map[string]any{"breakpoint": *bp, "error": err.Error()})
+			continue
+		}
+		r.hits = bp.hits
+		c := r
+		list = append(list, &c)
+		resolved = append(resolved, r)
+	}
+	d.mu.Lock()
+	d.bps = list
+	d.mu.Unlock()
+	data := map[string]any{"resolved": resolved, "reason": "workflow_reloaded"}
+	if len(rejected) > 0 {
+		data["unresolved"] = rejected
+	}
+	d.emit("", "", "", "breakpoints_set", data)
+}
 
 func normalizeSection(s string) (string, error) {
 	switch s {
@@ -187,10 +228,11 @@ func (d *Debugger) resolve(bp Breakpoint) (Breakpoint, error) {
 	if bp.Skip < 0 {
 		return bp, errors.New("skip cannot be negative")
 	}
-	wf := d.file.GetWorkflow(bp.Workflow)
+	file := d.currentFile()
+	wf := file.GetWorkflow(bp.Workflow)
 	if wf == nil {
-		names := make([]string, 0, len(d.file.Workflows))
-		for _, w := range d.file.Workflows {
+		names := make([]string, 0, len(file.Workflows))
+		for _, w := range file.Workflows {
 			names = append(names, w.Name)
 		}
 		return bp, fmt.Errorf("unknown workflow %q (workflows: %s)", bp.Workflow, quoteList(names))
@@ -219,8 +261,9 @@ func quoteList(items []string) string {
 // every real workflow name is tried as a prefix and the remainder must be one of its steps.
 // No match, or more than one, is an error (the structured form is unambiguous).
 func (d *Debugger) ResolveShorthand(s string) (Breakpoint, error) {
+	file := d.currentFile()
 	var found []Breakpoint
-	for _, w := range d.file.Workflows {
+	for _, w := range file.Workflows {
 		prefix := w.Name + "."
 		if !strings.HasPrefix(s, prefix) {
 			continue
@@ -239,7 +282,7 @@ func (d *Debugger) ResolveShorthand(s string) (Breakpoint, error) {
 		return found[0], nil
 	case 0:
 		var all []string
-		for _, w := range d.file.Workflows {
+		for _, w := range file.Workflows {
 			for _, section := range []string{sectionSteps, sectionRescue, sectionAlways} {
 				for _, st := range sectionList(&w, section) {
 					all = append(all, w.Name+"."+st.Name)
@@ -480,6 +523,55 @@ func (d *Debugger) pause(ctx context.Context, p debugPoint, vars, output map[str
 	return nil
 }
 
+// controlOpen reports whether a client is attached to the control channel.
+func (d *Debugger) controlOpen() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return !d.closed
+}
+
+// awaitReload holds a reload_workflow step until the control channel answers `reload` (optionally
+// with another source) or `reject_reload`. data describes the pending reload.
+func (d *Debugger) awaitReload(ctx context.Context, p debugPoint, data map[string]any) (DebugCommand, error) {
+	d.queue.Lock()
+	defer d.queue.Unlock()
+
+	st := &pausedState{resume: make(chan DebugCommand, 1), reload: true}
+	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return DebugCommand{Cmd: "reload"}, nil
+	}
+	d.paused = st
+	d.mu.Unlock()
+
+	log.Printf("[run:%s] reload pending at %s.%s; send reload or reject_reload on the control channel", p.runID, p.workflow, p.step)
+	d.emit(p.runID, p.workflow, p.step, "reload_pending", data)
+
+	var cmd DebugCommand
+	select {
+	case cmd = <-st.resume:
+	case <-ctx.Done():
+		d.mu.Lock()
+		d.paused = nil
+		d.mu.Unlock()
+		return cmd, ctx.Err()
+	}
+	d.mu.Lock()
+	d.paused = nil
+	d.mu.Unlock()
+
+	switch cmd.Cmd {
+	case "terminate":
+		d.emit(p.runID, p.workflow, p.step, "resumed", map[string]any{"command": "terminate"})
+		return cmd, errTerminated
+	case "__abort":
+		return cmd, errors.New("debugger control channel closed while a reload was pending")
+	}
+	d.emit(p.runID, p.workflow, p.step, "resumed", map[string]any{"command": cmd.Cmd})
+	return cmd, nil
+}
+
 // debugPause is the engine's hook: call at a step boundary. It returns an error only when the
 // run should stop (terminate, or the control channel closing while paused).
 func (e *Engine) debugPause(ctx context.Context, runID, workflowName string, step parser.Step, stateName, phase string, runCtx, output map[string]any) error {
@@ -550,7 +642,7 @@ func (d *Debugger) Handle(line string) {
 			data["unresolved"] = rejected
 		}
 		d.emit("", "", "", "breakpoints_set", data)
-	case "continue", "step", "until", "terminate":
+	case "continue", "step", "until", "terminate", "reload", "reject_reload":
 		if cmd.Cmd == "until" {
 			if _, err := d.resolve(Breakpoint{Workflow: cmd.Workflow, Step: cmd.Step, Section: cmd.Section}); err != nil {
 				d.emit("", "", "", "error", map[string]any{"error": err.Error(), "command": cmd.Cmd})
@@ -570,6 +662,17 @@ func (d *Debugger) dispatch(cmd DebugCommand) {
 	d.mu.Lock()
 	p := d.paused
 	cancel := d.cancel
+	isReload := cmd.Cmd == "reload" || cmd.Cmd == "reject_reload"
+	waiting := p != nil && p.reload
+	if cmd.Cmd != "terminate" && isReload != waiting {
+		d.mu.Unlock()
+		msg := "no reload is pending"
+		if waiting {
+			msg = "a reload is pending: send reload, reject_reload or terminate"
+		}
+		d.emit("", "", "", "error", map[string]any{"error": msg, "command": cmd.Cmd})
+		return
+	}
 	if p == nil {
 		switch cmd.Cmd {
 		case "continue":

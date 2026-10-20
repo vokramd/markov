@@ -52,6 +52,20 @@ type SourceCheck struct {
 	SourceDrifted  bool
 }
 
+// Reload records one reload_workflow step that replaced the workflow definition while a run was
+// executing. RunID is the top-level run; StepRunID is the (sub-)run whose step reloaded. A run
+// with reloads cannot be resumed: its completed steps came from more than one definition.
+type Reload struct {
+	RunID      string
+	StepRunID  string
+	Workflow   string
+	Step       string
+	Source     string
+	OldDigest  string
+	NewDigest  string
+	ReloadedAt time.Time
+}
+
 type StepResult struct {
 	RunID         string
 	WorkflowName  string
@@ -78,6 +92,8 @@ type Store interface {
 	GetChildRuns(ctx context.Context, parentRunID string) ([]*Run, error)
 	SaveSourceCheck(ctx context.Context, check *SourceCheck) error
 	GetSourceChecks(ctx context.Context, runID string) ([]*SourceCheck, error)
+	SaveReload(ctx context.Context, reload *Reload) error
+	GetReloads(ctx context.Context, runID string) ([]*Reload, error)
 
 	SaveStep(ctx context.Context, step *StepResult) error
 	GetSteps(ctx context.Context, runID string) ([]*StepResult, error)

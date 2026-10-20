@@ -33,22 +33,23 @@ func (j *JSONLCallback) write(event any) error {
 	return j.f.Sync()
 }
 
-func (j *JSONLCallback) OnRunStarted(event RunStartedEvent) error           { return j.write(event) }
-func (j *JSONLCallback) OnRunCompleted(event RunCompletedEvent) error       { return j.write(event) }
-func (j *JSONLCallback) OnRunFailed(event RunFailedEvent) error             { return j.write(event) }
-func (j *JSONLCallback) OnRunPaused(event RunPausedEvent) error             { return j.write(event) }
-func (j *JSONLCallback) OnRunResumed(event RunResumedEvent) error           { return j.write(event) }
-func (j *JSONLCallback) OnStepStarted(event StepStartedEvent) error         { return j.write(event) }
-func (j *JSONLCallback) OnStepCompleted(event StepCompletedEvent) error     { return j.write(event) }
-func (j *JSONLCallback) OnStepFailed(event StepFailedEvent) error           { return j.write(event) }
-func (j *JSONLCallback) OnStepSkipped(event StepSkippedEvent) error         { return j.write(event) }
-func (j *JSONLCallback) OnStepProgress(event StepProgressEvent) error       { return j.write(event) }
-func (j *JSONLCallback) OnDebug(event DebugEvent) error                     { return j.write(event) }
-func (j *JSONLCallback) OnJobCreated(event JobCreatedEvent) error           { return j.write(event) }
-func (j *JSONLCallback) OnGateEvaluated(event GateEvaluatedEvent) error     { return j.write(event) }
-func (j *JSONLCallback) OnSubRunStarted(event SubRunStartedEvent) error     { return j.write(event) }
-func (j *JSONLCallback) OnSubRunCompleted(event SubRunCompletedEvent) error { return j.write(event) }
-func (j *JSONLCallback) OnSubRunFailed(event SubRunFailedEvent) error       { return j.write(event) }
+func (j *JSONLCallback) OnRunStarted(event RunStartedEvent) error             { return j.write(event) }
+func (j *JSONLCallback) OnRunCompleted(event RunCompletedEvent) error         { return j.write(event) }
+func (j *JSONLCallback) OnRunFailed(event RunFailedEvent) error               { return j.write(event) }
+func (j *JSONLCallback) OnRunPaused(event RunPausedEvent) error               { return j.write(event) }
+func (j *JSONLCallback) OnRunResumed(event RunResumedEvent) error             { return j.write(event) }
+func (j *JSONLCallback) OnStepStarted(event StepStartedEvent) error           { return j.write(event) }
+func (j *JSONLCallback) OnStepCompleted(event StepCompletedEvent) error       { return j.write(event) }
+func (j *JSONLCallback) OnStepFailed(event StepFailedEvent) error             { return j.write(event) }
+func (j *JSONLCallback) OnStepSkipped(event StepSkippedEvent) error           { return j.write(event) }
+func (j *JSONLCallback) OnStepProgress(event StepProgressEvent) error         { return j.write(event) }
+func (j *JSONLCallback) OnDebug(event DebugEvent) error                       { return j.write(event) }
+func (j *JSONLCallback) OnJobCreated(event JobCreatedEvent) error             { return j.write(event) }
+func (j *JSONLCallback) OnGateEvaluated(event GateEvaluatedEvent) error       { return j.write(event) }
+func (j *JSONLCallback) OnSubRunStarted(event SubRunStartedEvent) error       { return j.write(event) }
+func (j *JSONLCallback) OnSubRunCompleted(event SubRunCompletedEvent) error   { return j.write(event) }
+func (j *JSONLCallback) OnSubRunFailed(event SubRunFailedEvent) error         { return j.write(event) }
+func (j *JSONLCallback) OnWorkflowReloaded(event WorkflowReloadedEvent) error { return j.write(event) }
 
 func (j *JSONLCallback) Close() error {
 	j.mu.Lock()

@@ -89,6 +89,19 @@ Each resume attempt writes one source-integrity check. The original digest in
 | `observed_digest` | TEXT | Digest found at resume time; empty in `off` mode |
 | `source_drifted` | BOOLEAN | Whether the observed digest differs from the original digest |
 
+### reloads table
+
+Each [`reload_workflow`](step-types.md#reload_workflow) that replaced the definition writes one row, keyed by the top-level run. `markov resume` refuses a run that has any.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `run_id` | TEXT | Top-level run |
+| `step_run_id` | TEXT | The (sub-)run whose step reloaded |
+| `workflow`, `step` | TEXT | The reload step |
+| `source` | TEXT | Source loaded |
+| `old_digest`, `new_digest` | TEXT | Source-tree digests before and after |
+| `reloaded_at` | TIMESTAMP | When the definition was replaced |
+
 ### steps table
 
 | Column | Type | Constraints | Description |
@@ -131,7 +144,7 @@ A step is `skipped` when its `when` condition evaluates to false.
 
 ## Resume flow
 
-Resume picks up a failed or paused run and re-executes it, skipping already-completed steps. Paused runs require explicit variable input (`markov resume <run_id> --var key=value`). By default it records and accepts source drift; `--source-integrity strict` rejects an edited workflow source.
+Resume picks up a failed or paused run and re-executes it, skipping already-completed steps. A run that [reloaded its workflow](step-types.md#reload_workflow) cannot be resumed. Paused runs require explicit variable input (`markov resume <run_id> --var key=value`). By default it records and accepts source drift; `--source-integrity strict` rejects an edited workflow source.
 
 ```
 markov resume <run_id>

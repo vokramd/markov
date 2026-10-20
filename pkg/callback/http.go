@@ -111,22 +111,23 @@ func (h *HTTPCallback) sendAndFlush(event any) error {
 	return nil
 }
 
-func (h *HTTPCallback) OnRunStarted(event RunStartedEvent) error           { return h.send(event) }
-func (h *HTTPCallback) OnRunCompleted(event RunCompletedEvent) error       { return h.sendAndFlush(event) }
-func (h *HTTPCallback) OnRunFailed(event RunFailedEvent) error             { return h.sendAndFlush(event) }
-func (h *HTTPCallback) OnRunPaused(event RunPausedEvent) error             { return h.sendAndFlush(event) }
-func (h *HTTPCallback) OnRunResumed(event RunResumedEvent) error           { return h.send(event) }
-func (h *HTTPCallback) OnStepStarted(event StepStartedEvent) error         { return h.send(event) }
-func (h *HTTPCallback) OnStepCompleted(event StepCompletedEvent) error     { return h.send(event) }
-func (h *HTTPCallback) OnStepFailed(event StepFailedEvent) error           { return h.send(event) }
-func (h *HTTPCallback) OnStepSkipped(event StepSkippedEvent) error         { return h.send(event) }
-func (h *HTTPCallback) OnStepProgress(event StepProgressEvent) error       { return h.send(event) }
-func (h *HTTPCallback) OnDebug(event DebugEvent) error                     { return h.send(event) }
-func (h *HTTPCallback) OnJobCreated(event JobCreatedEvent) error           { return h.send(event) }
-func (h *HTTPCallback) OnGateEvaluated(event GateEvaluatedEvent) error     { return h.send(event) }
-func (h *HTTPCallback) OnSubRunStarted(event SubRunStartedEvent) error     { return h.send(event) }
-func (h *HTTPCallback) OnSubRunCompleted(event SubRunCompletedEvent) error { return h.send(event) }
-func (h *HTTPCallback) OnSubRunFailed(event SubRunFailedEvent) error       { return h.send(event) }
+func (h *HTTPCallback) OnRunStarted(event RunStartedEvent) error             { return h.send(event) }
+func (h *HTTPCallback) OnRunCompleted(event RunCompletedEvent) error         { return h.sendAndFlush(event) }
+func (h *HTTPCallback) OnRunFailed(event RunFailedEvent) error               { return h.sendAndFlush(event) }
+func (h *HTTPCallback) OnRunPaused(event RunPausedEvent) error               { return h.sendAndFlush(event) }
+func (h *HTTPCallback) OnRunResumed(event RunResumedEvent) error             { return h.send(event) }
+func (h *HTTPCallback) OnStepStarted(event StepStartedEvent) error           { return h.send(event) }
+func (h *HTTPCallback) OnStepCompleted(event StepCompletedEvent) error       { return h.send(event) }
+func (h *HTTPCallback) OnStepFailed(event StepFailedEvent) error             { return h.send(event) }
+func (h *HTTPCallback) OnStepSkipped(event StepSkippedEvent) error           { return h.send(event) }
+func (h *HTTPCallback) OnStepProgress(event StepProgressEvent) error         { return h.send(event) }
+func (h *HTTPCallback) OnDebug(event DebugEvent) error                       { return h.send(event) }
+func (h *HTTPCallback) OnJobCreated(event JobCreatedEvent) error             { return h.send(event) }
+func (h *HTTPCallback) OnGateEvaluated(event GateEvaluatedEvent) error       { return h.send(event) }
+func (h *HTTPCallback) OnSubRunStarted(event SubRunStartedEvent) error       { return h.send(event) }
+func (h *HTTPCallback) OnSubRunCompleted(event SubRunCompletedEvent) error   { return h.send(event) }
+func (h *HTTPCallback) OnSubRunFailed(event SubRunFailedEvent) error         { return h.send(event) }
+func (h *HTTPCallback) OnWorkflowReloaded(event WorkflowReloadedEvent) error { return h.send(event) }
 
 func (h *HTTPCallback) Close() error {
 	h.closeOnce.Do(func() {

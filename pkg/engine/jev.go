@@ -17,14 +17,14 @@ import (
 // A decision is a durable child operation of a step, including when that step
 // is skipped or paused. Its identity includes inputs and non-secret config.
 func (e *Engine) decision(ctx context.Context, runID, workflow, step, name string, input, refresh any) (map[string]any, error) {
-	d, ok := e.file.Decisions[name]
+	d, ok := e.fileFor(ctx).Decisions[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown Jev decision %q", name)
 	}
 	if input == nil {
 		return nil, fmt.Errorf("decision %q: state is required", name)
 	}
-	conn, ok := e.file.Connections[d.Connection]
+	conn, ok := e.fileFor(ctx).Connections[d.Connection]
 	if !ok {
 		return nil, fmt.Errorf("unknown Jev connection %q", d.Connection)
 	}
@@ -139,7 +139,7 @@ func (e *Engine) resolveDecisionFacts(ctx context.Context, runID, workflow, step
 		}
 		sel, _ := spec["select"].(string)
 		if sel == "" {
-			sel = e.file.Decisions[dn].Type
+			sel = e.fileFor(ctx).Decisions[dn].Type
 		}
 		value, ok := answer[sel]
 		if !ok {
@@ -160,7 +160,7 @@ func (e *Engine) evalDecisionBool(ctx context.Context, runID, workflow, step, ex
 	functions := map[string]any{}
 	for _, kind := range []string{"noul", "choice", "score"} {
 		functions[kind] = func(name string, input any, refresh ...any) (any, error) {
-			d, ok := e.file.Decisions[name]
+			d, ok := e.fileFor(ctx).Decisions[name]
 			if !ok {
 				return nil, fmt.Errorf("unknown Jev decision %q", name)
 			}

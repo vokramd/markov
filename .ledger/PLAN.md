@@ -9,7 +9,7 @@
 - [Directory Workflow Files Plan](plans/000-directory-workflow-files.md)
 - [Step-Through Debugging and Interactive Workflow Building](plans/001-step-through-debugging.md)
 - [Durable External Tasks and Orchestration Reliability](plans/002-durable-task-orchestration.md) — proposed; implementation not started.
-- [Agentic Codification](plans/003-agentic-codification.md) — phase 1 done (see notes/codify-phase1-run.md); retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
+- [Agentic Codification](plans/003-agentic-codification.md) — phases 1 and 2 done (notes/codify-phase1-run.md, ADR-0006); retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
 
 ## Active Tasks
 
@@ -21,6 +21,7 @@
 
 ## Completed Tasks
 
+- [reload_workflow step and hot reload](tasks/done/reload-workflow-step.md) (plan 003 phase 2)
 - [Promotion, version archive and metrics loop](tasks/done/codify-promote-metrics.md) (plan 003 phase 1)
 - [Retro agent step and run evidence](tasks/done/codify-retro-step.md) (plan 003 phase 1)
 - [Codification fixture recording and candidate validation](tasks/done/codify-fixture-validator.md) (plan 003 phase 1)
@@ -66,3 +67,4 @@
 - [ADR-0003: Durable Jev decisions](decisions/ADR-0003-durable-jev-decisions.md)
 - [ADR-0004: Native claude step with Markov-enforced limits](decisions/ADR-0004-claude-step-type.md)
 - [ADR-0005: In-memory debugger with a stdin control protocol](decisions/ADR-0005-in-memory-debugger-and-control-protocol.md)
+- [ADR-0006: Workflow hot reload with an explicit reload_workflow step](decisions/ADR-0006-workflow-hot-reload.md)

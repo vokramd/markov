@@ -152,6 +152,7 @@ func TestJSONLCallbackAllEventTypes(t *testing.T) {
 	cb.OnSubRunStarted(SubRunStartedEvent{EventHeader: hdr("sub_run_started")})
 	cb.OnSubRunCompleted(SubRunCompletedEvent{EventHeader: hdr("sub_run_completed")})
 	cb.OnSubRunFailed(SubRunFailedEvent{EventHeader: hdr("sub_run_failed"), Error: "sub fail"})
+	cb.OnWorkflowReloaded(WorkflowReloadedEvent{EventHeader: hdr("workflow_reloaded"), Source: "/wf", Reload: 1})
 	cb.Close()
 
 	f, _ := os.Open(path)
@@ -165,8 +166,8 @@ func TestJSONLCallbackAllEventTypes(t *testing.T) {
 		}
 		count++
 	}
-	if count != 13 {
-		t.Errorf("got %d event lines, want 13", count)
+	if count != 14 {
+		t.Errorf("got %d event lines, want 14", count)
 	}
 }
 

@@ -7,9 +7,9 @@ Markov plan with a concrete first scenario. Must work both headless (CLI,
 markovd) and in the Markov IDE; the IDE side is
 `../../../markov-ide/.ledger/plans/002-agentic-codification.md`.
 
-**Status:** phase 1 done (notes/codify-phase1-run.md); later phases
-proposed. Engine and IDE findings below were checked against the code on
-2026-10-20.
+**Status:** phase 1 done (notes/codify-phase1-run.md), phase 2 done
+(ADR-0006, tasks/done/reload-workflow-step.md). Engine and IDE findings
+below were checked against the code on 2026-10-20.
 
 ## Idea
 

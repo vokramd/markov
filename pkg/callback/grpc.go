@@ -133,6 +133,10 @@ func (g *GRPCCallback) OnSubRunFailed(event SubRunFailedEvent) error {
 	return g.sendEvent(event.EventType, event.RunID, event.Timestamp, event)
 }
 
+func (g *GRPCCallback) OnWorkflowReloaded(event WorkflowReloadedEvent) error {
+	return g.sendEvent(event.EventType, event.RunID, event.Timestamp, event)
+}
+
 func (g *GRPCCallback) Close() error {
 	return g.conn.Close()
 }

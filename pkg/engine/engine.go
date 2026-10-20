@@ -30,7 +30,10 @@ import (
 )
 
 type Engine struct {
-	file       *parser.WorkflowFile
+	// file is the current workflow definition. A reload_workflow step replaces it; each workflow
+	// execution keeps the definition it started with (see fileFor), so only sub-workflow calls
+	// made after a reload see the new one.
+	file       atomic.Pointer[parser.WorkflowFile]
 	store      state.Store
 	tmpl       *template.Engine
 	executors  map[string]executor.Executor
@@ -44,9 +47,18 @@ type Engine struct {
 	// of the workflow source fingerprint.
 	SourceExcludes      []string
 	SourceIntegrityMode SourceIntegrityMode
-	sourceDigest        string
-	callbacks           []callback.Callback
-	debugger            *Debugger
+	// AllowReload lets reload_workflow steps replace the workflow definition (--allow-reload).
+	AllowReload bool
+	// Loader parses a workflow source for reload_workflow; nil uses parser.ParseFile.
+	Loader       func(path string) (*parser.WorkflowFile, error)
+	digestMu     sync.Mutex
+	sourceDigest string
+	// rootRunID is the top-level run, which reloads are recorded against.
+	rootRunID string
+	reloadMu  sync.Mutex
+	reloads   int
+	callbacks []callback.Callback
+	debugger  *Debugger
 	// Rewind and RewindChanged make ResumeWithVars re-run from a step (see rewind.go).
 	Rewind        []RewindTarget
 	RewindChanged bool
@@ -111,10 +123,13 @@ func New(file *parser.WorkflowFile, store state.Store, executors map[string]exec
 		forks = 5
 	}
 	e := &Engine{
-		file:      file,
 		tmpl:      template.New(),
 		executors: executors,
 		forks:     forks,
+	}
+	e.file.Store(file)
+	if _, ok := executors["reload_workflow"]; !ok {
+		executors["reload_workflow"] = &reloadExecutor{e: e}
 	}
 	e.store = &hashingStore{Store: store, e: e}
 	return e
@@ -153,19 +168,23 @@ func (e *Engine) verbose(format string, args ...any) {
 }
 
 func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]any) (string, error) {
+	file := e.current()
 	if workflowName == "" {
-		workflowName = e.file.Entrypoint
+		workflowName = file.Entrypoint
 	}
 
-	wf := e.file.GetWorkflow(workflowName)
+	wf := file.GetWorkflow(workflowName)
 	if wf == nil {
 		return "", fmt.Errorf("workflow %q not found", workflowName)
+	}
+	if err := e.checkReloadAllowed(file); err != nil {
+		return "", err
 	}
 	sourceDigest, err := e.currentSourceDigest()
 	if err != nil {
 		return "", err
 	}
-	e.sourceDigest = sourceDigest
+	e.setDigest(sourceDigest)
 
 	runCtx := e.buildContext(vars, wf.Vars)
 
@@ -173,6 +192,7 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 	if runID == "" {
 		runID = uuid.New().String()[:8]
 	}
+	e.rootRunID = runID
 	if e.debugger != nil {
 		e.debugger.noteRun(runID)
 	}
@@ -202,17 +222,17 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 			SourceDigest: sourceDigest,
 			Vars:         runCtx,
 			Forks:        e.forks,
-			Namespace:    e.file.Namespace,
+			Namespace:    file.Namespace,
 		})
 	})
 
 	log.Printf("[run:%s] starting workflow %q", runID, workflowName)
 	e.verbose("[run:%s]   forks: %d", runID, e.forks)
-	e.verbose("[run:%s]   namespace: %s", runID, e.file.Namespace)
+	e.verbose("[run:%s]   namespace: %s", runID, file.Namespace)
 	e.verbose("[run:%s]   vars: %s", runID, string(varsJSON))
 	e.verbose("[run:%s]   steps: %d", runID, len(wf.Steps))
 
-	err = e.executeWorkflow(ctx, runID, wf, runCtx)
+	err = e.executeWorkflow(withFile(ctx, file), runID, wf, runCtx)
 
 	now := time.Now()
 	duration := now.Sub(run.StartedAt).Seconds()
@@ -281,13 +301,26 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 	if run.Status == state.RunPaused && len(vars) == 0 {
 		return fmt.Errorf("paused run %q requires at least one --var override to resume", runID)
 	}
+	reloads, err := e.store.GetReloads(ctx, runID)
+	if err != nil {
+		return err
+	}
+	if len(reloads) > 0 {
+		last := reloads[len(reloads)-1]
+		return fmt.Errorf("run %q reloaded its workflow %d time(s) while running (last from %s, digest %s), so its completed steps came from more than one definition; it can't be resumed, start a new run", runID, len(reloads), last.Source, last.NewDigest)
+	}
+	file := e.current()
+	if err := e.checkReloadAllowed(file); err != nil {
+		return err
+	}
 	check, err := e.checkSourceIntegrity(ctx, run)
 	if err != nil {
 		return err
 	}
-	e.sourceDigest = run.SourceDigest
+	e.setDigest(run.SourceDigest)
+	e.rootRunID = runID
 
-	wf := e.file.GetWorkflow(run.Entrypoint)
+	wf := file.GetWorkflow(run.Entrypoint)
 	if wf == nil {
 		return fmt.Errorf("workflow %q not found", run.Entrypoint)
 	}
@@ -691,7 +724,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 
 	now := time.Now()
 
-	base, mergedParams := e.file.ResolveStepType(&step)
+	base, mergedParams := e.fileFor(ctx).ResolveStepType(&step)
 
 	e.fireEvent(func(cb callback.Callback) error {
 		return cb.OnStepStarted(callback.StepStartedEvent{
@@ -789,7 +822,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		if err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)
 		}
-		result, err := e.evaluateGate(runID, step.Rules, resolvedFacts, runCtx)
+		result, err := e.evaluateGate(e.fileFor(ctx), runID, step.Rules, resolvedFacts, runCtx)
 		if err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("gate evaluation: %w", err))
 		}
@@ -901,7 +934,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("rendering params: %w", err))
 	}
 	if base == "script_exec" {
-		renderedParams["_script_dir"] = e.file.ScriptDir
+		renderedParams["_script_dir"] = e.fileFor(ctx).ScriptDir
 	}
 
 	if base == "k8s_job" {
@@ -963,7 +996,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		if jobName, _ := renderedParams["job_name"].(string); jobName != "" {
 			namespace, _ := renderedParams["namespace"].(string)
 			if namespace == "" {
-				namespace = e.file.Namespace
+				namespace = e.fileFor(ctx).Namespace
 			}
 			e.fireEvent(func(cb callback.Callback) error {
 				return cb.OnJobCreated(callback.JobCreatedEvent{
@@ -991,6 +1024,10 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 			})
 		})
 	})
+
+	if base == "reload_workflow" {
+		execCtx = withStepInfo(execCtx, stepInfo{runID: runID, workflow: workflowName, step: step.Name, stepType: step.Type})
+	}
 
 	result, err := exec.Execute(execCtx, renderedParams)
 	var output map[string]any
@@ -1063,7 +1100,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 }
 
 func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowName string, step parser.Step, runCtx map[string]any) error {
-	wf, err := e.resolveSubWorkflow(step, runCtx)
+	wf, wfFile, err := e.resolveSubWorkflow(step, runCtx)
 	if err != nil {
 		return err
 	}
@@ -1099,7 +1136,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 	subRun := &state.Run{
 		RunID:        subRunID,
 		WorkflowFile: e.SourcePath,
-		SourceDigest: e.sourceDigest,
+		SourceDigest: e.digest(),
 		Entrypoint:   wf.Name,
 		Status:       state.RunRunning,
 		VarsJSON:     string(varsJSON),
@@ -1120,7 +1157,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 
 	log.Printf("[run:%s] starting sub-workflow %q as %s", runID, wf.Name, subRunID)
 
-	err = e.executeWorkflow(ctx, subRunID, wf, subVars)
+	err = e.executeWorkflow(withFile(ctx, wfFile), subRunID, wf, subVars)
 
 	subNow := time.Now()
 	duration := subNow.Sub(subRun.StartedAt).Seconds()
@@ -1279,7 +1316,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 			itemCtx[step.As] = itemVal
 
 			if step.Workflow != "" {
-				wf, err := e.resolveSubWorkflow(step, itemCtx)
+				wf, wfFile, err := e.resolveSubWorkflow(step, itemCtx)
 				if err != nil {
 					errOnce.Do(func() { failed.Store(true); firstErr = err })
 					return
@@ -1322,7 +1359,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 				subRun := &state.Run{
 					RunID:        subRunID,
 					WorkflowFile: e.SourcePath,
-					SourceDigest: e.sourceDigest,
+					SourceDigest: e.digest(),
 					Entrypoint:   wf.Name,
 					Status:       state.RunRunning,
 					VarsJSON:     string(varsJSON),
@@ -1342,7 +1379,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					})
 				})
 
-				err = e.executeWorkflow(ctx, subRunID, wf, subVars)
+				err = e.executeWorkflow(withFile(ctx, wfFile), subRunID, wf, subVars)
 
 				feNow := time.Now()
 				feDuration := feNow.Sub(subRun.StartedAt).Seconds()
@@ -1485,27 +1522,30 @@ func (e *Engine) resolveForEachList(expr string, ctx map[string]any) ([]any, err
 // resolveSubWorkflow finds the workflow a step calls. The name may be a template, rendered
 // against the step's context (for for_each, the item's), so one step can call different
 // workflows: `workflow: "submit-{{ test.arm }}"`.
-func (e *Engine) resolveSubWorkflow(step parser.Step, ctx map[string]any) (*parser.Workflow, error) {
+// resolveSubWorkflow looks the called workflow up in the current definition, which is where a
+// reload takes effect; the caller runs the sub-workflow pinned to the returned file.
+func (e *Engine) resolveSubWorkflow(step parser.Step, ctx map[string]any) (*parser.Workflow, *parser.WorkflowFile, error) {
+	file := e.current()
 	name := step.Workflow
 	if parser.IsTemplated(name) {
 		rendered, err := e.tmpl.Render(name, ctx)
 		if err != nil {
-			return nil, fmt.Errorf("rendering workflow name %q: %w", step.Workflow, err)
+			return nil, nil, fmt.Errorf("rendering workflow name %q: %w", step.Workflow, err)
 		}
 		name = strings.TrimSpace(rendered)
 		if len(step.WorkflowNames) > 0 && !slices.Contains(step.WorkflowNames, name) {
-			return nil, fmt.Errorf("workflow %q resolved to %q; expected one of %s (workflow_names)",
+			return nil, nil, fmt.Errorf("workflow %q resolved to %q; expected one of %s (workflow_names)",
 				step.Workflow, name, strings.Join(step.WorkflowNames, ", "))
 		}
 	}
-	wf := e.file.GetWorkflow(name)
+	wf := file.GetWorkflow(name)
 	if wf == nil {
 		if name != step.Workflow {
-			return nil, fmt.Errorf("sub-workflow %q (from %q) not found", name, step.Workflow)
+			return nil, nil, fmt.Errorf("sub-workflow %q (from %q) not found", name, step.Workflow)
 		}
-		return nil, fmt.Errorf("sub-workflow %q not found", name)
+		return nil, nil, fmt.Errorf("sub-workflow %q not found", name)
 	}
-	return wf, nil
+	return wf, file, nil
 }
 
 // checkSubRunWorkflow refuses to resume a sub-run in a different workflow from the one it ran
@@ -1715,7 +1755,7 @@ func isGateStep(wf *parser.Workflow, stepName string) bool {
 
 func (e *Engine) buildContext(cliVars map[string]any, workflowVars map[string]any) map[string]any {
 	ctx := make(map[string]any)
-	for k, v := range e.file.Vars {
+	for k, v := range e.current().Vars {
 		ctx[k] = v
 	}
 	for k, v := range workflowVars {

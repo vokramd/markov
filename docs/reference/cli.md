@@ -47,6 +47,7 @@ markov run <file.yaml|directory> [flags]
 | `--breakpoints-file path` | string | -- | JSON file with an array of breakpoint objects. |
 | `--break workflow.step` | string (repeatable) | -- | Breakpoint shorthand, resolved against the real workflow and step names. |
 | `--step` | bool | `false` | Pause before every step. |
+| `--allow-reload` | bool | `false` | Let [`reload_workflow`](step-types.md#reload_workflow) steps replace the workflow definition while it runs. A workflow containing such a step does not start without it. A run that reloads cannot be resumed. |
 
 **Examples:**
 
@@ -110,6 +111,7 @@ markov resume <run_id> [flags]
 | `--namespace`, `--kubeconfig`, `--forks`, `--verbose`, `--debug` | | | The same execution settings as `markov run`. They aren't stored with the run, so pass the original run's `--namespace` or `--forks` again if it used them. |
 | `--callback`, `--callback-header`, `--callback-tls-insecure`, `--callback-tls-cert`, `--callback-buffer-size` | | | The same event callbacks as `markov run`; the resumed run emits `run_resumed` first. |
 | `--control`, `--breakpoint`, `--breakpoints-file`, `--break`, `--step` | | | The same [debugger](debugging.md) flags as `markov run`, so a resumed run can be stepped through. |
+| `--allow-reload` | bool | `false` | As for `markov run`. A run that has already reloaded is never resumable. |
 
 **Examples:**
 

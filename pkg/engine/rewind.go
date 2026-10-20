@@ -39,12 +39,16 @@ type ChangedStep struct {
 // the custom step type it resolves to. The description is documentation, so editing it does not
 // count as a change.
 func (e *Engine) definitionHash(step parser.Step) string {
+	return definitionHashIn(e.current(), step)
+}
+
+func definitionHashIn(file *parser.WorkflowFile, step parser.Step) string {
 	step.Description = ""
 	payload := struct {
 		Step parser.Step
 		Type *parser.StepType
 	}{Step: step}
-	if st, ok := e.file.StepTypes[step.Type]; ok {
+	if st, ok := file.StepTypes[step.Type]; ok {
 		payload.Type = &st
 	}
 	b, err := json.Marshal(payload)
@@ -69,7 +73,11 @@ func sectionOfStepList(wf *parser.Workflow, section string) []parser.Step {
 // produced it. The longest matching step name wins, so a step called `a` and one called `a[b]`
 // do not confuse each other.
 func (e *Engine) findStep(workflow, stateName string) (step parser.Step, section string, ok bool) {
-	wf := e.file.GetWorkflow(workflow)
+	return findStepIn(e.current(), workflow, stateName)
+}
+
+func findStepIn(file *parser.WorkflowFile, workflow, stateName string) (step parser.Step, section string, ok bool) {
+	wf := file.GetWorkflow(workflow)
 	if wf == nil || strings.HasPrefix(stateName, "__jev__/") {
 		return parser.Step{}, "", false
 	}
@@ -92,7 +100,8 @@ func (e *Engine) findStep(workflow, stateName string) (step parser.Step, section
 	return step, section, ok
 }
 
-// hashingStore stamps every saved step row with the hash of its definition.
+// hashingStore stamps every saved step row with the hash of its definition, as the run that saved
+// it saw that definition (the context carries the workflow file it is pinned to).
 type hashingStore struct {
 	state.Store
 	e *Engine
@@ -100,8 +109,9 @@ type hashingStore struct {
 
 func (h *hashingStore) SaveStep(ctx context.Context, s *state.StepResult) error {
 	if s.DefinitionHash == "" {
-		if st, _, ok := h.e.findStep(s.WorkflowName, s.StepName); ok {
-			s.DefinitionHash = h.e.definitionHash(st)
+		file := h.e.fileFor(ctx)
+		if st, _, ok := findStepIn(file, s.WorkflowName, s.StepName); ok {
+			s.DefinitionHash = definitionHashIn(file, st)
 		}
 	}
 	return h.Store.SaveStep(ctx, s)
@@ -192,7 +202,7 @@ func (e *Engine) prepareResume(ctx context.Context, run *state.Run) ([]ChangedSt
 		}
 		return changed, false, nil
 	}
-	wf := e.file.GetWorkflow(run.Entrypoint)
+	wf := e.current().GetWorkflow(run.Entrypoint)
 	if wf == nil {
 		return nil, false, fmt.Errorf("workflow %q not found", run.Entrypoint)
 	}

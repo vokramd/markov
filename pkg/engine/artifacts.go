@@ -71,12 +71,12 @@ func (e *Engine) readArtifact(path string, source string) ([]byte, error) {
 	case "local":
 		return os.ReadFile(path)
 	case "k8s":
-		if e.k8s == nil || e.file.Namespace == "" {
+		if e.k8s == nil || e.current().Namespace == "" {
 			return nil, fmt.Errorf("k8s client not available for source: k8s")
 		}
 		return e.readFromK8s(path)
 	default:
-		if e.k8s != nil && e.file.Namespace != "" {
+		if e.k8s != nil && e.current().Namespace != "" {
 			return e.readFromK8s(path)
 		}
 		return os.ReadFile(path)
@@ -84,7 +84,7 @@ func (e *Engine) readArtifact(path string, source string) ([]byte, error) {
 }
 
 func (e *Engine) readFromK8s(path string) ([]byte, error) {
-	ns := e.file.Namespace
+	ns := e.current().Namespace
 	ctx := context.Background()
 
 	pods, err := e.k8s.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{

@@ -134,6 +134,9 @@ func stepTypes() []StepType {
 		StepType{Name: "set_fact", Inputs: "step", StepFields: []string{"vars"}, Summary: "Set variables for the steps after it; values may be templates."},
 		StepType{Name: "load_artifact", Inputs: "step", StepFields: []string{"artifacts"}, Summary: "Load files (YAML, markdown, tables) into the context."},
 		StepType{Name: "assert", Inputs: "step", StepFields: []string{"that", "msg"}, Summary: "Fail unless every condition holds."},
+		StepType{Name: "reload_workflow", Inputs: "params", Summary: "Replace the running workflow definition; sub-workflows called afterwards use the new one (needs --allow-reload).", Params: []Param{
+			p("source", "Workflow file or directory to load (default: the run's own source)"), p("require", "Workflow names the new definition must contain"),
+		}},
 		StepType{Name: "jev", Inputs: "params", Summary: "Ask a Jev decision service.", Params: []Param{}},
 		StepType{Name: "llm_invoke", Inputs: "params", Summary: "Invoke a language model.", Params: []Param{}},
 	)

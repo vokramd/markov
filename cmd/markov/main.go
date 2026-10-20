@@ -43,6 +43,7 @@ var (
 	flagBreakpointsFile string
 	flagBreakShorthand  []string
 	flagStep            bool
+	flagAllowReload     bool
 	flagControl         string
 
 	flagRewind        []string
@@ -117,6 +118,7 @@ func main() {
 	runCmd.Flags().BoolVar(&flagVerbose, "verbose", false, "Show detailed execution output")
 	runCmd.Flags().BoolVar(&flagDebug, "debug", false, "Show debug logging for flag parsing, callback setup, and K8s client init")
 	runCmd.Flags().StringVar(&flagRunID, "run-id", "", "Use a specific run ID instead of generating one")
+	runCmd.Flags().BoolVar(&flagAllowReload, "allow-reload", false, "Let reload_workflow steps replace the workflow definition while it runs (such a run cannot be resumed)")
 	addCallbackFlags(runCmd)
 	addDebugFlags(runCmd)
 
@@ -137,6 +139,7 @@ func main() {
 	resumeCmd.Flags().StringVar(&flagSourceIntegrity, "source-integrity", "warn", "Source drift policy: warn, strict, or off")
 	resumeCmd.Flags().StringArrayVar(&flagRewind, "rewind", nil, `Re-run from a step of the entrypoint workflow, as JSON, e.g. {"workflow":"main","step":"build"} (repeatable; the earliest wins)`)
 	resumeCmd.Flags().BoolVar(&flagRewindChanged, "rewind-changed", false, "Re-run from the earliest completed step whose definition changed since it ran")
+	resumeCmd.Flags().BoolVar(&flagAllowReload, "allow-reload", false, "Let reload_workflow steps replace the workflow definition while it runs (the resumed run then cannot be resumed again)")
 	addCallbackFlags(resumeCmd)
 	addDebugFlags(resumeCmd)
 
@@ -201,16 +204,9 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 		flagCallbacks, flagCallbackHeaders, flagCallbackTLSInsecure, flagCallbackBufferSize)
 	debugLog("flags: --var=%v", flagVars)
 
-	wfFile, err := parser.ParseFile(args[0])
+	wfFile, err := loadWorkflow(args[0])
 	if err != nil {
 		return err
-	}
-
-	if flagForks > 0 {
-		wfFile.Forks = flagForks
-	}
-	if flagNamespace != "" {
-		wfFile.Namespace = flagNamespace
 	}
 
 	vars := parseVarFlags(flagVars)
@@ -231,6 +227,8 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 	eng.Verbose = flagVerbose
 	eng.RunID = flagRunID
 	eng.SourcePath = args[0]
+	eng.AllowReload = flagAllowReload
+	eng.Loader = loadWorkflow
 	configureSourceIdentity(eng)
 
 	cbs, err := buildCallbacks()
@@ -275,6 +273,22 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("run %s completed successfully\n", runID)
 	return nil
+}
+
+// loadWorkflow parses a workflow file or directory and applies the --forks and --namespace
+// overrides. Runs use it for the initial definition and for every reload_workflow.
+func loadWorkflow(path string) (*parser.WorkflowFile, error) {
+	wfFile, err := parser.ParseFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if flagForks > 0 {
+		wfFile.Forks = flagForks
+	}
+	if flagNamespace != "" {
+		wfFile.Namespace = flagNamespace
+	}
+	return wfFile, nil
 }
 
 // buildDebugger turns the breakpoint and control flags into a debugger, or nil when none are
@@ -368,15 +382,9 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	wfFile, err := parser.ParseFile(run.WorkflowFile)
+	wfFile, err := loadWorkflow(run.WorkflowFile)
 	if err != nil {
 		return err
-	}
-	if flagForks > 0 {
-		wfFile.Forks = flagForks
-	}
-	if flagNamespace != "" {
-		wfFile.Namespace = flagNamespace
 	}
 
 	executors, err := buildExecutors(wfFile)
@@ -387,6 +395,8 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 	eng := engine.New(wfFile, store, executors)
 	eng.Verbose = flagVerbose
 	eng.SourcePath = run.WorkflowFile
+	eng.AllowReload = flagAllowReload
+	eng.Loader = loadWorkflow
 	if k8sClient, restCfg, err := getK8sClient(); err == nil {
 		eng.SetK8sClient(k8sClient, restCfg)
 	} else {

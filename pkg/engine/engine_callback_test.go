@@ -81,6 +81,9 @@ func (m *mockCallback) OnSubRunCompleted(e callback.SubRunCompletedEvent) error 
 func (m *mockCallback) OnSubRunFailed(e callback.SubRunFailedEvent) error {
 	return m.record("sub_run_failed", e)
 }
+func (m *mockCallback) OnWorkflowReloaded(e callback.WorkflowReloadedEvent) error {
+	return m.record("workflow_reloaded", e)
+}
 func (m *mockCallback) Close() error { return nil }
 
 type mockExec struct {
@@ -472,6 +475,9 @@ func (e *errorCallback) OnSubRunCompleted(callback.SubRunCompletedEvent) error {
 	return fmt.Errorf("cb error")
 }
 func (e *errorCallback) OnSubRunFailed(callback.SubRunFailedEvent) error {
+	return fmt.Errorf("cb error")
+}
+func (e *errorCallback) OnWorkflowReloaded(callback.WorkflowReloadedEvent) error {
 	return fmt.Errorf("cb error")
 }
 func (e *errorCallback) Close() error { return nil }

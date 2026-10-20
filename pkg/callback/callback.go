@@ -168,6 +168,19 @@ type SubRunFailedEvent struct {
 	Duration     float64 `json:"duration_seconds"`
 }
 
+// WorkflowReloadedEvent reports that a reload_workflow step replaced the workflow definition.
+// Steps already running keep their definition; sub-workflows called from now on use the new one.
+type WorkflowReloadedEvent struct {
+	EventHeader
+	WorkflowName string         `json:"workflow_name"`
+	StepName     string         `json:"step_name"`
+	Source       string         `json:"source"`
+	OldDigest    string         `json:"old_digest,omitempty"`
+	NewDigest    string         `json:"new_digest,omitempty"`
+	Reload       int            `json:"reload"`
+	Changes      map[string]any `json:"changes,omitempty"`
+}
+
 type Callback interface {
 	OnRunStarted(event RunStartedEvent) error
 	OnRunCompleted(event RunCompletedEvent) error
@@ -189,6 +202,8 @@ type Callback interface {
 	OnSubRunStarted(event SubRunStartedEvent) error
 	OnSubRunCompleted(event SubRunCompletedEvent) error
 	OnSubRunFailed(event SubRunFailedEvent) error
+
+	OnWorkflowReloaded(event WorkflowReloadedEvent) error
 
 	Close() error
 }

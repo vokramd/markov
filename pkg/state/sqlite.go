@@ -65,6 +65,18 @@ func migrate(db *sql.DB) error {
 			observed_digest  TEXT,
 			source_drifted   BOOLEAN NOT NULL DEFAULT FALSE
 		);
+
+		CREATE TABLE IF NOT EXISTS reloads (
+			id           INTEGER PRIMARY KEY AUTOINCREMENT,
+			run_id       TEXT NOT NULL,
+			step_run_id  TEXT NOT NULL,
+			workflow     TEXT NOT NULL,
+			step         TEXT NOT NULL,
+			source       TEXT NOT NULL,
+			old_digest   TEXT,
+			new_digest   TEXT,
+			reloaded_at  TIMESTAMP NOT NULL
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("migrating schema: %w", err)
@@ -369,4 +381,41 @@ func (s *SQLiteStore) DeleteSteps(ctx context.Context, runID string, stepNames [
 		}
 	}
 	return nil
+}
+
+func (s *SQLiteStore) SaveReload(ctx context.Context, r *Reload) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO reloads (run_id, step_run_id, workflow, step, source, old_digest, new_digest, reloaded_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.RunID, r.StepRunID, r.Workflow, r.Step, r.Source, nullStr(r.OldDigest), nullStr(r.NewDigest), r.ReloadedAt)
+	if err != nil {
+		return fmt.Errorf("saving reload: %w", err)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) GetReloads(ctx context.Context, runID string) ([]*Reload, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT run_id, step_run_id, workflow, step, source, old_digest, new_digest, reloaded_at
+		FROM reloads WHERE run_id = ? ORDER BY id`, runID)
+	if err != nil {
+		return nil, fmt.Errorf("getting reloads: %w", err)
+	}
+	defer rows.Close()
+
+	var reloads []*Reload
+	for rows.Next() {
+		var r Reload
+		var oldDigest, newDigest sql.NullString
+		if err := rows.Scan(&r.RunID, &r.StepRunID, &r.Workflow, &r.Step, &r.Source, &oldDigest, &newDigest, &r.ReloadedAt); err != nil {
+			return nil, fmt.Errorf("scanning reload: %w", err)
+		}
+		r.OldDigest = oldDigest.String
+		r.NewDigest = newDigest.String
+		reloads = append(reloads, &r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("getting reloads: %w", err)
+	}
+	return reloads, nil
 }

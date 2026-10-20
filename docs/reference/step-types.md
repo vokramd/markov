@@ -1,7 +1,7 @@
 {% raw %}
 # Built-in Step Types
 
-Markov ships with fifteen primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
+Markov ships with sixteen primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
 
 All step types support these common fields:
 
@@ -1156,6 +1156,67 @@ Each expression in the `that` list is evaluated using `EvalBool`, which wraps th
     - "not rejected"
     - "not deferred"
   msg: "Triage gate did not produce expected results for severity={{ severity }}"
+```
+
+---
+
+## reload_workflow
+
+Replaces the running workflow definition with a fresh load of its source, so a long-running (looping) workflow can pick up changes, including changes it made itself, without restarting Markov. Requires `markov run --allow-reload`; a workflow containing this step does not start without it.
+
+What changes when:
+
+- **Steps already running keep their definition.** The rest of the workflow that ran the reload continues with the steps, step types, rules and scripts directory it started with.
+- **Sub-workflows called after the reload use the new definition.** A loop written as recursion (an `iterate` workflow that calls itself) therefore runs each iteration on the definition current when that iteration was called.
+- **A failed load changes nothing.** An unreadable or invalid source, or one missing a `require`d workflow, fails the step and the current definition stays. Use `ignore_errors` to keep looping.
+
+Concurrent reloads (from `for_each` iterations) are applied one at a time.
+
+A run that reloaded **cannot be resumed** (`markov resume` refuses it), because its completed steps came from more than one definition. Every reload is recorded in the [state store](state-store.md#reloads-table) and reported with a [`workflow_reloaded`](callbacks.md#run-lifecycle-events) event.
+
+With a debugger control channel attached (`--control stdin`, as the IDE uses), the step does not load on its own: it emits a [`reload_pending`](debugging.md#reloading-the-workflow) debug event describing the candidate and waits for `reload` (optionally naming another source) or `reject_reload`.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `source` | string | no | Workflow file or directory to load. Defaults to the run's own source (the path given to `markov run`). |
+| `require` | string[] | no | Workflow names the new definition must contain. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `reloaded` | bool | Whether the definition was replaced. |
+| `source` | string | The source loaded (or attempted). |
+| `old_digest`, `new_digest` | string | Source-tree digests before and after. |
+| `reload` | int | How many reloads this process has applied, including this one. |
+| `changes` | map | `added_workflows`, `removed_workflows`, `changed_workflows` (each with `workflow`, `added_steps`, `removed_steps`, `changed_steps`) and `other_changed` (top-level sections such as `vars` or `rules`). |
+| `rejected` | bool | Set when a control-channel client answered `reject_reload`. |
+| `error` | string | Why the load failed. |
+
+### Example
+
+```yaml
+- name: iterate
+  vars:
+    i:
+  steps:
+    - name: work
+      workflow: work            # the definition current when this iteration was called
+    - name: improve
+      type: claude              # may edit workflows/work.yaml
+      params: {prompt: "...", allowed_tools: [Read, Edit]}
+    - name: reload
+      type: reload_workflow
+      ignore_errors: true       # a broken edit keeps the current definition
+      params:
+        require: [iterate, work]
+    - name: next
+      workflow: iterate         # picks up the reloaded iterate and work
+      when: "i < 10"
+      vars:
+        i: "{{ i + 1 }}"
 ```
 
 ---

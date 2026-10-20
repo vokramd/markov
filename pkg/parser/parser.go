@@ -406,6 +406,7 @@ var primitives = map[string]bool{
 	"load_artifact":    true,
 	"set_fact":         true,
 	"assert":           true,
+	"reload_workflow":  true,
 }
 
 // PrimitiveNames lists the built-in step types, sorted.

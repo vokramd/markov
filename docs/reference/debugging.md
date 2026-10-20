@@ -62,10 +62,18 @@ One JSON object per line on standard input.
 | `until` | `workflow`, `step`, optional `section`, `iteration` | Continue and pause before that step (one shot). |
 | `evaluate` | `id`, `expression` | While paused, render the expression against the paused variables (`n + 1` and `{{ n + 1 }}` are equivalent). Answered with an `evaluated` event carrying the same `id`. |
 | `terminate` | | Stop the run. The step is recorded as failed and the run can be continued with `markov resume`. |
+| `reload` | optional `source` | Answer a pending reload: load the step's source, or `source` instead (the IDE sends a fresh snapshot of the project). |
+| `reject_reload` | | Answer a pending reload: keep the current definition. The step completes with `reloaded: false, rejected: true`. |
 
 Only one pause is active at a time. With concurrent `for_each` iterations, the others wait their turn; a `continue` drops step-mode pauses queued behind it. Use `concurrency: 1` on the step for a deterministic order.
 
 If standard input closes while the run is paused, the run is aborted (failed, resumable) so nothing is left blocked; if it closes while running, debugging is simply switched off.
+
+## Reloading the workflow
+
+When a [`reload_workflow`](step-types.md#reload_workflow) step runs with a control channel attached, it holds like a pause and emits `reload_pending` with the candidate's `source`, `current_digest`, `candidate_digest` and `changes` (workflows and steps added, removed and changed), or an `error` if the candidate does not load. Only `reload`, `reject_reload` and `terminate` are accepted until it is answered; other resume commands get an `error` event. `evaluate` is not available (there is no paused context).
+
+After a reload the breakpoints are resolved again against the new definition. Those whose step still exists keep their hit counts; the others are dropped. Both lists are reported in a `breakpoints_set` event with `reason: workflow_reloaded`.
 
 ## What a pause contains
 

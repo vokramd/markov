@@ -206,6 +206,26 @@ func testStoreContract(t *testing.T, store Store) {
 		t.Fatalf("GetSourceChecks() = %#v, want persisted drift check", checks)
 	}
 
+	if reloads, err := store.GetReloads(ctx, runID); err != nil || len(reloads) != 0 {
+		t.Fatalf("GetReloads() before any = %#v, %v; want none", reloads, err)
+	}
+	for i, digest := range []string{"v1", "v2"} {
+		reload := &Reload{
+			RunID: runID, StepRunID: childID, Workflow: "iterate", Step: "reload",
+			Source: "/wf", OldDigest: fmt.Sprintf("v%d", i), NewDigest: digest, ReloadedAt: completed,
+		}
+		if err := store.SaveReload(ctx, reload); err != nil {
+			t.Fatalf("SaveReload() error = %v", err)
+		}
+	}
+	reloads, err := store.GetReloads(ctx, runID)
+	if err != nil {
+		t.Fatalf("GetReloads() error = %v", err)
+	}
+	if len(reloads) != 2 || reloads[0].NewDigest != "v1" || reloads[1].OldDigest != "v1" || reloads[1].StepRunID != childID || reloads[1].Step != "reload" {
+		t.Fatalf("GetReloads() = %#v, want two reloads in order", reloads)
+	}
+
 	children, err := store.GetChildRuns(ctx, runID)
 	if err != nil {
 		t.Fatalf("GetChildRuns() error = %v", err)
