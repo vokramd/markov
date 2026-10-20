@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jctanner/markov/pkg/callback"
@@ -235,6 +236,7 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	eng.EventLogs = jsonlCallbackPaths()
 	debugLog("callbacks: %d created from %d --callback flags", len(cbs), len(flagCallbacks))
 	if len(cbs) > 0 {
 		eng.SetCallbacks(cbs)
@@ -422,6 +424,7 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	eng.EventLogs = jsonlCallbackPaths()
 	if len(cbs) > 0 {
 		eng.SetCallbacks(cbs)
 		defer eng.CloseCallbacks()
@@ -600,6 +603,20 @@ func buildCallbacks() ([]callback.Callback, error) {
 		cbs = append(cbs, cb)
 	}
 	return cbs, nil
+}
+
+// jsonlCallbackPaths lists the absolute paths of the jsonl:// callbacks, for markov_event_logs.
+func jsonlCallbackPaths() []string {
+	var paths []string
+	for _, u := range flagCallbacks {
+		if p, ok := strings.CutPrefix(u, "jsonl://"); ok && p != "" {
+			if abs, err := filepath.Abs(p); err == nil {
+				p = abs
+			}
+			paths = append(paths, p)
+		}
+	}
+	return paths
 }
 
 func parseVarFlags(vars []string) map[string]any {

@@ -49,6 +49,9 @@ type Engine struct {
 	SourceIntegrityMode SourceIntegrityMode
 	// AllowReload lets reload_workflow steps replace the workflow definition (--allow-reload).
 	AllowReload bool
+	// EventLogs are the absolute paths of the run's jsonl callback files, exposed to the workflow
+	// as markov_event_logs.
+	EventLogs []string
 	// Loader parses a workflow source for reload_workflow; nil uses parser.ParseFile.
 	Loader       func(path string) (*parser.WorkflowFile, error)
 	digestMu     sync.Mutex
@@ -199,6 +202,7 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 	// Built-in: the run's own ID, for unique output paths. It is saved with the run's vars, so a
 	// resume sees the same value.
 	runCtx["markov_run_id"] = runID
+	runCtx["markov_event_logs"] = e.eventLogs()
 	varsJSON, _ := json.Marshal(runCtx)
 
 	run := &state.Run{
@@ -378,6 +382,8 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 		storedVars[k] = v
 		runCtx[k] = v
 	}
+	// The logs of this process, not the ones the run was started with.
+	runCtx["markov_event_logs"] = e.eventLogs()
 	varsJSON, _ := json.Marshal(storedVars)
 	run.VarsJSON = string(varsJSON)
 
@@ -508,6 +514,8 @@ func (e *Engine) checkSourceIntegrity(ctx context.Context, run *state.Run) (*sta
 }
 
 func (e *Engine) executeWorkflow(ctx context.Context, runID string, wf *parser.Workflow, runCtx map[string]any) error {
+	// Built-in: the (sub-)run executing these steps; markov_run_id stays the top-level run.
+	runCtx["markov_current_run_id"] = runID
 	mainErr := e.executeSteps(ctx, runID, wf, runCtx)
 	if IsPaused(mainErr) {
 		// A pause is deliberately nonterminal. In particular, cleanup such as
@@ -1522,6 +1530,15 @@ func (e *Engine) resolveForEachList(expr string, ctx map[string]any) ([]any, err
 // resolveSubWorkflow finds the workflow a step calls. The name may be a template, rendered
 // against the step's context (for for_each, the item's), so one step can call different
 // workflows: `workflow: "submit-{{ test.arm }}"`.
+// eventLogs is EventLogs as a template-friendly list.
+func (e *Engine) eventLogs() []any {
+	logs := make([]any, len(e.EventLogs))
+	for i, p := range e.EventLogs {
+		logs[i] = p
+	}
+	return logs
+}
+
 // resolveSubWorkflow looks the called workflow up in the current definition, which is where a
 // reload takes effect; the caller runs the sub-workflow pinned to the returned file.
 func (e *Engine) resolveSubWorkflow(step parser.Step, ctx map[string]any) (*parser.Workflow, *parser.WorkflowFile, error) {

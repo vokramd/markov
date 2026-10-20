@@ -8,7 +8,8 @@ markovd) and in the Markov IDE; the IDE side is
 `../../../markov-ide/.ledger/plans/002-agentic-codification.md`.
 
 **Status:** phase 1 done (notes/codify-phase1-run.md), phase 2 done
-(ADR-0006, tasks/done/reload-workflow-step.md). Engine and IDE findings
+(ADR-0006, tasks/done/reload-workflow-step.md), phase 3 done
+(tasks/done/event-log-variables.md). Engine and IDE findings
 below were checked against the code on 2026-10-20.
 
 ## Idea
@@ -181,6 +182,8 @@ evidence and metrics → `retro` (claude, writes candidate) → `validate` →
    new ones; concurrent `for_each` during swap; handshake reload with an
    alternate source and reject; breakpoints re-resolved; resume refusal.
 3. **Event-log variable** for the retro agent; `variables-and-context.md`.
+   Done as `markov_event_logs` plus `markov_current_run_id` (needed to
+   find one iteration's events in a log shared by the whole loop).
 4. **Automated driver loop** with metrics and budget stop; record a run and
    the coverage/cost curve in `.ledger/notes/`.
 5. **IDE support** per the IDE plan (needs 2; useful from 1 for viewing).
