@@ -180,7 +180,7 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 	if wf == nil {
 		return "", fmt.Errorf("workflow %q not found", workflowName)
 	}
-	if err := e.checkReloadAllowed(file); err != nil {
+	if err := e.checkReloadAllowed(file, workflowName); err != nil {
 		return "", err
 	}
 	sourceDigest, err := e.currentSourceDigest()
@@ -314,7 +314,7 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 		return fmt.Errorf("run %q reloaded its workflow %d time(s) while running (last from %s, digest %s), so its completed steps came from more than one definition; it can't be resumed, start a new run", runID, len(reloads), last.Source, last.NewDigest)
 	}
 	file := e.current()
-	if err := e.checkReloadAllowed(file); err != nil {
+	if err := e.checkReloadAllowed(file, run.Entrypoint); err != nil {
 		return err
 	}
 	check, err := e.checkSourceIntegrity(ctx, run)

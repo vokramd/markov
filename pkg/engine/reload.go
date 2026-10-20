@@ -57,16 +57,39 @@ func (e *Engine) setDigest(d string) {
 	e.sourceDigest = d
 }
 
-// usesReload reports whether any step of the file resolves to reload_workflow.
-func usesReload(file *parser.WorkflowFile) bool {
-	for _, wf := range file.Workflows {
+// usesReload reports whether a reload_workflow step is reachable from the workflow named start
+// through sub-workflow calls. A templated call reaches its workflow_names, or every workflow when
+// it lists none. Running a workflow that cannot reach a reload (a codified task in a project
+// whose driver loop reloads) therefore needs no --allow-reload.
+func usesReload(file *parser.WorkflowFile, start string) bool {
+	seen := map[string]bool{}
+	queue := []string{start}
+	for len(queue) > 0 {
+		name := queue[0]
+		queue = queue[1:]
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		wf := file.GetWorkflow(name)
+		if wf == nil {
+			continue
+		}
 		for _, steps := range [][]parser.Step{wf.Steps, wf.Rescue, wf.Always} {
 			for _, st := range steps {
-				if st.Type == "" {
-					continue
-				}
-				if base, _ := file.ResolveStepType(&st); base == "reload_workflow" {
-					return true
+				switch {
+				case st.Workflow != "" && !parser.IsTemplated(st.Workflow):
+					queue = append(queue, st.Workflow)
+				case st.Workflow != "" && len(st.WorkflowNames) > 0:
+					queue = append(queue, st.WorkflowNames...)
+				case st.Workflow != "":
+					for _, w := range file.Workflows {
+						queue = append(queue, w.Name)
+					}
+				case st.Type != "":
+					if base, _ := file.ResolveStepType(&st); base == "reload_workflow" {
+						return true
+					}
 				}
 			}
 		}
@@ -75,9 +98,10 @@ func usesReload(file *parser.WorkflowFile) bool {
 }
 
 // checkReloadAllowed refuses to start a run that could replace its own definition unless the
-// caller opted in, because such a run cannot be resumed.
-func (e *Engine) checkReloadAllowed(file *parser.WorkflowFile) error {
-	if !e.AllowReload && usesReload(file) {
+// caller opted in, because such a run cannot be resumed. A reload that only a later definition
+// introduces is still refused, by the step itself.
+func (e *Engine) checkReloadAllowed(file *parser.WorkflowFile, start string) error {
+	if !e.AllowReload && usesReload(file, start) {
 		return errors.New("the workflow has reload_workflow steps, which replace its definition while it runs; pass --allow-reload to allow it (a run that reloads cannot be resumed)")
 	}
 	return nil

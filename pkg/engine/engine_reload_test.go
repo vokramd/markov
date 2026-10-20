@@ -415,3 +415,36 @@ workflows:
 		t.Fatalf("commands = %s, want [v1-say v2-say]", got)
 	}
 }
+
+func TestAllowReloadIsOnlyNeededWhenAReloadIsReachable(t *testing.T) {
+	src := writeWF(t, "v1", `entrypoint: loop
+workflows:
+  - name: loop
+    steps:
+      - name: call
+        workflow: "{{ which }}"
+        workflow_names: [middle]
+  - name: middle
+    steps:
+      - name: reload
+        type: reload_workflow
+  - name: task
+    steps:
+      - name: do
+        type: shell_exec
+        params:
+          command: task
+`)
+	eng, _, exec := newReloadEngine(t, src)
+	eng.AllowReload = false
+	if _, err := eng.Run(context.Background(), "task", nil); err != nil {
+		t.Fatalf("running task (no reload reachable): %v", err)
+	}
+	if got := fmt.Sprint(exec.Commands()); got != "[task]" {
+		t.Fatalf("commands = %s", got)
+	}
+	// loop reaches the reload through a templated call's workflow_names.
+	if _, err := eng.Run(context.Background(), "loop", map[string]any{"which": "middle"}); err == nil || !strings.Contains(err.Error(), "--allow-reload") {
+		t.Fatalf("running loop error = %v, want a refusal", err)
+	}
+}

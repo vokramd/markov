@@ -1162,7 +1162,7 @@ Each expression in the `that` list is evaluated using `EvalBool`, which wraps th
 
 ## reload_workflow
 
-Replaces the running workflow definition with a fresh load of its source, so a long-running (looping) workflow can pick up changes, including changes it made itself, without restarting Markov. Requires `markov run --allow-reload`; a workflow containing this step does not start without it.
+Replaces the running workflow definition with a fresh load of its source, so a long-running (looping) workflow can pick up changes, including changes it made itself, without restarting Markov. Requires `markov run --allow-reload`: a run whose workflow can reach this step (through its sub-workflow calls) does not start without it. Running another workflow of the same project, one that cannot reach a reload, needs no flag.
 
 What changes when:
 
