@@ -1,10 +1,16 @@
 hn_base_url: https://hacker-news.firebaseio.com/v0
 out_dir: /tmp/hn-top10
 
-# Set by codify.sh for the codify driver.
-codify_dir: ""
+# The codification loop (codify_loop). Relative paths are resolved against
+# the directory markov runs in (the project directory in the IDE).
+codify_dir: ../hn-top10.codify
+project_dir: .
+markov_docs: ../../../docs/reference
+markov_bin: markov
+max_iterations: 8
+max_codify_usd: 5
+
+# Set by the loop for each codify pass.
 iteration_dir: ""
 task_events: ""
-project_dir: ""
-markov_bin: markov
-markov_docs: ""
+task_run_id: ""

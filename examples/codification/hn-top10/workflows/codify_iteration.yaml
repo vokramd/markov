@@ -1,0 +1,62 @@
+name: codify_iteration
+description: >
+  One iteration of the codification loop. The task is called as a
+  sub-workflow, so after a reload the next iteration runs the promoted
+  version; this workflow then calls itself until nothing is left to codify,
+  max_iterations is reached or the retro spend reaches max_codify_usd.
+  Protected.
+vars:
+  i:
+steps:
+  - name: begin
+    type: script_exec
+    register: begun
+    params:
+      interpreter: python3
+      path: codify/codify.py
+      args: [begin-iteration, --codify-dir, "{{ codify_dir }}"]
+
+  - name: iteration
+    type: set_fact
+    vars:
+      it: "{{ begun.stdout | fromjson }}"
+
+  - name: task
+    workflow: task
+    ignore_errors: true
+    vars:
+      out_dir: "{{ it.iteration_dir }}/out"
+
+  - name: codify
+    workflow: codify
+    register: pass
+    vars:
+      iteration_dir: "{{ it.iteration_dir }}"
+      task_events: "{{ markov_event_logs.0 }}"
+      task_run_id: "{{ markov_current_run_id }}-task"
+
+  - name: reload
+    type: reload_workflow
+    when: "pass.validation.status == 'passed'"
+    register: reloaded
+    params:
+      require: [task, codify, codify_loop, codify_iteration]
+
+  - name: spend
+    type: script_exec
+    register: spent
+    params:
+      interpreter: python3
+      path: codify/codify.py
+      args: [spend, --metrics-file, "{{ codify_dir }}/metrics.jsonl"]
+
+  - name: totals
+    type: set_fact
+    vars:
+      spend: "{{ spent.stdout | fromjson }}"
+
+  - name: next
+    workflow: codify_iteration
+    when: "pass.validation.status != 'no_change' and i < max_iterations and spend.retro_cost_usd < max_codify_usd"
+    vars:
+      i: "{{ i + 1 }}"

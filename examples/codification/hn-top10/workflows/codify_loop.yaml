@@ -1,0 +1,34 @@
+name: codify_loop
+description: >
+  Agentic codification in one process (plan 003 phase 4): run the task,
+  let the retro agent move one job out of the agent, promote a validated
+  candidate, reload the definition and go again. Needs --allow-reload and a
+  jsonl:// callback (the task's events are read back from it). Protected.
+steps:
+  - name: need_event_log
+    type: assert
+    that:
+      - "markov_event_logs | length > 0"
+    msg: "run with --callback jsonl://<file>: the retro agent reads the task's events from it"
+
+  - name: resolve_paths
+    type: script_exec
+    register: resolved
+    params:
+      interpreter: python3
+      path: codify/codify.py
+      args: [resolve-paths, --codify-dir, "{{ codify_dir }}", --project-dir, "{{ project_dir }}", --markov-docs, "{{ markov_docs }}", --markov-bin, "{{ markov_bin }}"]
+
+  - name: absolute_paths
+    type: set_fact
+    vars:
+      paths: "{{ resolved.stdout | fromjson }}"
+
+  - name: iterate
+    workflow: codify_iteration
+    vars:
+      i: 1
+      codify_dir: "{{ paths.codify_dir }}"
+      project_dir: "{{ paths.project_dir }}"
+      markov_docs: "{{ paths.markov_docs }}"
+      markov_bin: "{{ paths.markov_bin }}"

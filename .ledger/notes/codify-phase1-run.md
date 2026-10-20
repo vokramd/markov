@@ -42,3 +42,14 @@ Final v0005: `http_request` → `set_fact` slice → `assert` → `for_each` `ht
 - Total codification spend $2.48 against $0.154 per run saved: break-even after ~16 runs (the one-shot script codification of run 1 broke even after ~4). Gradual is safer and reviewable, but costs more; the plan should treat pass granularity as a tunable.
 - The validator caught a real engine bug the agent had no way to see, and the feedback of the previous validation result let the next pass fix it.
 - The driver's `report` step originally broke on quotes in validation reasons (`echo` of rendered text); it now passes JSON on stdin.
+
+# Phase 4: the loop in one process
+
+2026-10-20, `./codify.sh 3` starting from run 2's v0004, codify dir `hn-top10-p4b.codify`. One `markov run --workflow codify_loop --allow-reload`; one event log; one reload.
+
+| Iter | Task (agent / native) | Task tokens | Task cost | Retro cost | Validation | Action |
+|---|---|---|---|---|---|---|
+| 1 | 1 / 37 | 11,254 | $0.111 | $0.279 | passed | promoted v0001, reloaded in-process |
+| 2 | 0 / 38 | 0 | $0 | $0.171 | no_change | loop stopped |
+
+A first attempt (`hn-top10-p4test.codify`) failed every candidate on an engine check (see tasks/done/codify-in-process-loop.md), costing ~$1.6.

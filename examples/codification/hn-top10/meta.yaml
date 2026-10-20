@@ -1,3 +1,3 @@
-# Agentic codification demo (plan 003 phase 1). Running the project runs the
-# task; codify.sh runs the task and then the codify driver.
+# Agentic codification demo (plan 003). Running the project runs the task;
+# codify.sh runs the codify_loop workflow, which codifies the task in place.
 entrypoint: task

@@ -6,7 +6,8 @@ description: >
   and promote it when it passes. Protected: the candidate is rejected if this
   file or anything other than workflows/task.yaml, workflows/task_*.yaml and
   scripts/task/ changes.
-  Run through codify.sh, which sets the paths below.
+  Called by codify_iteration (the in-process loop), which sets the paths
+  below; task_run_id selects the task's events from the loop's event log.
 steps:
   - name: check_inputs
     type: assert
@@ -16,7 +17,7 @@ steps:
       - "task_events"
       - "project_dir"
       - "markov_docs"
-    msg: "run through codify.sh, which sets codify_dir, iteration_dir, task_events, project_dir and markov_docs"
+    msg: "run the codify_loop workflow (codify.sh), which sets codify_dir, iteration_dir, task_events, project_dir and markov_docs"
 
   - name: record_fixture
     type: script_exec
@@ -31,7 +32,7 @@ steps:
     params:
       interpreter: python3
       path: codify/codify.py
-      args: [evidence, --events, "{{ task_events }}", --iteration-dir, "{{ iteration_dir }}"]
+      args: [evidence, --events, "{{ task_events }}", --iteration-dir, "{{ iteration_dir }}", --run-id, "{{ task_run_id }}"]
 
   - name: prepare_candidate
     type: script_exec

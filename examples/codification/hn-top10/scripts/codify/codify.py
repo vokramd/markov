@@ -1,6 +1,8 @@
 """Deterministic helpers for the agentic codification driver (plan 003).
 
 Subcommands:
+  resolve-paths      make the driver's paths absolute and find the markov binary
+  begin-iteration    create the next iter-NNNN directory
   record-fixture     snapshot topstories.json and the first 10 items
   evidence           summarize a task run's events and collect its transcripts
   prepare-candidate  copy the project into a fresh candidate directory
@@ -8,6 +10,7 @@ Subcommands:
   promote            archive the current task files and install the candidate's
   rollback           install an archived version's task files
   record             append one row to metrics.jsonl
+  spend              total codification spend so far
 
 Each subcommand prints one JSON object on stdout.
 """
@@ -73,6 +76,13 @@ def expected_lines(fixture):
 def output_lines(path):
     with open(path) as f:
         return [line.rstrip() for line in f.read().strip().splitlines()]
+
+
+def failure_text(proc):
+    """The useful part of a failed markov command: its error lines, not the usage text."""
+    out = (proc.stdout + proc.stderr).strip().splitlines()
+    errors = [line for line in out if line.startswith("Error:") or " failed" in line or "failed:" in line]
+    return "\n".join(errors or out[-20:])[-2000:]
 
 
 def check_format(lines):
@@ -154,11 +164,23 @@ def _seconds(stamp):
     return datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp()
 
 
+def in_run(event, run_id):
+    """Whether an event belongs to run_id or one of its sub-runs (<run_id>-...)."""
+    rid = event.get("run_id") or ""
+    return rid == run_id or rid.startswith(run_id + "-")
+
+
 def cmd_evidence(args):
     evidence = os.path.join(args.iteration_dir, "evidence")
     os.makedirs(os.path.join(evidence, "transcripts"), exist_ok=True)
-    shutil.copy(args.events, os.path.join(evidence, "events.jsonl"))
-    metrics = summarize(load_events(args.events))
+    events = load_events(args.events)
+    if args.run_id:
+        # One event log holds the whole loop; keep this iteration's task run.
+        events = [ev for ev in events if in_run(ev, args.run_id)]
+    with open(os.path.join(evidence, "events.jsonl"), "w") as f:
+        for ev in events:
+            f.write(json.dumps(ev) + "\n")
+    metrics = summarize(events)
     home = os.path.expanduser("~/.claude/projects")
     for sid in metrics["sessions"]:
         for path in glob.glob(os.path.join(home, "*", f"{sid}.jsonl")):
@@ -178,6 +200,44 @@ def cmd_evidence(args):
 
 def _ignore(directory, names):
     return shutil.ignore_patterns(*IGNORED)(directory, names)
+
+
+def cmd_resolve_paths(args):
+    markov = args.markov_bin
+    if os.sep in markov:
+        markov = os.path.abspath(markov)
+    else:
+        markov = shutil.which(markov) or os.environ.get("MARKOV_BIN") or ""
+    if not markov:
+        sys.exit(f"cannot find the markov binary {args.markov_bin!r}: put it on PATH, set MARKOV_BIN, or pass --var markov_bin=...")
+    emit({
+        "codify_dir": os.path.abspath(args.codify_dir),
+        "project_dir": os.path.abspath(args.project_dir),
+        "markov_docs": os.path.abspath(args.markov_docs),
+        "markov_bin": markov,
+    })
+
+
+def cmd_begin_iteration(args):
+    os.makedirs(args.codify_dir, exist_ok=True)
+    n = len(glob.glob(os.path.join(args.codify_dir, "iter-*"))) + 1
+    path = os.path.join(args.codify_dir, f"iter-{n:04d}")
+    os.makedirs(path)
+    emit({"iteration_dir": path, "n": n})
+
+
+def cmd_spend(args):
+    total = 0.0
+    rows = 0
+    try:
+        with open(args.metrics_file) as f:
+            for line in f:
+                if line.strip():
+                    rows += 1
+                    total += (json.loads(line).get("retro") or {}).get("cost_usd") or 0
+    except OSError:
+        pass
+    emit({"retro_cost_usd": round(total, 4), "iterations": rows})
 
 
 def cmd_prepare_candidate(args):
@@ -246,7 +306,7 @@ def cmd_validate(args):
 
     proc = subprocess.run([args.markov, "validate", args.candidate], capture_output=True, text=True)
     if proc.returncode != 0:
-        result["reasons"].append(f"markov validate failed: {(proc.stdout + proc.stderr).strip()[-2000:]}")
+        result["reasons"].append(f"markov validate failed: {failure_text(proc)}")
         return done()
 
     handler = functools.partial(QuietHandler, directory=args.fixture)
@@ -274,7 +334,7 @@ def cmd_validate(args):
     result["candidate"] = summarize(load_events(events))
     result["candidate"]["run_seconds"] = round(time.monotonic() - started, 1)
     if proc.returncode != 0:
-        result["reasons"].append(f"candidate run failed: {(proc.stdout + proc.stderr).strip()[-2000:]}")
+        result["reasons"].append(f"candidate run failed: {failure_text(proc)}")
         return done()
 
     out = os.path.join(out_dir, OUTPUT_FILE)
@@ -378,6 +438,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    p = sub.add_parser("resolve-paths")
+    p.add_argument("--codify-dir", required=True)
+    p.add_argument("--project-dir", required=True)
+    p.add_argument("--markov-docs", required=True)
+    p.add_argument("--markov-bin", required=True)
+    p.set_defaults(fn=cmd_resolve_paths)
+
+    p = sub.add_parser("begin-iteration")
+    p.add_argument("--codify-dir", required=True)
+    p.set_defaults(fn=cmd_begin_iteration)
+
+    p = sub.add_parser("spend")
+    p.add_argument("--metrics-file", required=True)
+    p.set_defaults(fn=cmd_spend)
+
     p = sub.add_parser("record-fixture")
     p.add_argument("--base-url", required=True)
     p.add_argument("--out", required=True)
@@ -386,6 +461,7 @@ def main():
     p = sub.add_parser("evidence")
     p.add_argument("--events", required=True)
     p.add_argument("--iteration-dir", required=True)
+    p.add_argument("--run-id", default="", help="keep only this run's and its sub-runs' events")
     p.set_defaults(fn=cmd_evidence)
 
     p = sub.add_parser("prepare-candidate")

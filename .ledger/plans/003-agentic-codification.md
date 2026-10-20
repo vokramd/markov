@@ -9,7 +9,8 @@ markovd) and in the Markov IDE; the IDE side is
 
 **Status:** phase 1 done (notes/codify-phase1-run.md), phase 2 done
 (ADR-0006, tasks/done/reload-workflow-step.md), phase 3 done
-(tasks/done/event-log-variables.md). Engine and IDE findings
+(tasks/done/event-log-variables.md), phase 4 done
+(tasks/done/codify-in-process-loop.md). Phase 5 (IDE) is next. Engine and IDE findings
 below were checked against the code on 2026-10-20.
 
 ## Idea

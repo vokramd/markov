@@ -9,7 +9,7 @@
 - [Directory Workflow Files Plan](plans/000-directory-workflow-files.md)
 - [Step-Through Debugging and Interactive Workflow Building](plans/001-step-through-debugging.md)
 - [Durable External Tasks and Orchestration Reliability](plans/002-durable-task-orchestration.md) — proposed; implementation not started.
-- [Agentic Codification](plans/003-agentic-codification.md) — phases 1–3 done (notes/codify-phase1-run.md, ADR-0006); retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
+- [Agentic Codification](plans/003-agentic-codification.md) — phases 1–4 done (notes/codify-phase1-run.md, ADR-0006); IDE support next; retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
 
 ## Active Tasks
 
@@ -21,6 +21,7 @@
 
 ## Completed Tasks
 
+- [Codification loop in one markov process](tasks/done/codify-in-process-loop.md) (plan 003 phase 4)
 - [Event-log and current-run variables](tasks/done/event-log-variables.md) (plan 003 phase 3)
 - [reload_workflow step and hot reload](tasks/done/reload-workflow-step.md) (plan 003 phase 2)
 - [Promotion, version archive and metrics loop](tasks/done/codify-promote-metrics.md) (plan 003 phase 1)
