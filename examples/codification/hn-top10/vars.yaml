@@ -1,6 +1,10 @@
 hn_base_url: https://hacker-news.firebaseio.com/v0
 out_dir: /tmp/hn-top10
 
+# Models for the task's agent steps and the retro agent.
+task_model: claude-haiku-5-5
+retro_model: claude-haiku-5-5
+
 # The codification loop (codify_loop). Relative paths are resolved against
 # the directory markov runs in (the project directory in the IDE).
 codify_dir: ../hn-top10.codify

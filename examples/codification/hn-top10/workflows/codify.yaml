@@ -47,6 +47,7 @@ steps:
     ignore_errors: true
     params:
       chdir: "{{ codify_dir }}/candidate"
+      model: "{{ retro_model }}"
       add_dirs: ["{{ iteration_dir }}", "{{ markov_docs }}"]
       allowed_tools: [Read, Grep, Glob, Edit, Write, "Bash({{ markov_bin }} validate:*)"]
       permission_mode: acceptEdits

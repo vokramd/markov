@@ -14,6 +14,7 @@ steps:
     register: do_task
     params:
       chdir: "{{ out_dir }}"
+      model: "{{ task_model }}"
       prompt: |
         Write the current top 10 Hacker News stories to the file hn-top10.md
         in the current directory.
