@@ -55,6 +55,9 @@ steps:
     when: "outcome.status == 'passed'"
     register: reloaded
     params:
+      # The project the candidate was promoted into, not the run's source: an IDE
+      # runs a snapshot copy of the project.
+      source: "{{ project_dir }}"
       require: [task, codify, codify_loop, codify_iteration]
 
   - name: spend
