@@ -27,17 +27,32 @@ steps:
     vars:
       out_dir: "{{ it.iteration_dir }}/out"
 
+  # Not registered: a sub-workflow's register holds its whole context, which
+  # would be inherited by the next iteration (and its task) and grow every
+  # time. The pass's outcome is read back from the file it writes instead.
   - name: codify
     workflow: codify
-    register: pass
     vars:
       iteration_dir: "{{ it.iteration_dir }}"
       task_events: "{{ markov_event_logs.0 }}"
       task_run_id: "{{ markov_current_run_id }}-task"
 
+  - name: outcome
+    type: script_exec
+    register: outcome_run
+    params:
+      interpreter: python3
+      path: codify/codify.py
+      args: [outcome, --iteration-dir, "{{ it.iteration_dir }}"]
+
+  - name: pass_outcome
+    type: set_fact
+    vars:
+      outcome: "{{ outcome_run.stdout | fromjson }}"
+
   - name: reload
     type: reload_workflow
-    when: "pass.validation.status == 'passed'"
+    when: "outcome.status == 'passed'"
     register: reloaded
     params:
       require: [task, codify, codify_loop, codify_iteration]
@@ -57,6 +72,6 @@ steps:
 
   - name: next
     workflow: codify_iteration
-    when: "pass.validation.status != 'no_change' and i < max_iterations and spend.retro_cost_usd < max_codify_usd"
+    when: "outcome.status != 'no_change' and i < max_iterations and spend.retro_cost_usd < max_codify_usd"
     vars:
       i: "{{ i + 1 }}"

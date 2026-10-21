@@ -11,6 +11,7 @@ Subcommands:
   rollback           install an archived version's task files
   record             append one row to metrics.jsonl
   spend              total codification spend so far
+  outcome            the validation status of an iteration's codify pass
 
 Each subcommand prints one JSON object on stdout.
 """
@@ -240,6 +241,11 @@ def cmd_spend(args):
     emit({"retro_cost_usd": round(total, 4), "iterations": rows})
 
 
+def cmd_outcome(args):
+    result = read_json(os.path.join(args.iteration_dir, "validation", "result.json"), {}) or {}
+    emit({"status": result.get("status") or "failed"})
+
+
 def cmd_prepare_candidate(args):
     shutil.rmtree(args.out, ignore_errors=True)
     shutil.copytree(args.project, args.out, ignore=_ignore, symlinks=True)
@@ -448,6 +454,10 @@ def main():
     p = sub.add_parser("begin-iteration")
     p.add_argument("--codify-dir", required=True)
     p.set_defaults(fn=cmd_begin_iteration)
+
+    p = sub.add_parser("outcome")
+    p.add_argument("--iteration-dir", required=True)
+    p.set_defaults(fn=cmd_outcome)
 
     p = sub.add_parser("spend")
     p.add_argument("--metrics-file", required=True)

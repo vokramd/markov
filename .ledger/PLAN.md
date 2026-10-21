@@ -49,7 +49,7 @@
 
 ## Open Bugs
 
-- None
+- [Registered sub-workflow and for_each results carry the caller's whole context](bugs/open/register-copies-whole-context.md)
 
 ## Fixed Bugs
 

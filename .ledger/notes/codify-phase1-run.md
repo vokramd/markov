@@ -53,3 +53,23 @@ Final v0005: `http_request` → `set_fact` slice → `assert` → `for_each` `ht
 | 2 | 0 / 38 | 0 | $0 | $0.171 | no_change | loop stopped |
 
 A first attempt (`hn-top10-p4test.codify`) failed every candidate on an engine check (see tasks/done/codify-in-process-loop.md), costing ~$1.6.
+
+# Haiku: the whole loop on claude-haiku-5-5
+
+2026-10-20, `./codify.sh 8` from v0 with `task_model` and `retro_model` = `claude-haiku-5-5`.
+
+First attempt (`hn-top10-haiku.codify`): five promotions, but iteration 4's task failed `max_tokens`: the residual prompt serialized a `for_each` result, and in the loop every element carried the driver's growing `pass` register (52 KB → 270 KB over five iterations; bugs/open/register-copies-whole-context.md). The validator, which runs the task alone, could not see it. The driver no longer registers the codify pass; it reads the outcome from `validation/result.json`.
+
+Second attempt (`hn-top10-haiku2.codify`):
+
+| Iter | Task (agent / native) | Task tokens | Task cost | Retro cost | Job extracted | Result |
+|---|---|---|---|---|---|---|
+| 1 | 1 / 1 | 16,722 | $0.0055 | $0.057 | fetch topstories, take 10 IDs | promoted v0001 |
+| 2 | 1 / 3 | 14,992 | $0.0050 | $0.026 | fetch each item | promoted v0002 |
+| 3 | 1 / 14 | 11,732 | $0.0035 | $0.075 | pick url or HN fallback (`task_link`) | promoted v0003 |
+| 4 | 1 / 24 | 11,008 | $0.0030 | $0.019 | format each line | promoted v0004 |
+| 5 | 1 / 25 | 11,493 | $0.0035 | $0.017 | write the file | promoted v0005 |
+| 6 | 0 / 26 | 0 | $0 | $0.008 | none | no_change, stopped |
+
+- Every candidate passed on the first try; no scripts. Task context stayed 2.2–2.9 KB per iteration.
+- Retro total $0.20 (Opus run 2: $2.48). The agent task is now so cheap ($0.0055/run) that codifying it pays back only after ~37 runs; on Opus the same work paid back after ~16. The cheaper the agent, the weaker the economic case, and the stronger the case for codifying only expensive or frequent work.
