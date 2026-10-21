@@ -73,3 +73,18 @@ Second attempt (`hn-top10-haiku2.codify`):
 
 - Every candidate passed on the first try; no scripts. Task context stayed 2.2–2.9 KB per iteration.
 - Retro total $0.20 (Opus run 2: $2.48). The agent task is now so cheap ($0.0055/run) that codifying it pays back only after ~37 runs; on Opus the same work paid back after ~16. The cheaper the agent, the weaker the economic case, and the stronger the case for codifying only expensive or frequent work.
+
+# Phase 6: `markov codify` on a user's workflow
+
+2026-10-20, a copy of `~/Documents/markhov-hn-codify` with `codify-me` given tools (`WebFetch`, `Bash(curl:*)`, `Write`, `acceptEdits`); the prompt unchanged: "make a stories.html from the top 10 hackernews articles". `markov codify <copy> --workflow codify-me --max-iterations 6 --budget-usd 2`, Haiku. No URLs, format or contract declared anywhere.
+
+| Iter | Agent / steps | Task tokens | Retro | Job | Result |
+|---|---|---|---|---|---|
+| 1 | 1 / 1 | 21,911 | $0.062 | fetch the top-stories IDs, take 10 | promoted v0001 (judged) |
+| 2 | 1 / 2 | 19,153 | $0.023 | fetch each item | rejected by the judge: 536 vs 537 points |
+| 3 | 1 / 2 | 18,433 | $0.028 | fetch items, choose fields, format, write (the agent's whole remaining work) | promoted v0002 (judged) |
+| 4 | 0 / 13 | 0 | – | – | no agent steps left |
+
+Total spend $0.17. Result: `http_request` topstories → `for_each` `http_request` items → `write_file` HTML. The URLs came from the agent's trace (requests.md); the HTML format was fixed by the first native version and accepted by the judge on content.
+
+Iteration 2's rejection was a recording bug: the agent fetched an item twice while its score changed; the recording kept the second response (537), the agent had used the first (536). Fixed: within a live run a repeated request gets its first response.

@@ -293,6 +293,43 @@ fi
 
 ---
 
+### markov codify
+
+Codify a workflow: move the work its agent steps (`claude`, `llm_invoke`) do that needs no judgment into native steps, one validated change at a time, while the workflow keeps producing the same outputs. Nothing needs adding to the project.
+
+```
+markov codify <directory> --workflow <name> [flags]
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--workflow name` | (required) | The workflow to codify. It and the workflows it calls may change; nothing else may. |
+| `--model name` | `claude-haiku-5-5` | Model for the retro agent and the judge. |
+| `--max-iterations N` | `8` | Stop after this many iterations. |
+| `--budget-usd X` | `5` | Stop once model spend (the workflow's agent steps, the retro agent, the judge) reaches this; `0` for no limit. |
+| `--codify-dir path` | `<directory>.codify` | Where history goes. Must be outside the project. |
+| `--keep step` | -- | A step (`step` or `workflow.step`) that must stay an agent step. Repeatable. |
+| `--prompt-file path` | built in | Replace the retro agent's strategy prompt, a Go template with the same fields as the built-in one (`pkg/codify/retro.md`). |
+| `--callback url` and the other callback flags | -- | As for `markov run`: receive codify's events (below). |
+
+**Events.** Codify is one run (`run_started` … `run_completed`, named after the workflow). Its phases are steps of a virtual workflow named `codify`: `live`, `retro`, `candidate`, `judge` and `promote`, with their results as step output; the retro agent's and the judge's claude streams arrive as `step_progress` of `codify.retro` and `codify.judge`. Every event of the target workflow's runs (live and candidate) is passed on unchanged, including its claude steps' `step_progress`, except that each child run's own start and end arrive as `sub_run_started`/`sub_run_completed`/`sub_run_failed` with `parent_step` `live` or `candidate`. A one-line progress report per phase also goes to standard output.
+
+Each iteration:
+
+1. **Runs the current version** as `markov run <directory> --workflow <name>`, started in an empty directory, through a recording HTTP(S) proxy. The files it writes in that directory are its outputs; what it fetched is recorded. The proxy has its own certificate authority, which the run trusts through `HTTPS_PROXY`, `SSL_CERT_FILE`, `CURL_CA_BUNDLE`, `REQUESTS_CA_BUNDLE` and `NODE_EXTRA_CA_CERTS`; the claude CLI's own API traffic is tunnelled untouched.
+2. **Collects evidence**: the run's events, its claude transcripts, its outputs, the recorded requests (with the start of each response), and the previous pass's result.
+3. **Lets the retro agent edit a copy of the project**, moving one job out of the agent steps (native steps before scripts). It may change the files defining the workflow and the workflows it calls, add `workflows/<name>_*.yaml` helpers and files under `scripts/<name>/`.
+4. **Checks the copy**: no other file changed, scripts come with a justification, `markov validate` passes, `--keep` steps are still agent steps.
+5. **Runs the copy against the recording.** A request that was not recorded, or is not a GET or HEAD, fails.
+6. **Compares outputs** with the current version's. Identical outputs pass. Otherwise, because an agent produced the current version's outputs, a judge (the `--model`) compares their content: the same items, values, order and links; formatting may differ.
+7. **Installs a passing copy** in the project and archives the version.
+
+It stops when the retro agent finds nothing more to codify, no agent steps are left, the iterations or budget run out, three candidates in a row are rejected, or the current version fails or writes no files.
+
+History in the codify directory: `versions/vNNNN/` (the codified files of each version, `v0000` the original), `metrics.jsonl` (one row per iteration, which the IDE's Codification tab charts), and `iter-NNNN/` (the live and candidate runs, recording, evidence, `retro.json`, `validation.json`).
+
+Requires a directory workflow and the `claude` CLI. The workflow's outputs must be files it writes relative to where it starts (a `claude` step without `chdir` writes there); side effects other than HTTP GETs are not supported yet.
+
 ### markov diagram
 
 Generate a Mermaid flowchart diagram from a completed (or failed) workflow run. The diagram is written to stdout.

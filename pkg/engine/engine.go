@@ -134,6 +134,9 @@ func New(file *parser.WorkflowFile, store state.Store, executors map[string]exec
 	if _, ok := executors["reload_workflow"]; !ok {
 		executors["reload_workflow"] = &reloadExecutor{e: e}
 	}
+	if _, ok := executors["codify"]; !ok {
+		executors["codify"] = &codifyExecutor{e: e}
+	}
 	e.store = &hashingStore{Store: store, e: e}
 	return e
 }

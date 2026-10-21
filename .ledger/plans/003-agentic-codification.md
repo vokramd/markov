@@ -12,7 +12,8 @@ markovd) and in the Markov IDE; the IDE side is
 (tasks/done/event-log-variables.md), phase 4 done
 (tasks/done/codify-in-process-loop.md), phase 5 done in markov-ide (its
 plan 002: reload review, agent/native styling and coverage, Codification
-tab). Phase 6 (codify any workflow by default) proposed. Engine and IDE findings
+tab), phase 6 done (tasks/done/markov-codify-command.md; IDE: Codify
+this workflow). Engine and IDE findings
 below were checked against the code on 2026-10-20.
 
 ## Idea

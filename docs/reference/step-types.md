@@ -1,7 +1,7 @@
 {% raw %}
 # Built-in Step Types
 
-Markov ships with sixteen primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
+Markov ships with seventeen primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
 
 All step types support these common fields:
 
@@ -1217,6 +1217,54 @@ With a debugger control channel attached (`--control stdin`, as the IDE uses), t
       when: "i < 10"
       vars:
         i: "{{ i + 1 }}"
+```
+
+---
+
+## codify
+
+One iteration of [`markov codify`](cli.md#markov-codify) on a workflow of the project: runs it live through a recording proxy, lets a retro agent move one job out of its agent steps in a copy of the project, runs the copy against the recording, and installs it in the project when its outputs still match. Use it to drive codification from a workflow of your own; follow it with [`reload_workflow`](#reload_workflow) when it promoted a version, and call your loop again.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workflow` | string | yes | The workflow to codify (it and the workflows it calls may change). |
+| `model` | string | no | Model for the retro agent and the judge. Default `claude-haiku-5-5`. |
+| `keep` | string[] | no | Steps (`step` or `workflow.step`) that must stay agent steps. |
+| `project` | string | no | The project directory to codify and install into. Default the run's source; set it when the run's source is a copy (an IDE run). |
+| `codify_dir` | string | no | History directory. Default `<project>.codify`. |
+| `prompt_file` | string | no | Replacement for the retro agent's prompt. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `status` | string | `passed`, `failed`, `no_change` (nothing left to codify) or `live_failed` (the workflow itself failed or wrote no files). |
+| `promoted` | bool | A new version was installed. |
+| `version` | string | The version installed, when promoted. |
+| `reasons` | list | Why a candidate was rejected. |
+| `judged` | bool | The outputs were compared by content because an agent produced them. |
+| `iteration`, `extracted`, `agent_steps`, `spent_usd` | | The iteration directory, the job moved out of the agent, the agent steps the run had, and the model spend. |
+
+The markov binary for the child runs is `MARKOV_BIN` when set, else the running one.
+
+### Example
+
+```yaml
+- name: loop
+  steps:
+    - name: codify
+      type: codify
+      register: c
+      params:
+        workflow: codify-me
+    - name: reload
+      type: reload_workflow
+      when: "c.promoted"
+    - name: again
+      workflow: loop
+      when: "c.status == 'passed'"
 ```
 
 ---

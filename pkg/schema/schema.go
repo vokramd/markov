@@ -137,6 +137,10 @@ func stepTypes() []StepType {
 		StepType{Name: "reload_workflow", Inputs: "params", Summary: "Replace the running workflow definition; sub-workflows called afterwards use the new one (needs --allow-reload).", Params: []Param{
 			p("source", "Workflow file or directory to load (default: the run's own source)"), p("require", "Workflow names the new definition must contain"),
 		}},
+		StepType{Name: "codify", Inputs: "params", Summary: "One iteration of markov codify on a workflow of the project: move one job out of its agent steps and promote the result when its outputs still match.", Params: []Param{
+			req("workflow", "The workflow to codify"), p("model", "Retro agent and judge model (default claude-haiku-5-5)"), p("keep", "Steps that must stay agent steps"),
+			p("project", "Project directory to codify (default the run's source)"), p("codify_dir", "History directory (default <project>.codify)"), p("prompt_file", "Replacement retro prompt"),
+		}},
 		StepType{Name: "jev", Inputs: "params", Summary: "Ask a Jev decision service.", Params: []Param{}},
 		StepType{Name: "llm_invoke", Inputs: "params", Summary: "Invoke a language model.", Params: []Param{}},
 	)

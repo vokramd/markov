@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/jctanner/markov/pkg/callback"
+	"github.com/jctanner/markov/pkg/codify"
 	"github.com/jctanner/markov/pkg/engine"
 	"github.com/jctanner/markov/pkg/executor"
 	"github.com/jctanner/markov/pkg/parser"
@@ -144,6 +147,50 @@ func main() {
 	addCallbackFlags(resumeCmd)
 	addDebugFlags(resumeCmd)
 
+	var codifyCfg codify.Config
+	codifyCmd := &cobra.Command{
+		Use:   "codify <directory>",
+		Short: "Codify a workflow: move work that needs no model out of its agent steps, one validated step at a time",
+		Long: `Codify runs the workflow, lets a retro agent move one job out of its agent (claude) steps
+into native steps in a copy of the project, runs the copy against a recording of what the
+workflow fetched, and installs it when its outputs match. It repeats until no agent work that
+can be codified is left. History (versions, metrics, recordings) goes to <directory>.codify.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			bin, err := os.Executable()
+			if err != nil {
+				return err
+			}
+			codifyCfg.Source = args[0]
+			codifyCfg.Markov = bin
+			codifyCfg.Out = os.Stdout
+			cbs, err := buildCallbacks()
+			if err != nil {
+				return err
+			}
+			codifyCfg.Callbacks = cbs
+			defer func() {
+				for _, cb := range cbs {
+					cb.Close()
+				}
+			}()
+			// Stop (SIGTERM from the IDE, Ctrl-C) cancels the child runs and records the iteration.
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			_, err = codify.Run(ctx, codifyCfg)
+			return err
+		},
+	}
+	codifyCmd.Flags().StringVar(&codifyCfg.Workflow, "workflow", "", "The workflow to codify (it and the workflows it calls)")
+	codifyCmd.Flags().StringVar(&codifyCfg.Model, "model", "claude-haiku-5-5", "Model for the retro agent and the judge")
+	codifyCmd.Flags().IntVar(&codifyCfg.MaxIterations, "max-iterations", 8, "Stop after this many iterations")
+	codifyCmd.Flags().Float64Var(&codifyCfg.BudgetUSD, "budget-usd", 5, "Stop once model spend reaches this (0: no limit)")
+	codifyCmd.Flags().StringVar(&codifyCfg.CodifyDir, "codify-dir", "", "Where history goes (default <directory>.codify)")
+	codifyCmd.Flags().StringArrayVar(&codifyCfg.Keep, "keep", nil, "A step (step or workflow.step) that must stay an agent step (repeatable)")
+	codifyCmd.Flags().StringVar(&codifyCfg.PromptFile, "prompt-file", "", "Replace the retro agent's strategy prompt (a Go template; see the default in pkg/codify/retro.md)")
+	_ = codifyCmd.MarkFlagRequired("workflow")
+	addCallbackFlags(codifyCmd)
+
 	statusCmd := &cobra.Command{
 		Use:   "status <run_id>",
 		Short: "Show run status",
@@ -187,7 +234,7 @@ func main() {
 		},
 	}
 
-	root.AddCommand(runCmd, resumeCmd, statusCmd, listCmd, validateCmd, diagramCmd, schemaCmd)
+	root.AddCommand(runCmd, resumeCmd, statusCmd, listCmd, validateCmd, diagramCmd, schemaCmd, codifyCmd)
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
@@ -250,7 +297,10 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 		debugLog("k8s client: unavailable: %v", err)
 	}
 
-	ctx := context.Background()
+	// Stop (SIGTERM, Ctrl-C) cancels the run: steps stop their own processes (a claude step's
+	// whole process group) and the run is saved as failed, so it can be resumed.
+	ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
 	dbg, err := buildDebugger(wfFile)
 	if err != nil {
 		return err
@@ -378,7 +428,10 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 	}
 	defer store.Close()
 
-	ctx := context.Background()
+	// Stop (SIGTERM, Ctrl-C) cancels the run: steps stop their own processes (a claude step's
+	// whole process group) and the run is saved as failed, so it can be resumed.
+	ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
 	run, err := store.GetRun(ctx, args[0])
 	if err != nil {
 		return err
