@@ -12,7 +12,7 @@ markovd) and in the Markov IDE; the IDE side is
 (tasks/done/event-log-variables.md), phase 4 done
 (tasks/done/codify-in-process-loop.md), phase 5 done in markov-ide (its
 plan 002: reload review, agent/native styling and coverage, Codification
-tab). Engine and IDE findings
+tab). Phase 6 (codify any workflow by default) proposed. Engine and IDE findings
 below were checked against the code on 2026-10-20.
 
 ## Idea
@@ -190,6 +190,105 @@ evidence and metrics → `retro` (claude, writes candidate) → `validate` →
 4. **Automated driver loop** with metrics and budget stop; record a run and
    the coverage/cost curve in `.ledger/notes/`.
 5. **IDE support** per the IDE plan (needs 2; useful from 1 for viewing).
+6. **Codify any workflow by default** (below): `markov codify`, nothing
+   added to the user's project. Proposed 2026-10-20.
+
+## Phase 6: codify any workflow by default
+
+Phases 1–5 proved the loop, but using it means copying a driver (four
+workflows and `codify.py`) into the project, naming the target `task`, and
+hand-writing a validator for that one task (`hn_base_url` as a replay seam,
+an exact 10-line output contract). The default should need none of that:
+the user writes an ordinary agentic workflow and asks for it to be codified.
+
+Target case: `~/Documents/markhov-hn-codify`, where `main` calls
+`codify-me`, a single haiku `claude` step: "make a stories.html from the
+top 10 hackernews articles". No URLs, output format or contract declared.
+
+### The simple path
+
+```
+markov codify <project> --workflow codify-me \
+  [--model claude-haiku-5-5] [--max-iterations 8] [--budget-usd 1]
+```
+
+In the IDE: right-click a workflow, **Codify this workflow…** (model,
+iterations, budget), which runs the same command and fills the
+Codification tab. History goes to `<project>.codify/` beside the project,
+in the format the tab already reads (`metrics.jsonl`, `versions/`).
+
+### Design
+
+1. **The workflow is the unit.** The target and everything it reaches
+   through sub-workflow calls (the reachability walk the `--allow-reload`
+   check already does) is editable; the retro agent may add helper
+   workflows `workflows/<target>_*.yaml` and `scripts/<target>/`. Callers
+   (`main`) and everything else are protected. This replaces the `task` /
+   `task_*` naming convention. Equivalence is checked at the workflow's
+   boundary, so the agent may restructure freely inside it.
+2. **The harness is code; only the proposal is an agent.** `markov codify`
+   runs each version as a child `markov run --workflow <target>` in a fresh
+   working directory, so its outputs are the files it creates there (no
+   `out_dir` variable needed) plus what it registers. The loop does not live
+   in a workflow, so it needs no `reload_workflow`: each child run reads the
+   current files. Reading events, recording, the edit guard, comparison,
+   promotion, versions, metrics and budgets are all deterministic.
+3. **Inputs from the trace, recorded and replayed.** The measured live run
+   goes through a recording HTTP(S) proxy that Markov starts (its own CA,
+   trusted via `HTTPS_PROXY`/`SSL_CERT_FILE`/`CURL_CA_BUNDLE`/
+   `NODE_EXTRA_CA_CERTS` for the agent's tools, and by Markov's own
+   `http_request`). Candidates and the current version are then run
+   against the recording, so they see identical inputs. A request that is
+   not in the recording, or is not a GET/HEAD, fails in replay and is
+   reported: side effects stay out of scope until plan 002's durable tasks.
+4. **The current version is the oracle.** A candidate passes when, on the
+   same replayed inputs, it produces the same outputs as the current
+   version. No hand-written contract.
+5. **The first pass may fix the format.** v0's output is whatever the agent
+   chose (free-form HTML); two v0 runs do not match each other. The pass
+   that first replaces the step producing it is checked loosely: a judge
+   (the codify model) confirms the candidate's output carries the same
+   information as v0's on the same inputs (same stories, order, links).
+   From then on outputs are deterministic and compared exactly. Which
+   outputs are judged is recorded in the metrics.
+6. **Some steps stay agents.** `--keep <step>` (and a `codify: keep`
+   marker to be decided) excludes a step from codification; its outputs
+   are compared loosely or treated as given.
+7. **A default retro skill that can be replaced.** The prompt from the demo
+   (one job per pass, native steps before scripts, the previous rejection
+   as feedback) ships with Markov as the default; `--prompt-file` (and a
+   skill name) replace the strategy. The harness always supplies the facts
+   whatever the prompt: evidence paths, the editable set, the reference
+   docs, how candidates are judged.
+8. **Also a step type.** `type: codify` (params `workflow`, `model`,
+   `keep`, `max_cost_usd`; output `status`, `promoted`, `version`, costs)
+   for workflows that drive their own loop with `reload_workflow`, as the
+   phase 4 demo does by hand. Same machinery as the command.
+
+### Slices
+
+- 6a. `markov codify` with child runs in fresh directories, the
+  reachability-based guard, exact output comparison, the embedded default
+  prompt, and the existing metrics/versions format. Without replay, inputs
+  are live, so this slice suits tasks whose inputs are stable for a few
+  minutes.
+- 6b. Recording/replaying proxy (HTTP and HTTPS); non-GET refusal.
+- 6c. Loose first-pass judging and `--keep`.
+- 6d. `type: codify`.
+- 6e. IDE: **Codify this workflow…** and the tab reading `<project>.codify`.
+
+### Open questions
+
+- HTTPS interception: which of the agent's tools honour proxy and CA
+  variables (curl, Claude Code's WebFetch, Bash tools in general), and
+  whether a tool that does not can be detected rather than silently
+  bypassing the recording.
+- Output capture beyond the working directory (absolute paths the agent
+  chose) and registered results of the target workflow.
+- How the judge's verdicts are kept honest (sampling, a second model, or
+  asking the user once in the IDE before the format-fixing promotion).
+- Whether `codify: keep` belongs in the workflow file (visible, versioned)
+  or only in the command/IDE settings.
 
 ## Relationship to plan 002
 
