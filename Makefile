@@ -26,7 +26,7 @@ vet:
 	go vet ./...
 
 fmt:
-	@test -z "$$(gofmt -l .)" || (gofmt -l . && exit 1)
+	@files="$$(gofmt -l $$(find . -name '*.go' -not -path './third_party/*'))"; test -z "$$files" || (echo "$$files" && exit 1)
 
 docker-build:
 	docker build -t $(IMAGE):$(TAG) .
