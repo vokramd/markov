@@ -306,9 +306,16 @@ func (expr *term) Evaluate(ctx *ExecutionContext) (*Value, *Error) {
 				return AsValue(f1.Float() / f2.Float()), nil
 			}
 			// Result will be int
+			// markov: an integer division by zero is a template error, not a Go panic.
+			if f2.Integer() == 0 {
+				return nil, ctx.Error("division by zero", expr.opToken)
+			}
 			return AsValue(f1.Integer() / f2.Integer()), nil
 		case "%":
 			// Result will be int
+			if f2.Integer() == 0 {
+				return nil, ctx.Error("division by zero", expr.opToken)
+			}
 			return AsValue(f1.Integer() % f2.Integer()), nil
 		default:
 			return nil, ctx.Error("unimplemented", expr.opToken)

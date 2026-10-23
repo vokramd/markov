@@ -2,6 +2,7 @@ package template
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -263,5 +264,21 @@ func TestFromJSON_WholeNumbersRenderAsIntegers(t *testing.T) {
 	}
 	if result != "50163277/7/1.500000" {
 		t.Errorf("result = %q, want %q", result, "50163277/7/1.500000")
+	}
+}
+
+func TestDivisionByZeroIsAnErrorNotAPanic(t *testing.T) {
+	e := New()
+	// An unquoted path in an expression context parses as a division of undefined names.
+	if _, err := e.EvalBool("openshell/ai-pipeline-ca.pem", map[string]any{}); err == nil || !strings.Contains(err.Error(), "division by zero") {
+		t.Errorf("EvalBool: %v", err)
+	}
+	for _, tmpl := range []string{"{{ 1 / 0 }}", "{{ 5 % 0 }}", "{{ n / zero }}"} {
+		if _, err := e.Render(tmpl, map[string]any{"n": 4, "zero": 0}); err == nil {
+			t.Errorf("%s rendered without an error", tmpl)
+		}
+	}
+	if got, err := e.Render("{{ 7 / 2 }}", nil); err != nil || got != "3" {
+		t.Errorf("ordinary division: %q %v", got, err)
 	}
 }

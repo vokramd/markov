@@ -192,11 +192,22 @@ func (e *Engine) Render(tmpl string, ctx map[string]any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parsing template: %w", err)
 	}
-	result, err := t.Execute(pongo2.Context(ctx))
+	result, err := execute(t, ctx)
 	if err != nil {
 		return "", fmt.Errorf("executing template: %w", err)
 	}
 	return result, nil
+}
+
+// execute runs a parsed template, turning a panic inside the template engine into an error so
+// one bad expression fails its step instead of the whole process.
+func execute(t *pongo2.Template, ctx map[string]any) (result string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("template engine failed: %v", r)
+		}
+	}()
+	return t.Execute(pongo2.Context(ctx))
 }
 
 func (e *Engine) RenderMap(params map[string]any, ctx map[string]any) (map[string]any, error) {
@@ -217,7 +228,7 @@ func (e *Engine) EvalBool(expr string, ctx map[string]any) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("parsing expression %q: %w", expr, err)
 	}
-	result, err := t.Execute(pongo2.Context(ctx))
+	result, err := execute(t, ctx)
 	if err != nil {
 		return false, fmt.Errorf("evaluating expression %q: %w", expr, err)
 	}
