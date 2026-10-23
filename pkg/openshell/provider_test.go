@@ -2,6 +2,7 @@ package openshell
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,5 +106,26 @@ func TestProfileMatchesIgnoresGatewayDefaults(t *testing.T) {
 	registered["binaries"] = []any{"/usr/bin/curl", "/usr/bin/wget"}
 	if profileMatches(file, registered) {
 		t.Error("an extra binary was not noticed")
+	}
+}
+
+func TestNetworkProblemsKeepsDenialsAndFailuresOnce(t *testing.T) {
+	logs := []string{
+		"CONFIG:PUBLISHED [INFO] Policy DNS mapped relay-api.local",
+		"NET:OPEN [MED] DENIED /bin/claude -> 192.168.1.145:443 [reason:transparent_tcp_policy_denied]",
+		"NET:OPEN [INFO] ALLOWED /bin/claude -> relay-api.local:443",
+		"NET:OPEN [MED] DENIED /bin/claude -> 192.168.1.145:443 [reason:transparent_tcp_policy_denied]",
+		"NET:FAIL [LOW] relay-api.local:443",
+	}
+	got := networkProblems(logs)
+	if len(got) != 2 || !strings.Contains(got[0], "DENIED") || !strings.Contains(got[1], "NET:FAIL") {
+		t.Errorf("%q", got)
+	}
+	var many []string
+	for i := 0; i < 25; i++ {
+		many = append(many, fmt.Sprintf("NET:FAIL [LOW] host-%d:443", i))
+	}
+	if got := networkProblems(many); len(got) != maxNetworkProblems || !strings.Contains(got[len(got)-1], "host-24") {
+		t.Errorf("cap keeps the most recent: %q", got)
 	}
 }

@@ -231,6 +231,23 @@ func conformance(ctx context.Context, t *testing.T, tr Transport, image string) 
 		gone(t, "sleep 418")
 	})
 
+	t.Run("network problems", func(t *testing.T) {
+		// The default policy denies all egress, so this connection is logged as denied.
+		run(ExecRequest{Command: []string{"sh", "-c", "exec 3<>/dev/tcp/192.0.2.1/443 || true"}})
+		run(ExecRequest{Command: []string{"python3", "-c", "import socket; s=socket.socket(); s.settimeout(3)\ntry: s.connect(('192.0.2.1', 443))\nexcept Exception: pass"}})
+		var problems []string
+		for i := 0; i < 10 && len(problems) == 0; i++ {
+			time.Sleep(500 * time.Millisecond)
+			var err error
+			if problems, err = tr.NetworkProblems(ctx, name, time.Minute); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if len(problems) == 0 || !strings.Contains(strings.Join(problems, "\n"), "192.0.2.1") {
+			t.Errorf("no denial for 192.0.2.1 in %q", problems)
+		}
+	})
+
 	t.Run("errors", func(t *testing.T) {
 		var out bytes.Buffer
 		if code, err := tr.Exec(ctx, ExecRequest{Sandbox: name + "-missing", Command: []string{"true"}}, &out, io.Discard); err == nil && code == 0 {

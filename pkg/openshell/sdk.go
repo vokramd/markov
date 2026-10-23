@@ -344,3 +344,15 @@ func (s *SDK) EnsureProvider(ctx context.Context, req ProviderRequest) (*Provide
 	}
 	return &ProviderResult{CredentialKeys: keys}, nil
 }
+
+func (s *SDK) NetworkProblems(ctx context.Context, sandbox string, since time.Duration) ([]string, error) {
+	res, err := s.client.Sandboxes().GetLogs(ctx, s.workspace, sandbox, v1.WithLogSince(time.Now().Add(-since)), v1.WithLogLines(1000), v1.WithLogSources("sandbox"))
+	if err != nil {
+		return nil, fmt.Errorf("logs of %s: %w", sandbox, err)
+	}
+	messages := make([]string, len(res.Lines))
+	for i, l := range res.Lines {
+		messages[i] = l.Message
+	}
+	return networkProblems(messages), nil
+}

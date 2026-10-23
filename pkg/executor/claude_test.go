@@ -380,3 +380,42 @@ func TestClaudeInASandboxEnforcesLimitsByEndingTheExec(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func retryEvent(attempt int) map[string]any {
+	return map[string]any{"type": "system", "subtype": "api_retry", "attempt": attempt, "max_retries": 10, "retry_delay_ms": 600, "error": "unknown", "error_status": nil}
+}
+
+func TestClaudeReportsAPIRetriesAndWhyASandboxRunFailed(t *testing.T) {
+	ft := &sandboxTransport{events: []map[string]any{initEvent(), retryEvent(1), retryEvent(2)}}
+	ft.network = []string{"NET:OPEN [MED] DENIED /usr/local/bin/claude -> 192.168.1.145:443 [reason:transparent_tcp_policy_denied]"}
+	e := NewClaude()
+	e.newTransport = func(openshell.Config) (openshell.Transport, error) { return ft, nil }
+	var rec progressRecorder
+	res, err := e.Execute(rec.ctx(), map[string]any{"prompt": "x", "sandbox": "sb1"})
+	if err == nil {
+		t.Fatal("a run without a result succeeded")
+	}
+	for _, want := range []string{"the API never answered: 2 retries, last error unknown", "sandbox network:", "transparent_tcp_policy_denied"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error lacks %q:\n%v", want, err)
+		}
+	}
+	if res.Output["api_retries"] != 2 || len(res.Output["sandbox_network"].([]any)) != 1 {
+		t.Errorf("output %v", res.Output)
+	}
+	rec.mu.Lock()
+	kinds := strings.Join(rec.kinds, ",")
+	rec.mu.Unlock()
+	if strings.Count(kinds, "api_retry") != 2 {
+		t.Errorf("retries were not streamed: %s", kinds)
+	}
+
+	// A run that succeeds does not read the sandbox's logs into its output.
+	ft = &sandboxTransport{events: []map[string]any{initEvent(), retryEvent(1), resultEvent("ok", false, 1)}}
+	ft.network = []string{"NET:FAIL [LOW] somewhere"}
+	e.newTransport = func(openshell.Config) (openshell.Transport, error) { return ft, nil }
+	res, err = e.Execute(context.Background(), map[string]any{"prompt": "x", "sandbox": "sb1"})
+	if err != nil || res.Output["sandbox_network"] != nil || res.Output["api_retries"] != 1 {
+		t.Errorf("err %v output %v", err, res.Output)
+	}
+}

@@ -231,3 +231,19 @@ func pairs(m map[string]string) []string {
 	sort.Strings(out)
 	return out
 }
+
+func (c *CLI) NetworkProblems(ctx context.Context, sandbox string, since time.Duration) ([]string, error) {
+	out, err := c.run(ctx, "logs", sandbox, "--source", "sandbox", "--since", fmt.Sprintf("%ds", int(since.Seconds())+1), "-n", "1000")
+	if err != nil {
+		return nil, err
+	}
+	var messages []string
+	for _, line := range strings.Split(string(out), "\n") {
+		// "[1792781659.661] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED ..." -> the message.
+		if i := strings.Index(line, "] [ocsf] "); i >= 0 {
+			line = line[i+len("] [ocsf] "):]
+		}
+		messages = append(messages, line)
+	}
+	return networkProblems(messages), nil
+}

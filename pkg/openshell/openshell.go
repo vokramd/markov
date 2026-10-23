@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -75,6 +76,32 @@ type Transport interface {
 	EnsureProfile(ctx context.Context, path string) (ProfileChange, error)
 	// EnsureProvider creates the provider, or replaces the credentials of an existing one.
 	EnsureProvider(ctx context.Context, req ProviderRequest) (*ProviderResult, error)
+	// NetworkProblems returns the sandbox's recent network denials and failures (from its logs),
+	// oldest first, to explain why a command could not reach something.
+	NetworkProblems(ctx context.Context, sandbox string, since time.Duration) ([]string, error)
+}
+
+// maxNetworkProblems caps what NetworkProblems returns; the most recent are kept.
+const maxNetworkProblems = 10
+
+// networkProblems keeps the log messages that record a denied or failed connection, without
+// repeats (a retrying client logs the same denial many times), most recent last.
+func networkProblems(messages []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, m := range messages {
+		m = strings.TrimSpace(m)
+		problem := strings.Contains(m, "NET:") && (strings.Contains(m, "DENIED") || strings.Contains(m, "NET:FAIL"))
+		if !problem || seen[m] {
+			continue
+		}
+		seen[m] = true
+		out = append(out, m)
+	}
+	if len(out) > maxNetworkProblems {
+		out = out[len(out)-maxNetworkProblems:]
+	}
+	return out
 }
 
 // ProfileChange says what EnsureProfile did.

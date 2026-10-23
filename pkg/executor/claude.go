@@ -131,6 +131,7 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 		}
 	}
 
+	started := time.Now()
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	if limits.maxDuration > 0 {
@@ -139,14 +140,14 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 		defer cancelTimeout()
 	}
 
+	cfg := e.openshell
+	if t, ok := params["transport"].(string); ok && t != "" {
+		cfg.Transport = t
+	}
 	var stderr bytes.Buffer
 	var stdout io.Reader
 	var wait func() (int, error)
 	if sandbox != "" {
-		cfg := e.openshell
-		if t, ok := params["transport"].(string); ok && t != "" {
-			cfg.Transport = t
-		}
 		stdout, wait, err = e.startInSandbox(runCtx, cfg, openshell.ExecRequest{
 			Sandbox: sandbox,
 			Command: append([]string{binary}, args...),
@@ -180,22 +181,63 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 	output := s.output(exitCode, stderr.String(), breach)
 	res := &Result{Output: output}
 
+	// Why it failed, beyond the limit or exit status: the API never answering, and in a sandbox,
+	// the connections its policy denied or that failed.
+	var why []string
+	if u := s.unreachable(); u != "" {
+		why = append(why, u)
+	}
+	failed := breach != "" || ctx.Err() != nil || s.result == nil || s.resultIsError() || waitErr != nil
+	if sandbox != "" && failed {
+		if problems := e.sandboxNetwork(cfg, sandbox, output, time.Since(started)); len(problems) > 0 {
+			why = append(why, "sandbox network:\n  "+strings.Join(problems, "\n  "))
+		}
+	}
+	detail := ""
+	if len(why) > 0 {
+		detail = " (" + strings.Join(why, "; ") + ")"
+	}
+
 	switch {
 	case breach != "":
-		return res, fmt.Errorf("%s: limit exceeded: %s", name, breach)
+		return res, fmt.Errorf("%s: limit exceeded: %s%s", name, breach, detail)
 	case ctx.Err() != nil:
 		return res, fmt.Errorf("%s: %w", name, ctx.Err())
 	case s.result == nil:
 		if waitErr != nil {
-			return res, fmt.Errorf("%s: %w\nstderr: %s", name, waitErr, stderr.String())
+			return res, fmt.Errorf("%s: %w%s\nstderr: %s", name, waitErr, detail, stderr.String())
 		}
-		return res, fmt.Errorf("%s: process ended without a result event\nstderr: %s", name, stderr.String())
+		return res, fmt.Errorf("%s: process ended without a result event%s\nstderr: %s", name, detail, stderr.String())
 	case s.resultIsError():
 		return res, fmt.Errorf("%s: %s", name, claudeString(s.result["result"], "run reported an error"))
 	case waitErr != nil:
 		return res, fmt.Errorf("%s: %w\nstderr: %s", name, waitErr, stderr.String())
 	}
 	return res, nil
+}
+
+// sandboxNetwork reads the sandbox's network denials and failures since the step started into
+// output["sandbox_network"]. It has its own deadline: the step's context may already be over.
+func (e *Claude) sandboxNetwork(cfg openshell.Config, sandbox string, output map[string]any, since time.Duration) []string {
+	tr, err := e.newTransport(cfg)
+	if err != nil {
+		return nil
+	}
+	if c, ok := tr.(io.Closer); ok {
+		defer c.Close()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	problems, err := tr.NetworkProblems(ctx, sandbox, since+5*time.Second)
+	if err != nil || len(problems) == 0 {
+		return nil
+	}
+	list := make([]any, len(problems))
+	for i, p := range problems {
+		list[i] = p
+	}
+	output["sandbox_network"] = list
+	return problems
 }
 
 // startLocal runs the CLI on the runner. wait returns its exit code (-1 when it did not exit
@@ -427,6 +469,9 @@ type claudeStream struct {
 	truncated  bool
 	result     map[string]any
 	breach     string
+	// retries counts the CLI's api_retry events; lastRetry is the most recent one.
+	retries   int
+	lastRetry map[string]any
 }
 
 func (s *claudeStream) consume(r io.Reader) {
@@ -450,10 +495,20 @@ func (s *claudeStream) consume(r io.Reader) {
 func (s *claudeStream) handle(ev map[string]any) {
 	switch ev["type"] {
 	case "system":
-		if ev["subtype"] == "init" {
+		switch ev["subtype"] {
+		case "init":
 			s.sessionID, _ = ev["session_id"].(string)
 			s.model, _ = ev["model"].(string)
 			s.emit("init", map[string]any{"session_id": s.sessionID, "model": s.model, "cwd": ev["cwd"]}, true)
+		case "api_retry":
+			// The CLI could not get an answer from the API and is waiting to try again; without
+			// this, a run that never reaches the API shows nothing until a limit stops it.
+			s.retries++
+			s.lastRetry = map[string]any{
+				"attempt": ev["attempt"], "max_retries": ev["max_retries"], "retry_delay_ms": ev["retry_delay_ms"],
+				"error": ev["error"], "error_status": ev["error_status"],
+			}
+			s.emit("api_retry", s.lastRetry, true)
 		}
 	case "assistant":
 		s.handleAssistant(ev)
@@ -600,6 +655,10 @@ func (s *claudeStream) output(exitCode int, stderr, breach string) map[string]an
 		"is_error":         breach != "",
 		"total_cost_usd":   0.0,
 	}
+	if s.retries > 0 {
+		out["api_retries"] = s.retries
+		out["last_api_error"] = s.lastRetry
+	}
 	if s.result != nil {
 		out["result"] = claudeString(s.result["result"], "")
 		out["is_error"] = breach != "" || s.resultIsError()
@@ -616,6 +675,18 @@ func (s *claudeStream) output(exitCode int, stderr, breach string) map[string]an
 		}
 	}
 	return out
+}
+
+// unreachable explains a run that ended while the CLI was still retrying the API, or "".
+func (s *claudeStream) unreachable() string {
+	if s.retries == 0 || s.result != nil {
+		return ""
+	}
+	status := ""
+	if st := s.lastRetry["error_status"]; st != nil {
+		status = fmt.Sprintf(", status %v", st)
+	}
+	return fmt.Sprintf("the API never answered: %d retries, last error %v%s", s.retries, s.lastRetry["error"], status)
 }
 
 func claudeToolResultText(v any) string {

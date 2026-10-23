@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jctanner/markov/pkg/openshell"
 )
@@ -23,6 +24,7 @@ type fakeTransport struct {
 	deleted  []string
 	exitCode int
 	provider openshell.ProviderRequest
+	network  []string
 }
 
 func (f *fakeTransport) Create(_ context.Context, req openshell.CreateRequest) (*openshell.Sandbox, error) {
@@ -223,4 +225,8 @@ func TestOpenShellProviderEnsuresProfileThenProviderAndHidesSecrets(t *testing.T
 	if _, err := ex.Execute(context.Background(), map[string]any{"type": "x"}); err == nil {
 		t.Error("a provider without a name was accepted")
 	}
+}
+
+func (f *fakeTransport) NetworkProblems(context.Context, string, time.Duration) ([]string, error) {
+	return f.network, nil
 }
