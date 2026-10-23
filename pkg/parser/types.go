@@ -12,9 +12,26 @@ type WorkflowFile struct {
 	Rules       []Rule                    `yaml:"rules"`
 	StepTypes   map[string]StepType       `yaml:"step_types"`
 	Workflows   []Workflow                `yaml:"workflows"`
+	OpenShell   *OpenShell                `yaml:"openshell"`
 	// ScriptDir is the directory used as the base for script_exec path values.
 	// It is set by the parser and is not part of the workflow YAML schema.
 	ScriptDir string `yaml:"-"`
+}
+
+// OpenShell configures the openshell_* steps: how they reach the OpenShell gateway.
+type OpenShell struct {
+	// Transport is "cli" (the openshell command, the default) or "sdk" (the Go SDK).
+	Transport string `yaml:"transport"`
+	// Workspace is the OpenShell workspace sandboxes live in (default "default").
+	Workspace string `yaml:"workspace"`
+	// Gateway is the gateway name for the CLI, or its host:port address for the SDK.
+	Gateway string `yaml:"gateway"`
+	// Binary is the openshell command the CLI transport runs.
+	Binary string `yaml:"binary"`
+	// TokenEnv names the environment variable holding a bearer token (SDK only).
+	TokenEnv string `yaml:"token_env"`
+	// CAFile is the CA certificate for the gateway's TLS (SDK only).
+	CAFile string `yaml:"ca_file"`
 }
 
 type Rule struct {

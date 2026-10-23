@@ -127,6 +127,27 @@ func stepTypes() []StepType {
 		StepType{Name: "k8s_job_wait", Inputs: "params", Summary: "Wait for an existing Kubernetes Job.", Params: []Param{
 			req("job_name", "Name of the Job to watch"), p("namespace", ""), p("timeout", "Seconds to wait (0 relies on the step timeout)"), p("tail_logs", ""), p("log_bytes", ""),
 		}},
+		StepType{Name: "openshell_build", Inputs: "params", Summary: "Build a sandbox image with podman.", Params: []Param{
+			req("tag", "Image tag; a bare name becomes localhost/<name>"), p("context", "Build context directory (default .)"), p("containerfile", "Containerfile or Dockerfile path"),
+			p("build_args", "Map of build arguments"), p("target", "Build stage"), p("pull", "Always pull base images"), p("no_cache", ""), p("push", "Push the image (for a remote gateway)"), p("binary", "Default podman"),
+		}},
+		StepType{Name: "openshell_create", Inputs: "params", Summary: "Create an OpenShell sandbox and wait until it is ready.", Params: []Param{
+			p("image", "Image reference (default: the gateway's image)"), p("name", "Sandbox name (default derived from the step and run)"), p("cpu", ""), p("memory", "For example 4Gi"),
+			p("gpu", "true for any GPU, or a count"), p("env", "Map of environment variables"), p("providers", "Providers to attach"), p("policy", "Policy file"), p("labels", "Map of labels"), p("transport", "cli or sdk"),
+		}},
+		StepType{Name: "openshell_upload", Inputs: "params", Summary: "Copy a local file or directory into a sandbox.", Params: []Param{
+			req("sandbox", "Sandbox name"), req("src", "Local path"), p("dest", "Sandbox directory to copy into (default /sandbox)"), p("git_ignore", "Skip files .gitignore excludes"), p("transport", "cli or sdk"),
+		}},
+		StepType{Name: "openshell_exec", Inputs: "params", Summary: "Run a command in a sandbox, streaming its output.", Params: []Param{
+			req("sandbox", "Sandbox name"), req("command", "String (run by sh -c) or list (argv)"), p("workdir", ""), p("env", "Map of environment variables"),
+			p("timeout", "Seconds before the command is stopped"), p("stdin", "Text (or a value sent as JSON) for standard input"), p("transport", "cli or sdk"),
+		}},
+		StepType{Name: "openshell_download", Inputs: "params", Summary: "Copy a file or directory out of a sandbox.", Params: []Param{
+			req("sandbox", "Sandbox name"), req("src", "Sandbox path"), p("dest", "Local directory to copy into (default .)"), p("transport", "cli or sdk"),
+		}},
+		StepType{Name: "openshell_delete", Inputs: "params", Summary: "Delete sandboxes.", Params: []Param{
+			req("sandbox", "Sandbox name or list of names"), p("transport", "cli or sdk"),
+		}},
 		StepType{Name: "prompt", Inputs: "params", Summary: "Ask for input.", Params: []Param{
 			req("message", "Text shown before the prompt"), p("choices", ""), p("default", ""), p("case_insensitive", ""),
 		}},

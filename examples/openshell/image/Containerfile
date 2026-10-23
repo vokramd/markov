@@ -1,0 +1,4 @@
+FROM docker.io/library/python:3.12-slim
+# The default OpenShell policy only lets sandboxes read /usr, /bin, /lib and /etc,
+# so code baked into the image goes under /usr.
+COPY report.py /usr/local/lib/report.py

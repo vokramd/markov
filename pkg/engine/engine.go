@@ -1023,6 +1023,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		}
 	}
 
+	execCtx = executor.WithStep(execCtx, executor.StepContext{RunID: runID, Workflow: workflowName, Step: step.Name})
 	execCtx = executor.WithProgress(execCtx, func(kind string, data map[string]any) {
 		e.fireEvent(func(cb callback.Callback) error {
 			return cb.OnStepProgress(callback.StepProgressEvent{

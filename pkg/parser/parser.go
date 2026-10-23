@@ -33,9 +33,10 @@ func ParseDir(path string) (*WorkflowFile, error) {
 
 	metaPath := filepath.Join(path, "meta.yaml")
 	var meta struct {
-		Entrypoint string `yaml:"entrypoint"`
-		Namespace  string `yaml:"namespace"`
-		Forks      int    `yaml:"forks"`
+		Entrypoint string     `yaml:"entrypoint"`
+		Namespace  string     `yaml:"namespace"`
+		Forks      int        `yaml:"forks"`
+		OpenShell  *OpenShell `yaml:"openshell"`
 	}
 	if err := readYAML(metaPath, &meta); err != nil {
 		return nil, err
@@ -43,6 +44,7 @@ func ParseDir(path string) (*WorkflowFile, error) {
 	wf.Entrypoint = meta.Entrypoint
 	wf.Namespace = meta.Namespace
 	wf.Forks = meta.Forks
+	wf.OpenShell = meta.OpenShell
 
 	vars, err := readVars(path)
 	if err != nil {
@@ -263,6 +265,13 @@ func validate(wf *WorkflowFile) error {
 	if wf.Forks <= 0 {
 		wf.Forks = 5
 	}
+	if wf.OpenShell != nil {
+		switch wf.OpenShell.Transport {
+		case "", "cli", "sdk":
+		default:
+			return fmt.Errorf("openshell: transport must be cli or sdk, not %q", wf.OpenShell.Transport)
+		}
+	}
 	if wf.Vars == nil {
 		wf.Vars = map[string]any{}
 	}
@@ -390,24 +399,30 @@ func validateSteps(wf *WorkflowFile, workflowName, section string, steps []Step,
 }
 
 var primitives = map[string]bool{
-	"jev":              true,
-	"k8s_job":          true,
-	"k8s_job_wait":     true,
-	"http_request":     true,
-	"llm_invoke":       true,
-	"shell_exec":       true,
-	"script_exec":      true,
-	"write_file":       true,
-	"claude":           true,
-	"ansible":          true,
-	"ansible_playbook": true,
-	"prompt":           true,
-	"gate":             true,
-	"load_artifact":    true,
-	"set_fact":         true,
-	"assert":           true,
-	"reload_workflow":  true,
-	"codify":           true,
+	"jev":                true,
+	"k8s_job":            true,
+	"k8s_job_wait":       true,
+	"http_request":       true,
+	"llm_invoke":         true,
+	"shell_exec":         true,
+	"script_exec":        true,
+	"write_file":         true,
+	"claude":             true,
+	"ansible":            true,
+	"ansible_playbook":   true,
+	"prompt":             true,
+	"gate":               true,
+	"load_artifact":      true,
+	"set_fact":           true,
+	"assert":             true,
+	"reload_workflow":    true,
+	"codify":             true,
+	"openshell_build":    true,
+	"openshell_create":   true,
+	"openshell_upload":   true,
+	"openshell_exec":     true,
+	"openshell_download": true,
+	"openshell_delete":   true,
 }
 
 // PrimitiveNames lists the built-in step types, sorted.

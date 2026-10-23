@@ -1,0 +1,5 @@
+entrypoint: main
+# How the openshell_* steps reach the gateway. cli (the default) uses the openshell
+# command's active gateway; see docs/reference/workflow-file.md#openshell.
+openshell:
+  transport: cli

@@ -29,3 +29,23 @@ func reportProgress(ctx context.Context, kind string, data map[string]any) {
 		fn(kind, data)
 	}
 }
+
+// StepContext identifies the step an executor is running.
+type StepContext struct {
+	RunID    string
+	Workflow string
+	Step     string
+}
+
+type stepKey struct{}
+
+// WithStep returns a context that tells executors which step they run.
+func WithStep(ctx context.Context, info StepContext) context.Context {
+	return context.WithValue(ctx, stepKey{}, info)
+}
+
+// StepFrom returns the step set by WithStep (zero when there is none).
+func StepFrom(ctx context.Context) StepContext {
+	info, _ := ctx.Value(stepKey{}).(StepContext)
+	return info
+}

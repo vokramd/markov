@@ -1,0 +1,60 @@
+# Build an image, run a report over local data in an OpenShell sandbox, and copy the
+# report back. Run it from this directory (paths are relative to the working directory):
+#
+#   cd examples/openshell && markov run . --state-store /tmp/openshell-example.db
+#
+# Needs podman and a running OpenShell gateway (docs/reference/step-types.md#openshell-sandboxes).
+name: main
+steps:
+  - name: image
+    type: openshell_build
+    register: image
+    params:
+      tag: markov-openshell-example:1
+      context: ./image
+
+  - name: sandbox
+    type: openshell_create
+    register: sandbox
+    params:
+      image: "{{ image.image }}"
+      env:
+        REPORT_TITLE: Fruit inventory
+
+  - name: inputs
+    type: openshell_upload
+    register: inputs
+    params:
+      sandbox: "{{ sandbox.name }}"
+      src: ./data
+      dest: /sandbox
+
+  - name: report
+    type: openshell_exec
+    register: report
+    params:
+      sandbox: "{{ sandbox.name }}"
+      workdir: /sandbox
+      command: [python3, /usr/local/lib/report.py, "{{ inputs.path }}", /sandbox/out/report.md]
+      timeout: 60
+
+  - name: fetch
+    type: openshell_download
+    register: fetched
+    params:
+      sandbox: "{{ sandbox.name }}"
+      src: /sandbox/out/report.md
+      dest: ./results
+
+  - name: show
+    type: shell_exec
+    params:
+      command: "echo 'report written to {{ fetched.path }}:' && cat '{{ fetched.path }}'"
+
+always:
+  # Runs even when a step above failed, so the sandbox never outlives the run.
+  - name: cleanup
+    type: openshell_delete
+    when: "sandbox.name"
+    params:
+      sandbox: "{{ sandbox.name }}"

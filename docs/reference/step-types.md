@@ -1,7 +1,7 @@
 {% raw %}
 # Built-in Step Types
 
-Markov ships with seventeen primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
+Markov ships with twenty-four primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
 
 All step types support these common fields:
 
@@ -1265,6 +1265,211 @@ The markov binary for the child runs is `MARKOV_BIN` when set, else the running 
     - name: again
       workflow: loop
       when: "c.status == 'passed'"
+```
+
+---
+
+## OpenShell sandboxes
+
+The `openshell_*` steps run work in [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandboxes: build an image, create a sandbox from it, copy files in, run commands, copy results out, and delete it. They need an OpenShell gateway; on a Linux workstation that is the `openshell-gateway` user service with the Podman driver (`systemctl --user enable --now podman.socket openshell-gateway`, then `openshell gateway add https://127.0.0.1:17670 --local --name openshell`).
+
+**Transport.** Every step except `openshell_build` reaches the gateway through a transport: `cli` (the default) runs the `openshell` command, which uses its own active gateway and credentials. Choose it, in order of precedence, with the step's `transport` param, `markov run --openshell-transport`, or the workflow file's `openshell:` block ([workflow file](workflow-file.md#openshell)). The `sdk` transport is not implemented yet.
+
+**Copies.** `openshell_upload` and `openshell_download` copy `src` *into* the directory `dest` under its own name, whether `src` is a file or a directory: uploading `./site` to `/sandbox` gives `/sandbox/site`. Rename with `openshell_exec` if you need another name.
+
+**What a sandbox can read.** OpenShell's default policy lets sandbox processes read `/bin`, `/usr`, `/lib`, `/etc`, `/proc` and `/var/log`, and write `/sandbox` (the working directory) and `/tmp`. Install code baked into an image under `/usr` (not `/opt`), or pass a `policy` that allows its path. Sandbox names are DNS labels of at most 19 characters.
+
+**Cleanup.** A sandbox stays up until it is deleted, including when a later step fails. Delete it in the workflow's `always:` section (see the example under [openshell_delete](#openshell_delete)).
+
+Live output of `openshell_build` and `openshell_exec` is reported as `step_progress` events of kind `output`, with `stream` (`stdout` or `stderr`) and `text` (one line).
+
+## openshell_build
+
+Builds an image with `podman build`. OpenShell does not build images: a local gateway with the Podman driver runs images from local Podman storage, so a bare name is tagged `localhost/<name>` for it to find. For a remote gateway, tag the image for a registry the gateway can pull from and set `push`.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tag` | string | yes | Image tag. A name without a registry or path (`site:1`) becomes `localhost/site:1`. |
+| `context` | string | no | Build context directory. Default `.`. |
+| `containerfile` | string | no | Containerfile or Dockerfile path (podman's default lookup when unset). |
+| `build_args` | map | no | Build arguments. |
+| `target` | string | no | Build stage to stop at. |
+| `pull` | bool | no | Always pull base images. |
+| `no_cache` | bool | no | Build without the layer cache. |
+| `push` | bool | no | Push the image after building. |
+| `binary` | string | no | Default `podman`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `image` | string | The image reference to pass to `openshell_create`. |
+| `id` | string | The image ID. |
+
+## openshell_create
+
+Creates a sandbox and returns once it is ready.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | string | no | Image reference. Default: the gateway's default image. |
+| `name` | string | no | Sandbox name: lowercase letters, digits and `-`, at most 19 characters. Default `mk-<step>-<random>`, unique per call, so a `for_each` gets one sandbox per item. |
+| `cpu` | string | no | CPU limit. |
+| `memory` | string | no | Memory limit, for example `4Gi`. |
+| `gpu` | bool or int | no | `true` for a GPU, or a count. |
+| `env` | map | no | Environment variables for the sandbox. |
+| `providers` | string[] | no | OpenShell providers to attach. |
+| `policy` | string | no | Policy file. |
+| `labels` | map | no | Labels. Markov adds `markov-run`, `markov-workflow` and `markov-step` (yours win), so `openshell sandbox list --selector markov-run=<run id>` finds a run's sandboxes. |
+| `transport` | string | no | `cli` or `sdk`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `name` | string | The sandbox name; pass it to the other steps. |
+| `id` | string | The sandbox ID. |
+| `phase` | string | `Ready`. |
+| `workspace` | string | The OpenShell workspace. |
+| `image` | string | The image requested. |
+
+### Failure Conditions
+
+- The image cannot be pulled or found, a sandbox with the name exists, or the gateway is unreachable.
+
+## openshell_upload
+
+Copies a local file or directory into a sandbox directory.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sandbox` | string | yes | Sandbox name. |
+| `src` | string | yes | Local file or directory. Relative paths resolve against the run's working directory. |
+| `dest` | string | no | Sandbox directory to copy into (created if missing). Default `/sandbox`. |
+| `git_ignore` | bool | no | Skip files `.gitignore` excludes when `src` is in a Git work tree. Default `false`: copy everything. |
+| `transport` | string | no | `cli` or `sdk`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `sandbox` | string | The sandbox. |
+| `path` | string | Where `src` landed: `dest/<base name of src>`. |
+
+## openshell_exec
+
+Runs a command in a sandbox and streams its output.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sandbox` | string | yes | Sandbox name. |
+| `command` | string or string[] | yes | A string runs under `sh -c`; a list is the argv. |
+| `workdir` | string | no | Working directory in the sandbox. |
+| `env` | map | no | Environment variables for the command. |
+| `timeout` | int | no | Seconds before the command is stopped. |
+| `stdin` | any | no | Standard input: a string as it is, any other value as JSON. |
+| `transport` | string | no | `cli` or `sdk`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `stdout` | string | Standard output. |
+| `stderr` | string | Standard error. |
+| `exit_code` | int | The command's exit code (124 when `timeout` stopped it). |
+| `timed_out` | bool | `timeout` stopped the command. |
+
+### Failure Conditions
+
+- The command exits non-zero (the error includes stderr) or is stopped by `timeout`. The output is still registered, so `failed_when` or a later step can inspect it.
+- The sandbox does not exist or the gateway is unreachable.
+
+## openshell_download
+
+Copies a file or directory out of a sandbox into a local directory.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sandbox` | string | yes | Sandbox name. |
+| `src` | string | yes | Path in the sandbox. |
+| `dest` | string | no | Local directory to copy into (created if missing). Default `.`, the run's working directory. |
+| `transport` | string | no | `cli` or `sdk`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `sandbox` | string | The sandbox. |
+| `path` | string | Where `src` landed: `dest/<base name of src>`. |
+
+## openshell_delete
+
+Deletes one or more sandboxes. Deleting a sandbox that does not exist succeeds, so it is safe in `always:`.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sandbox` | string or string[] | yes | Sandbox name or names. |
+| `transport` | string | no | `cli` or `sdk`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `deleted` | string[] | The names deleted. |
+
+### Example
+
+The whole lifecycle; `always:` deletes the sandbox even when a step fails:
+
+```yaml
+workflows:
+  - name: main
+    steps:
+      - name: image
+        type: openshell_build
+        register: image
+        params:
+          tag: report-runner:1
+          context: ./image
+      - name: sandbox
+        type: openshell_create
+        register: sandbox
+        params:
+          image: "{{ image.image }}"
+      - name: inputs
+        type: openshell_upload
+        params:
+          sandbox: "{{ sandbox.name }}"
+          src: ./data
+      - name: report
+        type: openshell_exec
+        params:
+          sandbox: "{{ sandbox.name }}"
+          workdir: /sandbox
+          command: python3 /usr/local/lib/report.py data > report.md
+      - name: fetch
+        type: openshell_download
+        params:
+          sandbox: "{{ sandbox.name }}"
+          src: /sandbox/report.md
+    always:
+      - name: cleanup
+        type: openshell_delete
+        when: "sandbox.name"
+        params:
+          sandbox: "{{ sandbox.name }}"
 ```
 
 ---

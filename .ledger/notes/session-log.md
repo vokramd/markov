@@ -94,3 +94,10 @@ and added it to the Markov plan index. Priorities are durable external
 task ownership/reconciliation and engine-side output contracts, followed
 by explicit retry policy, durable events, shared budgets and evidence
 preservation. Proposals only; no engine changes, commit or deployment.
+
+## 2026-10-23 — OpenShell phase 1
+
+Plan 004 phase 1 done: six `openshell_*` step types over the CLI transport, verified against a
+local OpenShell 0.1.5 gateway on the Podman driver (setup in notes/openshell-setup.md). Next:
+phase 2, the Go SDK transport, running the same `TestE2E` conformance checks on both
+transports. Uncommitted at the end of the session.

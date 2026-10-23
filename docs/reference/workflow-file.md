@@ -16,6 +16,26 @@ Markov accepts either a single workflow YAML file or a workflow directory. Both 
 | Rules | `rules` | Rule[] | no | `[]` | Named rule definitions used by `gate` steps. Rules can also be loaded from external files. |
 | StepTypes | `step_types` | map[string]StepType | no | `{}` | User-defined step type definitions that wrap a primitive type with default parameters. |
 | Workflows | `workflows` | Workflow[] | yes | -- | List of workflow definitions. At least one must be defined, and the entrypoint must reference one by name. |
+| OpenShell | `openshell` | map | no | -- | How `openshell_*` steps reach the OpenShell gateway. See [OpenShell](#openshell). |
+
+### OpenShell
+
+Settings for the [`openshell_*` steps](step-types.md#openshell-sandboxes). Every key is optional; an empty block means the `cli` transport with the `openshell` command's own active gateway.
+
+| Key | Description |
+|-----|-------------|
+| `transport` | `cli` (default) runs the `openshell` command; `sdk` uses the Go SDK (not implemented yet). Overridden by `markov run --openshell-transport` and by a step's `transport` param. |
+| `workspace` | OpenShell workspace. Default `default`. |
+| `gateway` | `cli`: a gateway name from `openshell gateway list`. `sdk`: the gateway's `host:port`. |
+| `binary` | `cli`: the command to run. Default `openshell`. |
+| `token_env` | `sdk`: environment variable holding a bearer token. |
+| `ca_file` | `sdk`: CA certificate for the gateway's TLS. |
+
+```yaml
+openshell:
+  transport: cli
+  gateway: openshell
+```
 
 ---
 
@@ -60,7 +80,7 @@ The files map directly to the single-file schema:
 
 | File | YAML Shape | Description |
 |------|------------|-------------|
-| `meta.yaml` | map | `entrypoint`, `namespace`, and `forks` |
+| `meta.yaml` | map | `entrypoint`, `namespace`, `forks`, and `openshell` |
 | `vars.yaml` | map | Top-level variables, without a wrapping `vars:` key |
 | `vars/*.yaml` | map | Optional. More variables, merged in filename order after `vars.yaml`; a variable may be defined only once |
 | `rules.yaml` | list | Rule definitions, without a wrapping `rules:` key |
@@ -387,6 +407,7 @@ These are the built-in step types available in every workflow file.
 | `load_artifact` | Load file artifacts into the variable context. |
 | `set_fact` | Set variables in the current workflow context. |
 | `assert` | Validate expressions. Fails the step if any assertion in `that` is false. |
+| `openshell_build`, `openshell_create`, `openshell_upload`, `openshell_exec`, `openshell_download`, `openshell_delete` | Build a sandbox image and run work in [OpenShell](step-types.md#openshell-sandboxes) sandboxes. |
 | `llm_invoke` | Reserved for LLM integration. Not yet implemented. |
 
 ---

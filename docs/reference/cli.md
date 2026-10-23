@@ -32,6 +32,7 @@ markov run <file.yaml|directory> [flags]
 | `--workflow name` | string | -- | Run a specific workflow by its `name:` field instead of the file's `entrypoint`. |
 | `--forks N` | int | `0` (use file default) | Override the global `forks` concurrency limit. A value of 0 defers to the workflow file setting (which defaults to 5). |
 | `--namespace ns` | string | -- | Override the Kubernetes namespace for `k8s_job` steps. |
+| `--openshell-transport t` | `cli` or `sdk` | -- | Transport for `openshell_*` steps, overriding the workflow file's `openshell.transport`. A step's own `transport` param still wins. |
 | `--kubeconfig path` | string | -- | Path to a kubeconfig file for Kubernetes client configuration. |
 | `--state-store path-or-dsn` | string | `MARKOV_STATE_STORE`, `/tmp/markov-state.db`, or `./markov-state.db` | SQLite path or Postgres DSN. Defaults to `MARKOV_STATE_STORE` when set, then `/tmp/markov-state.db` in-cluster, otherwise `./markov-state.db`. |
 | `--verbose` | bool | `false` | Show detailed execution output including parameter values and template rendering results. |
@@ -108,7 +109,7 @@ markov resume <run_id> [flags]
 | `--source-integrity mode` | `warn`, `strict`, or `off` | `warn` | How to handle a workflow source-tree digest mismatch. `warn` resumes and records drift; `strict` rejects the resume; `off` skips the comparison. |
 | `--rewind json` | string (repeatable) | -- | Re-run from a step of the entrypoint workflow, e.g. `{"workflow":"main","step":"build"}`. That step and every later one run again; the earliest target wins. A completed run can be rewound. See [Edited steps and rewinding](state-store.md#edited-steps-and-rewinding). |
 | `--rewind-changed` | bool | `false` | Re-run from the earliest completed step whose definition changed since it ran. |
-| `--namespace`, `--kubeconfig`, `--forks`, `--verbose`, `--debug` | | | The same execution settings as `markov run`. They aren't stored with the run, so pass the original run's `--namespace` or `--forks` again if it used them. |
+| `--namespace`, `--kubeconfig`, `--openshell-transport`, `--forks`, `--verbose`, `--debug` | | | The same execution settings as `markov run`. They aren't stored with the run, so pass the original run's `--namespace` or `--forks` again if it used them. |
 | `--callback`, `--callback-header`, `--callback-tls-insecure`, `--callback-tls-cert`, `--callback-buffer-size` | | | The same event callbacks as `markov run`; the resumed run emits `run_resumed` first. |
 | `--control`, `--breakpoint`, `--breakpoints-file`, `--break`, `--step` | | | The same [debugger](debugging.md) flags as `markov run`, so a resumed run can be stepped through. |
 | `--allow-reload` | bool | `false` | As for `markov run`. A run that has already reloaded is never resumable. |

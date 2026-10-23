@@ -16,6 +16,7 @@ import (
 	"github.com/jctanner/markov/pkg/codify"
 	"github.com/jctanner/markov/pkg/engine"
 	"github.com/jctanner/markov/pkg/executor"
+	"github.com/jctanner/markov/pkg/openshell"
 	"github.com/jctanner/markov/pkg/parser"
 	"github.com/jctanner/markov/pkg/schema"
 	"github.com/jctanner/markov/pkg/state"
@@ -31,6 +32,7 @@ var (
 	flagForks               int
 	flagStateStore          string
 	flagNamespace           string
+	flagOpenShellTransport  string
 	flagKubeconfig          string
 	flagSteps               bool
 	flagVerbose             bool
@@ -118,6 +120,7 @@ func main() {
 	runCmd.Flags().IntVar(&flagForks, "forks", 0, "Override global forks")
 	addStateStoreFlag(runCmd, stateStorePath)
 	runCmd.Flags().StringVar(&flagNamespace, "namespace", "", "Override K8s namespace")
+	runCmd.Flags().StringVar(&flagOpenShellTransport, "openshell-transport", "", "Transport for openshell_* steps: cli or sdk (overrides the workflow file)")
 	runCmd.Flags().StringVar(&flagKubeconfig, "kubeconfig", "", "K8s config path")
 	runCmd.Flags().BoolVar(&flagVerbose, "verbose", false, "Show detailed execution output")
 	runCmd.Flags().BoolVar(&flagDebug, "debug", false, "Show debug logging for flag parsing, callback setup, and K8s client init")
@@ -136,6 +139,7 @@ func main() {
 	resumeCmd.Flags().StringArrayVar(&flagVars, "var", nil, "Override vars before resuming (required for paused runs; key=value, repeatable)")
 	// The same execution settings as run, so a resumed run behaves like the original.
 	resumeCmd.Flags().StringVar(&flagNamespace, "namespace", "", "Override K8s namespace")
+	resumeCmd.Flags().StringVar(&flagOpenShellTransport, "openshell-transport", "", "Transport for openshell_* steps: cli or sdk (overrides the workflow file)")
 	resumeCmd.Flags().StringVar(&flagKubeconfig, "kubeconfig", "", "K8s config path")
 	resumeCmd.Flags().BoolVar(&flagVerbose, "verbose", false, "Show detailed execution output")
 	resumeCmd.Flags().BoolVar(&flagDebug, "debug", false, "Show debug logging for flag parsing, callback setup, and K8s client init")
@@ -703,6 +707,18 @@ func resolveNamespace(wfNamespace, flagNS string) string {
 	return "default"
 }
 
+// openShellConfig is the file's openshell settings, with --openshell-transport applied.
+func openShellConfig(wf *parser.WorkflowFile) openshell.Config {
+	var cfg openshell.Config
+	if o := wf.OpenShell; o != nil {
+		cfg = openshell.Config{Transport: o.Transport, Workspace: o.Workspace, Gateway: o.Gateway, Binary: o.Binary, TokenEnv: o.TokenEnv, CAFile: o.CAFile}
+	}
+	if flagOpenShellTransport != "" {
+		cfg.Transport = flagOpenShellTransport
+	}
+	return cfg
+}
+
 func buildExecutors(wf *parser.WorkflowFile) (map[string]executor.Executor, error) {
 	executors := map[string]executor.Executor{
 		"shell_exec":       executor.NewShellExec(),
@@ -714,6 +730,9 @@ func buildExecutors(wf *parser.WorkflowFile) (map[string]executor.Executor, erro
 		"prompt":           executor.NewPrompt(),
 		"http_request":     executor.NewHTTPRequest(),
 		"jev":              executor.NewJev(wf.Connections),
+	}
+	for name, ex := range executor.NewOpenShellSteps(openShellConfig(wf)) {
+		executors[name] = ex
 	}
 
 	namespace := resolveNamespace(wf.Namespace, flagNamespace)
