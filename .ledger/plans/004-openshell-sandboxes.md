@@ -5,7 +5,8 @@ sandboxes: build an image, create a sandbox, copy files in, run commands in it, 
 out, delete it. The target setup is a local gateway using the Podman compute driver.
 
 **Status:** phase 1 done (tasks/done/openshell-cli-transport.md, notes/openshell-setup.md);
-phase 2 done (tasks/done/openshell-sdk-transport.md); phase 3 (IDE) next. Design changes from what phase 1 found are folded in below.
+phase 2 done (tasks/done/openshell-sdk-transport.md); phase 3 done in markov-ide
+(its tasks/done/openshell-steps.md). Design changes from what phase 1 found are folded in below.
 
 ## Findings (OpenShell v0.1.5, source checked 2026-10-23)
 
@@ -98,7 +99,7 @@ The `markov-run` label finds a run's leftovers: `openshell sandbox list --select
 2. **SDK transport.** Add the SDK dependency (go.mod to Go 1.25.13), implement the
    interface including tar-over-exec copies, run the conformance suite on both transports.
 3. **IDE.** markov-ide: icons and palette templates for the six steps (the inspector's
-   fields come from the engine schema).
+   fields come from the engine schema), and exec/build output lines in the Transcript tab.
 
 ## Open questions
 
