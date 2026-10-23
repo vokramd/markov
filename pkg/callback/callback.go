@@ -84,11 +84,13 @@ type StepCompletedEvent struct {
 
 type StepFailedEvent struct {
 	EventHeader
-	WorkflowName string  `json:"workflow_name"`
-	StepName     string  `json:"step_name"`
-	StepType     string  `json:"step_type"`
-	Error        string  `json:"error"`
-	Duration     float64 `json:"duration_seconds"`
+	WorkflowName string `json:"workflow_name"`
+	StepName     string `json:"step_name"`
+	StepType     string `json:"step_type"`
+	Error        string `json:"error"`
+	// Output is what the step's executor returned before failing, when it returned anything.
+	Output   map[string]any `json:"output,omitempty"`
+	Duration float64        `json:"duration_seconds"`
 }
 
 type StepSkippedEvent struct {

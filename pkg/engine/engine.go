@@ -1055,7 +1055,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 	}
 	if err != nil {
 		if !step.IgnoreErrors {
-			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)
+			return e.failStepWithOutput(ctx, runID, workflowName, stateStepName, base, now, err, output)
 		}
 		output = ignoredFailure(output, err)
 		log.Printf("[run:%s] step %q failed, ignored (ignore_errors): %v", runID, step.Name, err)
@@ -1737,13 +1737,25 @@ func (e *Engine) injectJobMeta(params map[string]any, runID, workflowName, stepN
 }
 
 func (e *Engine) failStep(ctx context.Context, runID, workflowName, stepName, stepType string, startedAt time.Time, err error) error {
+	return e.failStepWithOutput(ctx, runID, workflowName, stepName, stepType, startedAt, err, nil)
+}
+
+// failStepWithOutput records a failed step together with what its executor returned (a shell
+// step's stdout and stderr, a claude step's events), so the failure can be examined in full.
+func (e *Engine) failStepWithOutput(ctx context.Context, runID, workflowName, stepName, stepType string, startedAt time.Time, err error, output map[string]any) error {
 	now := time.Now()
+	outputJSON := ""
+	if output != nil {
+		b, _ := json.Marshal(output)
+		outputJSON = string(b)
+	}
 	e.store.SaveStep(ctx, &state.StepResult{
 		RunID:        runID,
 		WorkflowName: workflowName,
 		StepName:     stepName,
 		Status:       state.StepFailed,
 		Error:        err.Error(),
+		OutputJSON:   outputJSON,
 		StartedAt:    &startedAt,
 		CompletedAt:  &now,
 	})
@@ -1754,6 +1766,7 @@ func (e *Engine) failStep(ctx context.Context, runID, workflowName, stepName, st
 			StepName:     stepName,
 			StepType:     stepType,
 			Error:        err.Error(),
+			Output:       output,
 			Duration:     now.Sub(startedAt).Seconds(),
 		})
 	})

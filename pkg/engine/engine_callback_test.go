@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -906,5 +907,41 @@ func TestCallbackJobCreatedForK8sJobWait(t *testing.T) {
 	}
 	if created < 0 || created > completed {
 		t.Fatalf("job_created at %d, step_completed at %d: want job_created first", created, completed)
+	}
+}
+
+// failingWithOutput fails but, like shell_exec and claude, still returns what it produced.
+type failingWithOutput struct{}
+
+func (failingWithOutput) Execute(context.Context, map[string]any) (*executor.Result, error) {
+	return &executor.Result{Output: map[string]any{"stdout": "partial output\n", "stderr": "boom\n", "exit_code": 2}}, fmt.Errorf("exit status 2")
+}
+
+func TestFailedStepKeepsItsOutput(t *testing.T) {
+	wfFile := &parser.WorkflowFile{Entrypoint: "main", Workflows: []parser.Workflow{{
+		Name: "main", Steps: []parser.Step{{Name: "bad", Type: "shell_exec", Params: map[string]any{"command": "x"}}},
+	}}}
+	eng, cb := newTestEngine(t, wfFile, map[string]executor.Executor{"shell_exec": failingWithOutput{}})
+	runID, err := eng.Run(context.Background(), "main", nil)
+	if err == nil {
+		t.Fatal("the step should fail")
+	}
+	var failed *callback.StepFailedEvent
+	cb.mu.Lock()
+	for _, e := range cb.all {
+		if f, ok := e.(callback.StepFailedEvent); ok {
+			failed = &f
+		}
+	}
+	cb.mu.Unlock()
+	if failed == nil || failed.Output["stdout"] != "partial output\n" || failed.Output["stderr"] != "boom\n" {
+		t.Fatalf("step_failed event: %+v", failed)
+	}
+	steps, err := eng.store.GetSteps(context.Background(), runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(steps) != 1 || !strings.Contains(steps[0].OutputJSON, "partial output") {
+		t.Errorf("stored step: %+v", steps)
 	}
 }
