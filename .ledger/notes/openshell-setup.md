@@ -14,3 +14,15 @@ every command fails with "No active gateway". The gateway auto-detects the Podma
 (rootless, pasta networking) and creates the `openshell` podman network. Logs:
 `journalctl --user -u openshell-gateway`. Upgrade: rerun install.sh or install the next
 release's RPMs the same way.
+
+## Lab relay CA (2026-10-23)
+
+To reach the lab's model relay (`relay-api.local`, private "AI Pipeline Internal CA") from
+sandboxes with provider credential substitution, the gateway must trust that CA: OpenShell's
+proxy terminates TLS to swap the placeholder key and then verifies the upstream itself. Copied
+`testbox:.../breadboard/deploy/fullsend-sandbox-local/internal-ca.crt` (key id 1F:70:0D:DF:…,
+matching the relay certificate's AKI; the `pipeline-agent` copy is an older CA) to
+`~/.config/openshell/tls/ai-pipeline-ca.pem` and set
+`[openshell.drivers.podman] additional_ca_bundle` in `~/.config/openshell/gateway.toml`
+(backup: `gateway.toml.bak-before-ca`), then restarted the gateway. github-workflow-example's
+`ask-claude` then completed in ~3s.

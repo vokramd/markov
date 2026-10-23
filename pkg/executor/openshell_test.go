@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -193,15 +194,19 @@ func (f *fakeTransport) EnsureProvider(_ context.Context, req openshell.Provider
 }
 
 func TestOpenShellProviderEnsuresProfileThenProviderAndHidesSecrets(t *testing.T) {
+	profile := filepath.Join(t.TempDir(), "relay.yaml")
+	if err := os.WriteFile(profile, []byte("id: relay-claude\ncredentials:\n  - name: api_key\n    env_vars: [ANTHROPIC_API_KEY]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	ex, ft := openShellStep(t, "provider", openshell.Config{})
 	res, err := ex.Execute(context.Background(), map[string]any{
-		"name": "relay", "type": "relay-claude", "profile": "openshell/relay.yaml",
+		"name": "relay", "type": "relay-claude", "profile": profile,
 		"credentials": map[string]any{"ANTHROPIC_API_KEY": "sk-very-secret"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ft.copies[0] != "profile openshell/relay.yaml" || ft.provider.Name != "relay" || ft.provider.Type != "relay-claude" || ft.provider.Credentials["ANTHROPIC_API_KEY"] != "sk-very-secret" {
+	if ft.copies[0] != "profile "+profile || ft.provider.Name != "relay" || ft.provider.Type != "relay-claude" || ft.provider.Credentials["ANTHROPIC_API_KEY"] != "sk-very-secret" {
 		t.Errorf("profile %v provider %+v", ft.copies, ft.provider)
 	}
 	if res.Output["created"] != true || res.Output["profile"] != "imported" {
@@ -229,4 +234,26 @@ func TestOpenShellProviderEnsuresProfileThenProviderAndHidesSecrets(t *testing.T
 
 func (f *fakeTransport) NetworkProblems(context.Context, string, time.Duration) ([]string, error) {
 	return f.network, nil
+}
+
+func TestOpenShellProviderRefusesCredentialsTheProfileDoesNotDeclare(t *testing.T) {
+	profile := filepath.Join(t.TempDir(), "relay.yaml")
+	body := "id: relay\ncredentials:\n  - name: api_key\n    env_vars: [ANTHROPIC_API_KEY]\n"
+	if err := os.WriteFile(profile, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ex, ft := openShellStep(t, "provider", openshell.Config{})
+	_, err := ex.Execute(context.Background(), map[string]any{
+		"name": "relay", "profile": profile,
+		"credentials": map[string]any{"ANTHROPIC_API_KEY": "sk-relay-secret", "GITHUB_TOKEN": "ghp-secret-token"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "GITHUB_TOKEN is not declared") || !strings.Contains(err.Error(), "declares ANTHROPIC_API_KEY") {
+		t.Fatalf("err = %v", err)
+	}
+	if strings.Contains(err.Error(), "ghp-secret-token") || strings.Contains(err.Error(), "sk-relay-secret") {
+		t.Errorf("the secret is in the error: %v", err)
+	}
+	if ft.provider.Name != "" || len(ft.copies) != 0 {
+		t.Error("nothing should reach the gateway")
+	}
 }

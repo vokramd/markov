@@ -30,6 +30,27 @@ func readProfile(path string) (map[string]any, string, error) {
 	return doc, id, nil
 }
 
+// ProfileCredentialVars lists the credential environment variables a profile file declares: the
+// only credentials a provider of that profile can hold.
+func ProfileCredentialVars(path string) ([]string, error) {
+	doc, _, err := readProfile(path)
+	if err != nil {
+		return nil, err
+	}
+	var vars []string
+	creds, _ := doc["credentials"].([]any)
+	for _, c := range creds {
+		m, _ := c.(map[string]any)
+		envs, _ := m["env_vars"].([]any)
+		for _, e := range envs {
+			if s, ok := e.(string); ok {
+				vars = append(vars, s)
+			}
+		}
+	}
+	return vars, nil
+}
+
 // profileMatches reports whether every field the file sets has the same value in the registered
 // profile. The gateway adds fields of its own (resource_version, source, scope) and fills in
 // defaults, also inside list items (description: "", query_param: ""), which do not count.

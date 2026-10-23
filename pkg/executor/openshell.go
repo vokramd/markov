@@ -9,6 +9,7 @@ import (
 	"io"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -276,6 +277,17 @@ func (e *OpenShell) provider(ctx context.Context, tr openshell.Transport, params
 	}
 	profile := ""
 	if path := str(params, "profile"); path != "" {
+		// The gateway refuses credentials the profile does not declare with a bare "invalid
+		// argument"; say which one and why before asking it.
+		declared, err := openshell.ProfileCredentialVars(path)
+		if err != nil {
+			return nil, e.errf("profile %s: %v", path, err)
+		}
+		for k := range req.Credentials {
+			if !slices.Contains(declared, k) {
+				return nil, e.errf("credential %s is not declared by profile %s (it declares %s); a provider can only hold its profile's credentials, so use another provider with its own profile for it", k, path, strings.Join(declared, ", "))
+			}
+		}
 		change, err := tr.EnsureProfile(ctx, path)
 		if err != nil {
 			return nil, e.errf("profile %s: %v", path, err)
