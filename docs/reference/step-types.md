@@ -1273,7 +1273,18 @@ The markov binary for the child runs is `MARKOV_BIN` when set, else the running 
 
 The `openshell_*` steps run work in [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandboxes: build an image, create a sandbox from it, copy files in, run commands, copy results out, and delete it. They need an OpenShell gateway; on a Linux workstation that is the `openshell-gateway` user service with the Podman driver (`systemctl --user enable --now podman.socket openshell-gateway`, then `openshell gateway add https://127.0.0.1:17670 --local --name openshell`).
 
-**Transport.** Every step except `openshell_build` reaches the gateway through a transport: `cli` (the default) runs the `openshell` command, which uses its own active gateway and credentials. Choose it, in order of precedence, with the step's `transport` param, `markov run --openshell-transport`, or the workflow file's `openshell:` block ([workflow file](workflow-file.md#openshell)). The `sdk` transport is not implemented yet.
+**Transport.** Every step except `openshell_build` reaches the gateway through a transport. Choose it, in order of precedence, with the step's `transport` param, `markov run --openshell-transport`, or the workflow file's `openshell:` block ([workflow file](workflow-file.md#openshell)). Both behave the same except where noted:
+
+| | `cli` (default) | `sdk` |
+|---|---|---|
+| How | Runs the `openshell` command, which uses its own active gateway and credentials. | Talks gRPC to the gateway through the OpenShell Go SDK, finding the gateway the way the CLI does (see [workflow file](workflow-file.md#openshell)). Needs no `openshell` command. |
+| Copies | `openshell sandbox upload` / `download`. | A tar stream through exec, so the image needs `sh` and `tar`. |
+| `openshell_create` `policy` | Supported. | Not supported (the SDK cannot parse policy files); the step fails. |
+| `openshell_exec` `stdin` | At most 4 MiB (the CLI's limit). | Streamed in chunks. |
+| Gateways using OIDC or Cloudflare auth | Supported. | Not supported; use `cli`. |
+| Latency | Each exec waits about 0.3 s before starting (see below). | None added. |
+
+**Stopping commands.** When a step is cancelled (Ctrl-C, the step's `timeout:` field) or `openshell_exec`'s `timeout` passes, the command in the sandbox is stopped. OpenShell 0.1.5 does not do this on its own: its exec timeout reports 124 but leaves the command running, and a command started by the CLI's one-shot exec keeps running when the CLI is killed. So Markov enforces `timeout` itself by ending the exec stream, and the `cli` transport holds the CLI's stdin open for 0.3 s so the CLI uses its streaming exec, which stops the command when the CLI goes away.
 
 **Copies.** `openshell_upload` and `openshell_download` copy `src` *into* the directory `dest` under its own name, whether `src` is a file or a directory: uploading `./site` to `/sandbox` gives `/sandbox/site`. Rename with `openshell_exec` if you need another name.
 
@@ -1323,7 +1334,7 @@ Creates a sandbox and returns once it is ready.
 | `gpu` | bool or int | no | `true` for a GPU, or a count. |
 | `env` | map | no | Environment variables for the sandbox. |
 | `providers` | string[] | no | OpenShell providers to attach. |
-| `policy` | string | no | Policy file. |
+| `policy` | string | no | Policy file (`cli` transport only). |
 | `labels` | map | no | Labels. Markov adds `markov-run`, `markov-workflow` and `markov-step` (yours win), so `openshell sandbox list --selector markov-run=<run id>` finds a run's sandboxes. |
 | `transport` | string | no | `cli` or `sdk`. |
 
@@ -1374,8 +1385,8 @@ Runs a command in a sandbox and streams its output.
 | `command` | string or string[] | yes | A string runs under `sh -c`; a list is the argv. |
 | `workdir` | string | no | Working directory in the sandbox. |
 | `env` | map | no | Environment variables for the command. |
-| `timeout` | int | no | Seconds before the command is stopped. |
-| `stdin` | any | no | Standard input: a string as it is, any other value as JSON. |
+| `timeout` | int | no | Seconds before the command is stopped (by Markov; see [Stopping commands](#openshell-sandboxes)). |
+| `stdin` | any | no | Standard input: a string as it is, any other value as JSON. At most 4 MiB on the `cli` transport. |
 | `transport` | string | no | `cli` or `sdk`. |
 
 ### Output Variables

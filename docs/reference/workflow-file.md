@@ -24,12 +24,13 @@ Settings for the [`openshell_*` steps](step-types.md#openshell-sandboxes). Every
 
 | Key | Description |
 |-----|-------------|
-| `transport` | `cli` (default) runs the `openshell` command; `sdk` uses the Go SDK (not implemented yet). Overridden by `markov run --openshell-transport` and by a step's `transport` param. |
+| `transport` | `cli` (default) runs the `openshell` command; `sdk` talks gRPC through the OpenShell Go SDK ([differences](step-types.md#openshell-sandboxes)). Overridden by `markov run --openshell-transport` and by a step's `transport` param. |
 | `workspace` | OpenShell workspace. Default `default`. |
-| `gateway` | `cli`: a gateway name from `openshell gateway list`. `sdk`: the gateway's `host:port`. |
+| `gateway` | A gateway name from `openshell gateway list`; empty means the CLI's active gateway (`OPENSHELL_GATEWAY`, else `openshell gateway select`). `sdk` reads a named gateway's endpoint and mTLS certificates from the CLI's config (`~/.config/openshell/gateways/<name>/`), and also accepts a `host:port` address (`http://host:port` for plaintext). |
 | `binary` | `cli`: the command to run. Default `openshell`. |
 | `token_env` | `sdk`: environment variable holding a bearer token. |
-| `ca_file` | `sdk`: CA certificate for the gateway's TLS. |
+| `ca_file` | `sdk` with an address: CA certificate for the gateway's TLS. |
+| `cert_file`, `key_file` | `sdk` with an address: client certificate and key for an mTLS gateway. |
 
 ```yaml
 openshell:

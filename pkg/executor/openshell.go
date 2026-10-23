@@ -52,6 +52,9 @@ func (e *OpenShell) Execute(ctx context.Context, params map[string]any) (*Result
 	if err != nil {
 		return nil, e.errf("%v", err)
 	}
+	if c, ok := tr.(io.Closer); ok {
+		defer c.Close()
+	}
 	switch e.op {
 	case "create":
 		return e.create(ctx, tr, params)

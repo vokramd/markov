@@ -10,7 +10,7 @@
 - [Step-Through Debugging and Interactive Workflow Building](plans/001-step-through-debugging.md)
 - [Durable External Tasks and Orchestration Reliability](plans/002-durable-task-orchestration.md) — proposed; implementation not started.
 - [Agentic Codification](plans/003-agentic-codification.md) — phases 1–5 done (notes/codify-phase1-run.md, ADR-0006, markov-ide plan 002); phase 6 (`markov codify`, any workflow) done; retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
-- [OpenShell sandboxes](plans/004-openshell-sandboxes.md) — phase 1 (CLI transport) done; native steps to build images and create, upload to, exec in, download from and delete OpenShell sandboxes, over the openshell CLI or the Go SDK.
+- [OpenShell sandboxes](plans/004-openshell-sandboxes.md) — phases 1 (CLI transport) and 2 (SDK transport) done; native steps to build images and create, upload to, exec in, download from and delete OpenShell sandboxes, over the openshell CLI or the Go SDK.
 
 ## Active Tasks
 
@@ -22,6 +22,7 @@
 
 ## Completed Tasks
 
+- [OpenShell SDK transport](tasks/done/openshell-sdk-transport.md) (plan 004 phase 2)
 - [OpenShell steps on the CLI transport](tasks/done/openshell-cli-transport.md) (plan 004 phase 1)
 - [markov codify (codify any workflow by default)](tasks/done/markov-codify-command.md) (plan 003 phase 6)
 - [Codification loop in one markov process](tasks/done/codify-in-process-loop.md) (plan 003 phase 4)

@@ -101,3 +101,10 @@ Plan 004 phase 1 done: six `openshell_*` step types over the CLI transport, veri
 local OpenShell 0.1.5 gateway on the Podman driver (setup in notes/openshell-setup.md). Next:
 phase 2, the Go SDK transport, running the same `TestE2E` conformance checks on both
 transports. Uncommitted at the end of the session.
+
+## 2026-10-23 — OpenShell phase 2
+
+Plan 004 phase 2 done: the `sdk` transport (Go SDK pinned to the v0.1.5 commit; go.mod now Go
+1.25.13). TestE2E runs identical checks on both transports. Found that OpenShell 0.1.5's exec
+timeout and a killed one-shot exec both leave the command running; both transports now stop
+commands by ending a streaming exec. Phase 3 (IDE) is next.

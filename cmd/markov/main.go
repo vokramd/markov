@@ -711,7 +711,7 @@ func resolveNamespace(wfNamespace, flagNS string) string {
 func openShellConfig(wf *parser.WorkflowFile) openshell.Config {
 	var cfg openshell.Config
 	if o := wf.OpenShell; o != nil {
-		cfg = openshell.Config{Transport: o.Transport, Workspace: o.Workspace, Gateway: o.Gateway, Binary: o.Binary, TokenEnv: o.TokenEnv, CAFile: o.CAFile}
+		cfg = openshell.Config{Transport: o.Transport, Workspace: o.Workspace, Gateway: o.Gateway, Binary: o.Binary, TokenEnv: o.TokenEnv, CAFile: o.CAFile, CertFile: o.CertFile, KeyFile: o.KeyFile}
 	}
 	if flagOpenShellTransport != "" {
 		cfg.Transport = flagOpenShellTransport

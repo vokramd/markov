@@ -5,7 +5,7 @@ sandboxes: build an image, create a sandbox, copy files in, run commands in it, 
 out, delete it. The target setup is a local gateway using the Podman compute driver.
 
 **Status:** phase 1 done (tasks/done/openshell-cli-transport.md, notes/openshell-setup.md);
-phase 2 (SDK transport) next. Design changes from what phase 1 found are folded in below.
+phase 2 done (tasks/done/openshell-sdk-transport.md); phase 3 (IDE) next. Design changes from what phase 1 found are folded in below.
 
 ## Findings (OpenShell v0.1.5, source checked 2026-10-23)
 
@@ -50,9 +50,13 @@ two implementations; the executors depend only on the interface.
 
 - **`cli`** (default): runs `openshell`. Gateway selection and auth are the CLI's own
   (`openshell gateway select`, env vars). Create uses `-o json`; exec uses `--no-tty`.
-- **`sdk`**: Go SDK over gRPC. Exec streams through `Exec().Stream`. Upload and download
-  stream a tar archive through exec (`tar -x -C DEST` / `tar -c`), so the image needs `tar`;
-  `git_ignore: true` selects files with `git ls-files`.
+- **`sdk`**: Go SDK over gRPC for create, wait and delete; exec on the interactive exec RPC
+  directly (TTY off, stdin streamed). Upload and download stream a tar archive through exec
+  (`tar -x -C DEST` / `tar -c`), so the image needs `sh` and `tar`; `git_ignore: true` selects
+  files with `git ls-files`. Policy files are cli-only (the SDK cannot parse them).
+- Both: `timeout` and cancellation end the exec stream, which stops the command; OpenShell's
+  own exec timeout leaves it running, and the CLI transport holds stdin open 300ms so the CLI
+  streams (tasks/done/openshell-sdk-transport.md).
 
 Configured per workflow file, at the top level of a single file or in `meta.yaml`:
 
@@ -98,7 +102,9 @@ The `markov-run` label finds a run's leftovers: `openshell sandbox list --select
 
 ## Open questions
 
-- Whether to cap upload size on the SDK transport or stream without limit.
+- Whether to cap upload size on the SDK transport or stream without limit (the supervisor
+  buffers exec stdin without bound; the CLI caps it at 4 MiB).
+- Report upstream: exec timeout leaves the command running; one-shot exec outlives its client.
 - Whether `openshell_create` should also accept a `template`.
 - Whether Markov should delete sandboxes a failed run left behind on its own (by the
   `markov-run` label) instead of relying on `always:`.

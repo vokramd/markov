@@ -3,10 +3,12 @@ package openshell
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeCLI writes an openshell stand-in that logs its argv (one call per line) and answers
@@ -72,9 +74,30 @@ func TestCLIExecReturnsExitCodeAndStreams(t *testing.T) {
 	if code != 7 || out.String() != "out-line\n" || errOut.String() != "err-line\n" {
 		t.Errorf("code=%d out=%q err=%q", code, out.String(), errOut.String())
 	}
-	want := "--gateway gw --workspace ws sandbox exec --name sb1 --no-tty --workdir /w --timeout 5 --env K=v -- sh -c echo hi"
+	// --timeout is not passed: OpenShell's own timeout leaves the command running.
+	want := "--gateway gw --workspace ws sandbox exec --name sb1 --no-tty --workdir /w --env K=v -- sh -c echo hi"
 	if got := calls(t, log)[0]; got != want {
 		t.Errorf("argv\n got %s\nwant %s", got, want)
+	}
+}
+
+func TestCLIExecTimeoutStopsTheCLIAndReports124(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "openshell")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nexec sleep 30\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	code, err := NewCLI(Config{Binary: bin}).Exec(context.Background(), ExecRequest{Sandbox: "sb", Command: []string{"true"}, Timeout: 1}, io.Discard, io.Discard)
+	if err != nil || code != TimeoutExitCode {
+		t.Errorf("code=%d err=%v", code, err)
+	}
+	if took := time.Since(start); took > 10*time.Second {
+		t.Errorf("took %s", took)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(200*time.Millisecond, cancel)
+	if _, err := NewCLI(Config{Binary: bin}).Exec(ctx, ExecRequest{Sandbox: "sb", Command: []string{"true"}, Timeout: 5}, io.Discard, io.Discard); err == nil {
+		t.Error("a cancelled exec reported success")
 	}
 }
 

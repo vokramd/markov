@@ -4,8 +4,10 @@ package openshell
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"time"
 )
 
 // Config says how to reach the gateway. Empty fields take OpenShell's own defaults.
@@ -18,6 +20,9 @@ type Config struct {
 	Binary   string
 	TokenEnv string
 	CAFile   string
+	// CertFile and KeyFile are a client certificate for an mTLS gateway given by address (sdk).
+	CertFile string
+	KeyFile  string
 }
 
 // Sandbox is a sandbox as the gateway reports it.
@@ -70,13 +75,28 @@ type Transport interface {
 // TimeoutExitCode is the exit code of a command stopped by ExecRequest.Timeout.
 const TimeoutExitCode = 124
 
+// execDeadline applies req.Timeout to ctx. OpenShell's own exec timeout (0.1.5) reports 124 but
+// leaves the command running, while ending the exec stream stops it, so the transports enforce
+// the timeout by cancelling. timedOut reports whether the deadline, not the caller, ended ctx.
+func execDeadline(ctx context.Context, req ExecRequest) (_ context.Context, cancel context.CancelFunc, timedOut func() bool) {
+	if req.Timeout <= 0 {
+		ctx, cancel = context.WithCancel(ctx)
+		return ctx, cancel, func() bool { return false }
+	}
+	parent := ctx
+	ctx, cancel = context.WithTimeout(ctx, time.Duration(req.Timeout)*time.Second)
+	return ctx, cancel, func() bool {
+		return errors.Is(ctx.Err(), context.DeadlineExceeded) && parent.Err() == nil
+	}
+}
+
 // New returns the transport cfg asks for.
 func New(cfg Config) (Transport, error) {
 	switch cfg.Transport {
 	case "", "cli":
 		return NewCLI(cfg), nil
 	case "sdk":
-		return nil, fmt.Errorf("the sdk transport is not implemented yet; use transport: cli")
+		return NewSDK(cfg)
 	default:
 		return nil, fmt.Errorf("unknown transport %q (use cli or sdk)", cfg.Transport)
 	}

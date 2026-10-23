@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // CLI is the transport that runs the openshell command. Gateway selection and authentication are
@@ -151,13 +152,19 @@ func (c *CLI) Download(ctx context.Context, sandbox, src, destDir string) error 
 	return err
 }
 
+// stdinGrace is how long the CLI's stdin is held open before any input is written. The CLI
+// (0.1.5) uses the one-shot exec RPC when stdin is complete within 200ms, and a command started
+// that way keeps running in the sandbox when the CLI is killed; with stdin still open it uses the
+// streaming RPC, which stops the command when the CLI goes away. Cancelling and timeouts rely
+// on that.
+const stdinGrace = 300 * time.Millisecond
+
 func (c *CLI) Exec(ctx context.Context, req ExecRequest, stdout, stderr io.Writer) (int, error) {
+	ctx, cancel, timedOut := execDeadline(ctx, req)
+	defer cancel()
 	args := []string{"sandbox", "exec", "--name", req.Sandbox, "--no-tty"}
 	if req.Workdir != "" {
 		args = append(args, "--workdir", req.Workdir)
-	}
-	if req.Timeout > 0 {
-		args = append(args, "--timeout", fmt.Sprint(req.Timeout))
 	}
 	for _, kv := range pairs(req.Env) {
 		args = append(args, "--env", kv)
@@ -166,10 +173,33 @@ func (c *CLI) Exec(ctx context.Context, req ExecRequest, stdout, stderr io.Write
 	cmd := c.command(ctx, args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	cmd.Stdin = req.Stdin
-	err := cmd.Run()
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return -1, err
+	}
+	if err := cmd.Start(); err != nil {
+		return -1, fmt.Errorf("openshell sandbox exec: %w", err)
+	}
+	go func() {
+		defer stdin.Close()
+		select {
+		case <-time.After(stdinGrace):
+		case <-ctx.Done():
+			return
+		}
+		if req.Stdin != nil {
+			_, _ = io.Copy(stdin, req.Stdin)
+		}
+	}()
+	err = cmd.Wait()
+	switch {
+	case timedOut():
+		return TimeoutExitCode, nil
+	case ctx.Err() != nil:
+		return -1, fmt.Errorf("openshell sandbox exec: %w", ctx.Err())
+	}
 	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) && ctx.Err() == nil {
+	if errors.As(err, &exitErr) {
 		return exitErr.ExitCode(), nil
 	}
 	if err != nil {

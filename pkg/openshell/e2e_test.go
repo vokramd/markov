@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -34,7 +35,7 @@ func TestE2E(t *testing.T) {
 		t.Fatalf("image %+v", img)
 	}
 
-	for _, transport := range []string{"cli"} {
+	for _, transport := range []string{"cli", "sdk"} {
 		t.Run(transport, func(t *testing.T) {
 			tr, err := New(Config{Transport: transport})
 			if err != nil {
@@ -131,6 +132,103 @@ func conformance(ctx context.Context, t *testing.T, tr Transport, image string) 
 		if err := tr.Download(ctx, name, "/sandbox/nope", back); err == nil {
 			t.Error("downloading a missing path succeeded")
 		}
+	})
+
+	t.Run("large, executable and symlinked files", func(t *testing.T) {
+		local := t.TempDir()
+		tree := filepath.Join(local, "big")
+		if err := os.MkdirAll(tree, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		// 3 MiB: several stdin chunks on the sdk transport, past the gateway's 1 MiB message size.
+		blob := bytes.Repeat([]byte("0123456789abcdef"), 3<<16)
+		if err := os.WriteFile(filepath.Join(tree, "blob"), blob, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tree, "run.sh"), []byte("#!/bin/sh\necho ran\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink("run.sh", filepath.Join(tree, "link")); err != nil {
+			t.Fatal(err)
+		}
+		if err := tr.Upload(ctx, name, tree, "/sandbox/x", false); err != nil {
+			t.Fatalf("upload: %v", err)
+		}
+		code, out, _ := run(ExecRequest{Command: []string{"sh", "-c", "cd /sandbox/x/big && wc -c < blob && ./run.sh && readlink link"}})
+		if want := fmt.Sprintf("%d\nran\nrun.sh\n", len(blob)); code != 0 || out != want {
+			t.Errorf("in the sandbox: code=%d out=%q want %q", code, out, want)
+		}
+		back := filepath.Join(local, "back")
+		if err := tr.Download(ctx, name, "/sandbox/x/big", back); err != nil {
+			t.Fatalf("download: %v", err)
+		}
+		got, err := os.ReadFile(filepath.Join(back, "big", "blob"))
+		if err != nil || !bytes.Equal(got, blob) {
+			t.Errorf("blob came back with %d bytes (%v), want %d", len(got), err, len(blob))
+		}
+		if info, err := os.Stat(filepath.Join(back, "big", "run.sh")); err != nil || info.Mode()&0o100 == 0 {
+			t.Errorf("run.sh lost its executable bit: %v %v", info, err)
+		}
+	})
+
+	t.Run("git ignore", func(t *testing.T) {
+		repo := filepath.Join(t.TempDir(), "repo")
+		if err := os.MkdirAll(repo, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for rel, body := range map[string]string{".gitignore": "*.log\n", "keep.txt": "k\n", "drop.log": "d\n"} {
+			if err := os.WriteFile(filepath.Join(repo, rel), []byte(body), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v %s", err, out)
+		}
+		if err := tr.Upload(ctx, name, repo, "/sandbox/gi", true); err != nil {
+			t.Fatalf("upload: %v", err)
+		}
+		if err := tr.Upload(ctx, name, repo, "/sandbox/all", false); err != nil {
+			t.Fatalf("upload: %v", err)
+		}
+		_, out, _ := run(ExecRequest{Command: []string{"sh", "-c", "ls -A /sandbox/gi/repo | grep -v '^.git$' | tr '\\n' ' '; echo; ls -A /sandbox/all/repo | grep -v '^.git$' | tr '\\n' ' '"}})
+		if want := ".gitignore keep.txt \n.gitignore drop.log keep.txt "; out != want {
+			t.Errorf("git_ignore uploads\n%q\nwant\n%q", out, want)
+		}
+	})
+
+	// gone waits for no process in the sandbox to have marker in its command line. The sandbox
+	// has no ps, so it reads /proc; the marker is written as a bracket pattern so the check does
+	// not find itself.
+	gone := func(t *testing.T, marker string) {
+		t.Helper()
+		pattern := marker[:len(marker)-1] + "[" + marker[len(marker)-1:] + "]"
+		var out string
+		for i := 0; i < 10; i++ {
+			_, out, _ = run(ExecRequest{Command: []string{"sh", "-c", "cat /proc/[0-9]*/cmdline 2>/dev/null | tr '\\0' ' ' | grep -c '" + pattern + "' || true"}})
+			if strings.TrimSpace(out) == "0" {
+				return
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		t.Errorf("%q still runs in the sandbox", marker)
+	}
+
+	t.Run("cancel stops the command", func(t *testing.T) {
+		cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		start := time.Now()
+		_, _ = tr.Exec(cctx, ExecRequest{Sandbox: name, Command: []string{"sh", "-c", "sleep 417 | cat"}}, io.Discard, io.Discard)
+		if took := time.Since(start); took > 15*time.Second {
+			t.Errorf("exec returned %s after its context ended", took)
+		}
+		gone(t, "sleep 417")
+	})
+
+	t.Run("timeout stops the command", func(t *testing.T) {
+		if code, _, _ := run(ExecRequest{Command: []string{"sh", "-c", "sleep 418 | cat"}, Timeout: 1}); code != TimeoutExitCode {
+			t.Errorf("exit code %d", code)
+		}
+		gone(t, "sleep 418")
 	})
 
 	t.Run("errors", func(t *testing.T) {

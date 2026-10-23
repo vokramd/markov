@@ -32,6 +32,10 @@ type OpenShell struct {
 	TokenEnv string `yaml:"token_env"`
 	// CAFile is the CA certificate for the gateway's TLS (SDK only).
 	CAFile string `yaml:"ca_file"`
+	// CertFile and KeyFile are a client certificate for an mTLS gateway given by address (SDK
+	// only; a gateway given by name brings its own).
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
 }
 
 type Rule struct {
