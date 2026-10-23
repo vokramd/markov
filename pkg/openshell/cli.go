@@ -47,7 +47,13 @@ func (c *CLI) command(ctx context.Context, args ...string) *exec.Cmd {
 
 // run runs an invocation that does not stream, returning its stdout.
 func (c *CLI) run(ctx context.Context, args ...string) ([]byte, error) {
+	return c.runEnv(ctx, nil, args...)
+}
+
+// runEnv is run with extra environment variables, for values that must stay off the command line.
+func (c *CLI) runEnv(ctx context.Context, env []string, args ...string) ([]byte, error) {
 	cmd := c.command(ctx, args...)
+	cmd.Env = append(cmd.Env, env...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

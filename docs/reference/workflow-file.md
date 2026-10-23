@@ -408,7 +408,7 @@ These are the built-in step types available in every workflow file.
 | `load_artifact` | Load file artifacts into the variable context. |
 | `set_fact` | Set variables in the current workflow context. |
 | `assert` | Validate expressions. Fails the step if any assertion in `that` is false. |
-| `openshell_build`, `openshell_create`, `openshell_upload`, `openshell_exec`, `openshell_download`, `openshell_delete` | Build a sandbox image and run work in [OpenShell](step-types.md#openshell-sandboxes) sandboxes. |
+| `openshell_provider`, `openshell_build`, `openshell_create`, `openshell_upload`, `openshell_exec`, `openshell_download`, `openshell_delete` | Build a sandbox image and run work in [OpenShell](step-types.md#openshell-sandboxes) sandboxes. |
 | `llm_invoke` | Reserved for LLM integration. Not yet implemented. |
 
 ---

@@ -423,6 +423,7 @@ var primitives = map[string]bool{
 	"openshell_exec":     true,
 	"openshell_download": true,
 	"openshell_delete":   true,
+	"openshell_provider": true,
 }
 
 // PrimitiveNames lists the built-in step types, sorted.

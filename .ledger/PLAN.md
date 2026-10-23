@@ -22,6 +22,7 @@
 
 ## Completed Tasks
 
+- [claude in sandboxes, and openshell_provider](tasks/done/openshell-claude-and-providers.md) (after plan 004)
 - [OpenShell SDK transport](tasks/done/openshell-sdk-transport.md) (plan 004 phase 2)
 - [OpenShell steps on the CLI transport](tasks/done/openshell-cli-transport.md) (plan 004 phase 1)
 - [markov codify (codify any workflow by default)](tasks/done/markov-codify-command.md) (plan 003 phase 6)

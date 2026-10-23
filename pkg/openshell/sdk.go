@@ -306,3 +306,41 @@ func tlsConfig(ep *Endpoint) (*tls.Config, error) {
 	}
 	return tc, nil
 }
+
+// EnsureProfile is not available on the sdk transport: the SDK takes typed profiles, and only
+// the openshell CLI parses profile YAML.
+func (s *SDK) EnsureProfile(ctx context.Context, path string) (ProfileChange, error) {
+	return "", errors.New("profile files need the cli transport: the sdk cannot parse OpenShell profile YAML")
+}
+
+func (s *SDK) EnsureProvider(ctx context.Context, req ProviderRequest) (*ProviderResult, error) {
+	if req.Name == "" || req.Type == "" {
+		return nil, errors.New("a provider needs a name and a type")
+	}
+	keys := sortedKeys(req.Credentials)
+	existing, err := s.client.Providers().Get(ctx, s.workspace, req.Name)
+	if v1.IsNotFound(err) {
+		_, err := s.client.Providers().Create(ctx, s.workspace, &v1.Provider{
+			// Profiles imported without --global live in the workspace; say which one.
+			Name: req.Name, Type: req.Type, Spec: v1.ProviderSpec{Credentials: req.Credentials, ProfileWorkspace: s.workspace},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create provider %s: %w", req.Name, err)
+		}
+		return &ProviderResult{Created: true, CredentialKeys: keys}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("provider %s: %w", req.Name, err)
+	}
+	if existing.Type != req.Type {
+		return nil, fmt.Errorf("provider %s exists with type %s, not %s; delete it to change its type", req.Name, existing.Type, req.Type)
+	}
+	if len(keys) > 0 {
+		updated := *existing
+		updated.Spec.Credentials = req.Credentials
+		if _, err := s.client.Providers().Update(ctx, s.workspace, &updated); err != nil {
+			return nil, fmt.Errorf("update provider %s: %w", req.Name, err)
+		}
+	}
+	return &ProviderResult{CredentialKeys: keys}, nil
+}

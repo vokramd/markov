@@ -105,6 +105,7 @@ func stepTypes() []StepType {
 			p("allowed_tools", ""), p("disallowed_tools", ""), p("append_system_prompt", ""), p("add_dirs", "Extra directories the run may access"), p("mcp_config", ""),
 			p("settings", ""), p("resume", "Resume a session"), p("session_id", ""), p("bare", "Skip hooks, plugins and CLAUDE.md discovery (needs an API key)"),
 			p("limits", "max_turns, max_tokens, max_duration, max_budget_usd"), p("events_limit", "Maximum events kept in the output"), p("env", ""), p("extra_args", ""), p("binary", ""),
+			p("sandbox", "Run in this OpenShell sandbox"), p("transport", "With sandbox: cli or sdk"),
 		}},
 		StepType{Name: "ansible_playbook", Inputs: "params", Summary: "Run ansible-playbook.", Params: []Param{
 			req("playbook", "Playbook path(s)"), p("chdir", ""), p("inventory", "Path, inline host list, list, or inline inventory map"), p("limit", ""), p("tags", ""), p("skip_tags", ""),
@@ -147,6 +148,10 @@ func stepTypes() []StepType {
 		}},
 		StepType{Name: "openshell_delete", Inputs: "params", Summary: "Delete sandboxes.", Params: []Param{
 			req("sandbox", "Sandbox name or list of names"), p("transport", "cli or sdk"),
+		}},
+		StepType{Name: "openshell_provider", Inputs: "params", Summary: "Make sure an OpenShell provider exists with these credentials, registering its profile first.", Params: []Param{
+			req("name", "Provider name"), p("type", "Provider profile id (default: name)"), p("profile", "Profile YAML file to import, or update when it differs (cli transport)"),
+			p("credentials", "Map of credential env var to secret value; never logged or output"), p("transport", "cli or sdk"),
 		}},
 		StepType{Name: "prompt", Inputs: "params", Summary: "Ask for input.", Params: []Param{
 			req("message", "Text shown before the prompt"), p("choices", ""), p("default", ""), p("case_insensitive", ""),

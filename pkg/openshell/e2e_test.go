@@ -241,3 +241,88 @@ func conformance(ctx context.Context, t *testing.T, tr Transport, image string) 
 		}
 	})
 }
+
+// TestE2EProvider ensures a throwaway profile and provider on the live gateway with each
+// transport, then removes them.
+func TestE2EProvider(t *testing.T) {
+	if os.Getenv("MARKOV_OPENSHELL_E2E") != "1" {
+		t.Skip("set MARKOV_OPENSHELL_E2E=1 to run against a live OpenShell gateway")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cli := NewCLI(Config{})
+	id := fmt.Sprintf("markov-e2e-%d", time.Now().UnixNano()%1e6)
+	profile := filepath.Join(t.TempDir(), "p.yaml")
+	writeProfile := func(port int) {
+		body := fmt.Sprintf(`id: %s
+display_name: Markov e2e
+description: throwaway profile for markov's tests
+category: other
+credentials:
+  - name: token
+    env_vars: [MARKOV_E2E_TOKEN]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+endpoints:
+  - host: markov-e2e.invalid
+    port: %d
+    protocol: rest
+    access: read-only
+    enforcement: enforce
+binaries: [/usr/bin/curl]
+`, id, port)
+		if err := os.WriteFile(profile, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer func() {
+		_, _ = cli.run(context.Background(), "profile", "delete", id)
+	}()
+	writeProfile(443)
+	for _, want := range []ProfileChange{ProfileImported, ProfileUnchanged} {
+		if got, err := cli.EnsureProfile(ctx, profile); err != nil || got != want {
+			t.Fatalf("profile: %q %v, want %q", got, err, want)
+		}
+	}
+	writeProfile(8443)
+	if got, err := cli.EnsureProfile(ctx, profile); err != nil || got != ProfileUpdated {
+		t.Fatalf("changed profile: %q %v", got, err)
+	}
+
+	for _, transport := range []string{"cli", "sdk"} {
+		t.Run(transport, func(t *testing.T) {
+			tr, err := New(Config{Transport: transport})
+			if err != nil {
+				t.Fatal(err)
+			}
+			name := id + "-" + transport
+			defer func() {
+				_, _ = cli.run(context.Background(), "provider", "delete", name)
+			}()
+			req := ProviderRequest{Name: name, Type: id, Credentials: map[string]string{"MARKOV_E2E_TOKEN": "first"}}
+			if res, err := tr.EnsureProvider(ctx, req); err != nil || !res.Created {
+				t.Fatalf("create: %+v %v", res, err)
+			}
+			req.Credentials["MARKOV_E2E_TOKEN"] = "second"
+			if res, err := tr.EnsureProvider(ctx, req); err != nil || res.Created {
+				t.Fatalf("update: %+v %v", res, err)
+			}
+			out, err := cli.run(ctx, "provider", "get", name)
+			if err != nil || providerField(out, "Type") != id || !strings.Contains(string(out), "MARKOV_E2E_TOKEN") {
+				t.Errorf("provider get: %s %v", out, err)
+			}
+			if strings.Contains(string(out), "second") {
+				t.Errorf("provider get shows the secret: %s", out)
+			}
+			if _, err := tr.EnsureProvider(ctx, ProviderRequest{Name: name, Type: "github"}); err == nil {
+				t.Error("a type change was not refused")
+			}
+			if transport == "sdk" {
+				if _, err := tr.EnsureProfile(ctx, profile); err == nil {
+					t.Error("the sdk transport accepted a profile file")
+				}
+			}
+		})
+	}
+}

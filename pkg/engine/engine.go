@@ -962,7 +962,11 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 			e.verbose("[run:%s]   namespace: %s", runID, ns)
 		}
 	} else {
+		secret := executor.SecretParams(base)
 		for k, v := range renderedParams {
+			if slices.Contains(secret, k) {
+				v = "<redacted>"
+			}
 			e.verbose("[run:%s]   param %s: %v", runID, k, v)
 		}
 	}

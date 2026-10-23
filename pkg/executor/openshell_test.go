@@ -22,6 +22,7 @@ type fakeTransport struct {
 	copies   []string
 	deleted  []string
 	exitCode int
+	provider openshell.ProviderRequest
 }
 
 func (f *fakeTransport) Create(_ context.Context, req openshell.CreateRequest) (*openshell.Sandbox, error) {
@@ -172,5 +173,54 @@ func TestOpenShellDeleteAndTransportOverride(t *testing.T) {
 	}
 	if ft.cfg.Transport != "sdk" || ft.cfg.Workspace != "ws" {
 		t.Errorf("the step's transport should override the file's and keep the rest: %+v", ft.cfg)
+	}
+}
+
+func (f *fakeTransport) EnsureProfile(_ context.Context, path string) (openshell.ProfileChange, error) {
+	f.copies = append(f.copies, "profile "+path)
+	return openshell.ProfileImported, nil
+}
+
+func (f *fakeTransport) EnsureProvider(_ context.Context, req openshell.ProviderRequest) (*openshell.ProviderResult, error) {
+	f.provider = req
+	keys := make([]string, 0, len(req.Credentials))
+	for k := range req.Credentials {
+		keys = append(keys, k)
+	}
+	return &openshell.ProviderResult{Created: true, CredentialKeys: keys}, nil
+}
+
+func TestOpenShellProviderEnsuresProfileThenProviderAndHidesSecrets(t *testing.T) {
+	ex, ft := openShellStep(t, "provider", openshell.Config{})
+	res, err := ex.Execute(context.Background(), map[string]any{
+		"name": "relay", "type": "relay-claude", "profile": "openshell/relay.yaml",
+		"credentials": map[string]any{"ANTHROPIC_API_KEY": "sk-very-secret"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ft.copies[0] != "profile openshell/relay.yaml" || ft.provider.Name != "relay" || ft.provider.Type != "relay-claude" || ft.provider.Credentials["ANTHROPIC_API_KEY"] != "sk-very-secret" {
+		t.Errorf("profile %v provider %+v", ft.copies, ft.provider)
+	}
+	if res.Output["created"] != true || res.Output["profile"] != "imported" {
+		t.Errorf("output %v", res.Output)
+	}
+	if strings.Contains(fmt.Sprint(res.Output), "sk-very-secret") {
+		t.Errorf("the secret is in the output: %v", res.Output)
+	}
+	if got := SecretParams("openshell_provider"); len(got) != 1 || got[0] != "credentials" {
+		t.Errorf("secret params %v", got)
+	}
+
+	// type defaults to the name; no profile means none is touched.
+	ex, ft = openShellStep(t, "provider", openshell.Config{})
+	if _, err := ex.Execute(context.Background(), map[string]any{"name": "github"}); err != nil {
+		t.Fatal(err)
+	}
+	if ft.provider.Type != "github" || len(ft.copies) != 0 {
+		t.Errorf("provider %+v copies %v", ft.provider, ft.copies)
+	}
+	if _, err := ex.Execute(context.Background(), map[string]any{"type": "x"}); err == nil {
+		t.Error("a provider without a name was accepted")
 	}
 }

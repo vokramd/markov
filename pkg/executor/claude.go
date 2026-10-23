@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jctanner/markov/pkg/openshell"
 )
 
 const (
@@ -34,9 +36,22 @@ var claudePermissionModes = map[string]string{
 // stream-json output live. Authentication is whatever the claude CLI finds in
 // the runner environment (an OAuth login under HOME, or any key the user puts
 // in env); the step never requires an API key.
-type Claude struct{}
+//
+// With `sandbox`, the CLI runs inside that OpenShell sandbox instead, through
+// the same transport as the openshell_* steps; chdir, add_dirs and other paths
+// are then sandbox paths, and only the step's own env is passed in.
+type Claude struct {
+	openshell    openshell.Config
+	newTransport func(openshell.Config) (openshell.Transport, error)
+}
 
-func NewClaude() *Claude { return &Claude{} }
+func NewClaude() *Claude { return &Claude{newTransport: openshell.New} }
+
+// WithOpenShell sets the workflow file's openshell settings, used by steps with `sandbox`.
+func (e *Claude) WithOpenShell(cfg openshell.Config) *Claude {
+	e.openshell = cfg
+	return e
+}
 
 type claudeLimits struct {
 	maxTurns     int
@@ -77,18 +92,26 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 		}
 		binary = s
 	}
+	sandbox := ""
+	if raw, ok := params["sandbox"]; ok {
+		s, ok := raw.(string)
+		if !ok || s == "" {
+			return nil, fmt.Errorf("%s: sandbox must be a non-empty string", name)
+		}
+		sandbox = s
+	}
 	chdir := ""
 	if raw, ok := params["chdir"]; ok {
 		s, ok := raw.(string)
 		if !ok || s == "" {
 			return nil, fmt.Errorf("%s: chdir must be a non-empty string", name)
 		}
-		if info, err := os.Stat(s); err != nil || !info.IsDir() {
+		if info, err := os.Stat(s); sandbox == "" && (err != nil || !info.IsDir()) {
 			return nil, fmt.Errorf("%s: chdir %q is not a directory", name, s)
 		}
 		chdir = s
 	}
-	env := os.Environ()
+	stepEnv := map[string]string{}
 	if raw, ok := params["env"]; ok {
 		values, ok := stringMapParam(raw)
 		if !ok {
@@ -98,7 +121,7 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 			if k == "" || strings.Contains(k, "=") {
 				return nil, fmt.Errorf("%s: env key %q is invalid", name, k)
 			}
-			env = append(env, k+"="+v)
+			stepEnv[k] = v
 		}
 	}
 	eventsLimit := claudeDefaultEventsLimit
@@ -116,19 +139,26 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 		defer cancelTimeout()
 	}
 
-	cmd := exec.CommandContext(runCtx, binary, args...)
-	cmd.Dir = chdir
-	cmd.Env = env
-	cmd.Stdin = strings.NewReader(prompt)
-	isolateProcessGroup(cmd)
 	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	stdout, err := cmd.StdoutPipe()
+	var stdout io.Reader
+	var wait func() (int, error)
+	if sandbox != "" {
+		cfg := e.openshell
+		if t, ok := params["transport"].(string); ok && t != "" {
+			cfg.Transport = t
+		}
+		stdout, wait, err = e.startInSandbox(runCtx, cfg, openshell.ExecRequest{
+			Sandbox: sandbox,
+			Command: append([]string{binary}, args...),
+			Workdir: chdir,
+			Env:     stepEnv,
+			Stdin:   strings.NewReader(prompt),
+		}, &stderr)
+	} else {
+		stdout, wait, err = startLocal(runCtx, binary, args, chdir, stepEnv, prompt, &stderr)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("%s: starting %s: %w", name, binary, err)
 	}
 
 	s := &claudeStream{
@@ -140,12 +170,7 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 		cancel:      cancel,
 	}
 	s.consume(stdout)
-	waitErr := cmd.Wait()
-
-	exitCode := -1
-	if cmd.ProcessState != nil {
-		exitCode = cmd.ProcessState.ExitCode()
-	}
+	exitCode, waitErr := wait()
 	breach := s.breach
 	if breach == "" && errors.Is(runCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
 		breach = "max_duration"
@@ -171,6 +196,67 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 		return res, fmt.Errorf("%s: %w\nstderr: %s", name, waitErr, stderr.String())
 	}
 	return res, nil
+}
+
+// startLocal runs the CLI on the runner. wait returns its exit code (-1 when it did not exit
+// normally) and the error from waiting.
+func startLocal(ctx context.Context, binary string, args []string, chdir string, stepEnv map[string]string, prompt string, stderr io.Writer) (io.Reader, func() (int, error), error) {
+	cmd := exec.CommandContext(ctx, binary, args...)
+	cmd.Dir = chdir
+	cmd.Env = os.Environ()
+	for k, v := range stepEnv {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+	cmd.Stdin = strings.NewReader(prompt)
+	isolateProcessGroup(cmd)
+	cmd.Stderr = stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, nil, fmt.Errorf("starting %s: %w", binary, err)
+	}
+	return stdout, func() (int, error) {
+		err := cmd.Wait()
+		code := -1
+		if cmd.ProcessState != nil {
+			code = cmd.ProcessState.ExitCode()
+		}
+		return code, err
+	}, nil
+}
+
+// startInSandbox runs the CLI in an OpenShell sandbox. Ending ctx ends the exec stream, which
+// stops the CLI there too, so limits are enforced the same way as on the runner.
+func (e *Claude) startInSandbox(ctx context.Context, cfg openshell.Config, req openshell.ExecRequest, stderr io.Writer) (io.Reader, func() (int, error), error) {
+	tr, err := e.newTransport(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	pr, pw := io.Pipe()
+	type exit struct {
+		code int
+		err  error
+	}
+	done := make(chan exit, 1)
+	go func() {
+		code, err := tr.Exec(ctx, req, pw, stderr)
+		pw.Close()
+		if c, ok := tr.(io.Closer); ok {
+			c.Close()
+		}
+		done <- exit{code, err}
+	}()
+	return pr, func() (int, error) {
+		// Drain what consume left unread so Exec is not blocked on the pipe.
+		_, _ = io.Copy(io.Discard, pr)
+		x := <-done
+		if x.err == nil && x.code != 0 {
+			x.err = fmt.Errorf("exit status %d", x.code)
+		}
+		return x.code, x.err
+	}, nil
 }
 
 func claudePrompt(params map[string]any) (string, error) {

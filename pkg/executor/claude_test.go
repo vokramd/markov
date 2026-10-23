@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jctanner/markov/pkg/openshell"
 )
 
 type fakeClaudeOpts struct {
@@ -288,5 +291,92 @@ func TestClaudeRejectsInvalidParams(t *testing.T) {
 				t.Fatal("expected error")
 			}
 		})
+	}
+}
+
+// sandboxTransport replays canned stream-json as a sandbox would, recording the exec request.
+type sandboxTransport struct {
+	fakeTransport
+	events []map[string]any
+	req    openshell.ExecRequest
+	prompt string
+	// block keeps the stream open until the context ends, like a CLI that is still working.
+	block bool
+}
+
+func (f *sandboxTransport) Exec(ctx context.Context, req openshell.ExecRequest, stdout, stderr io.Writer) (int, error) {
+	f.req = req
+	b, _ := io.ReadAll(req.Stdin)
+	f.prompt = string(b)
+	for _, ev := range f.events {
+		line, _ := json.Marshal(ev)
+		if _, err := fmt.Fprintf(stdout, "%s\n", line); err != nil {
+			return -1, err
+		}
+	}
+	if f.block {
+		<-ctx.Done()
+		return -1, ctx.Err()
+	}
+	return 0, nil
+}
+
+func TestClaudeRunsInASandbox(t *testing.T) {
+	ft := &sandboxTransport{events: []map[string]any{
+		initEvent(),
+		assistantEvent("m1", []any{textBlock("hello from the sandbox")}, usage(10, 5, 0, 0)),
+		resultEvent("done", false, 1),
+	}}
+	var gotCfg openshell.Config
+	e := NewClaude().WithOpenShell(openshell.Config{Transport: "cli", Workspace: "ws"})
+	e.newTransport = func(c openshell.Config) (openshell.Transport, error) { gotCfg = c; return ft, nil }
+	var rec progressRecorder
+	res, err := e.Execute(rec.ctx(), map[string]any{
+		"prompt": "fix the bug", "sandbox": "sb1", "transport": "sdk",
+		"chdir": "/sandbox/repo", "model": "claude-haiku-5-5", "env": map[string]any{"ANTHROPIC_BASE_URL": "https://relay-api.local"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ft.req.Sandbox != "sb1" || ft.req.Workdir != "/sandbox/repo" || ft.prompt != "fix the bug" {
+		t.Errorf("exec request %+v prompt %q", ft.req, ft.prompt)
+	}
+	if ft.req.Command[0] != "claude" || !strings.Contains(strings.Join(ft.req.Command, " "), "--output-format stream-json") || !strings.Contains(strings.Join(ft.req.Command, " "), "--model claude-haiku-5-5") {
+		t.Errorf("command %q", ft.req.Command)
+	}
+	if len(ft.req.Env) != 1 || ft.req.Env["ANTHROPIC_BASE_URL"] != "https://relay-api.local" {
+		t.Errorf("only the step's env goes into the sandbox, not the runner's: %v", ft.req.Env)
+	}
+	if gotCfg.Transport != "sdk" || gotCfg.Workspace != "ws" {
+		t.Errorf("transport config %+v", gotCfg)
+	}
+	if res.Output["result"] != "done" || res.Output["exit_code"] != 0 {
+		t.Errorf("output %v", res.Output)
+	}
+	rec.mu.Lock()
+	kinds := strings.Join(rec.kinds, ",")
+	rec.mu.Unlock()
+	if !strings.Contains(kinds, "text") {
+		t.Errorf("the transcript did not stream: %s", kinds)
+	}
+}
+
+func TestClaudeInASandboxEnforcesLimitsByEndingTheExec(t *testing.T) {
+	ft := &sandboxTransport{events: manyTurns(5, usage(1, 1, 0, 0)), block: true}
+	e := NewClaude()
+	e.newTransport = func(openshell.Config) (openshell.Transport, error) { return ft, nil }
+	done := make(chan struct{})
+	var err error
+	go func() {
+		_, err = e.Execute(context.Background(), map[string]any{"prompt": "x", "sandbox": "sb1", "limits": map[string]any{"max_turns": 2}})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the step did not end after the limit was exceeded")
+	}
+	if err == nil || !strings.Contains(err.Error(), "max_turns") {
+		t.Errorf("err = %v", err)
 	}
 }

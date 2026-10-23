@@ -28,7 +28,7 @@ type OpenShell struct {
 // NewOpenShellSteps returns the openshell_* executors, keyed by step type.
 func NewOpenShellSteps(cfg openshell.Config) map[string]Executor {
 	out := map[string]Executor{}
-	for _, op := range []string{"build", "create", "upload", "exec", "download", "delete"} {
+	for _, op := range []string{"build", "create", "upload", "exec", "download", "delete", "provider"} {
 		out["openshell_"+op] = &OpenShell{op: op, cfg: cfg, newTransport: openshell.New}
 	}
 	return out
@@ -66,6 +66,8 @@ func (e *OpenShell) Execute(ctx context.Context, params map[string]any) (*Result
 		return e.exec(ctx, tr, params)
 	case "delete":
 		return e.delete(ctx, tr, params)
+	case "provider":
+		return e.provider(ctx, tr, params)
 	}
 	return nil, e.errf("unknown operation")
 }
@@ -248,6 +250,49 @@ func (e *OpenShell) delete(ctx context.Context, tr openshell.Transport, params m
 		deleted[i] = n
 	}
 	return &Result{Output: map[string]any{"deleted": deleted}}, nil
+}
+
+// SecretParams lists the params of a step type whose values are secret, so nothing prints them.
+func SecretParams(stepType string) []string {
+	if stepType == "openshell_provider" {
+		return []string{"credentials"}
+	}
+	return nil
+}
+
+// provider makes sure a provider exists with the given credentials, registering its profile
+// first when `profile` names a file. Credential values never reach the output.
+func (e *OpenShell) provider(ctx context.Context, tr openshell.Transport, params map[string]any) (*Result, error) {
+	req := openshell.ProviderRequest{Name: str(params, "name"), Type: str(params, "type")}
+	if req.Name == "" {
+		return nil, e.errf("name is required")
+	}
+	if req.Type == "" {
+		req.Type = req.Name
+	}
+	var err error
+	if req.Credentials, err = e.stringMap(params, "credentials"); err != nil {
+		return nil, err
+	}
+	profile := ""
+	if path := str(params, "profile"); path != "" {
+		change, err := tr.EnsureProfile(ctx, path)
+		if err != nil {
+			return nil, e.errf("profile %s: %v", path, err)
+		}
+		profile = string(change)
+	}
+	res, err := tr.EnsureProvider(ctx, req)
+	if err != nil {
+		return nil, e.errf("%v", err)
+	}
+	keys := make([]any, len(res.CredentialKeys))
+	for i, k := range res.CredentialKeys {
+		keys[i] = k
+	}
+	return &Result{Output: map[string]any{
+		"name": req.Name, "type": req.Type, "created": res.Created, "profile": profile, "credential_keys": keys,
+	}}, nil
 }
 
 func (e *OpenShell) stringMap(params map[string]any, key string) (map[string]string, error) {

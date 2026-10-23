@@ -70,6 +70,36 @@ type Transport interface {
 	Exec(ctx context.Context, req ExecRequest, stdout, stderr io.Writer) (int, error)
 	// Delete deletes sandboxes; deleting one that does not exist succeeds.
 	Delete(ctx context.Context, names []string) error
+	// EnsureProfile registers the provider profile in the YAML file, or updates the registered
+	// one when the file differs from it.
+	EnsureProfile(ctx context.Context, path string) (ProfileChange, error)
+	// EnsureProvider creates the provider, or replaces the credentials of an existing one.
+	EnsureProvider(ctx context.Context, req ProviderRequest) (*ProviderResult, error)
+}
+
+// ProfileChange says what EnsureProfile did.
+type ProfileChange string
+
+const (
+	ProfileImported  ProfileChange = "imported"
+	ProfileUpdated   ProfileChange = "updated"
+	ProfileUnchanged ProfileChange = "unchanged"
+)
+
+// ProviderRequest is a provider to ensure. Credentials are secret: transports must not put
+// them on a command line, in errors or in results.
+type ProviderRequest struct {
+	Name        string
+	Type        string
+	Credentials map[string]string
+}
+
+// ProviderResult is what EnsureProvider did.
+type ProviderResult struct {
+	// Created is false when the provider existed; its credentials were then replaced.
+	Created bool
+	// CredentialKeys are the credential names set (never their values).
+	CredentialKeys []string
 }
 
 // TimeoutExitCode is the exit code of a command stopped by ExecRequest.Timeout.

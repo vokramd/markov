@@ -1,7 +1,7 @@
 {% raw %}
 # Built-in Step Types
 
-Markov ships with twenty-four primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
+Markov ships with twenty-five primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
 
 All step types support these common fields:
 
@@ -186,7 +186,9 @@ Group-writable modes on a setgid volume let them remove what the runner wrote:
 
 Runs the Claude Code CLI non-interactively (`claude -p`) with `--output-format stream-json --verbose` and processes its event stream live. Use it to run a prompt or a skill (a slash command) in an execution directory, with limits that Markov enforces while the run is in progress.
 
-The step runs on the Markov runner host and needs the `claude` CLI installed there.
+The step runs on the Markov runner host and needs the `claude` CLI installed there, unless `sandbox` names an [OpenShell sandbox](#openshell-sandboxes) to run it in.
+
+**In a sandbox.** With `sandbox`, the same command runs inside that sandbox through the `openshell_*` steps' transport, and everything else works as on the runner: the live transcript, usage and cost, and limits (a breach ends the exec, which stops `claude` in the sandbox). The image needs the `claude` CLI; `chdir`, `add_dirs`, `mcp_config` and `settings` are sandbox paths; and only the step's `env` is passed in, not the runner's environment. The sandbox's network policy must allow the API endpoint: attach an OpenShell provider for it on `openshell_create` (`providers`), which also keeps the key itself out of the sandbox.
 
 **Authentication.** The step never requires or sets `ANTHROPIC_API_KEY`. It starts `claude` with the runner's environment, so an existing OAuth login under `HOME` (`~/.claude`) is used. To use a key or token instead, pass it through `env`. In Kubernetes there is no interactive login in the pod; provide credentials through `env` or by mounting them.
 
@@ -216,6 +218,8 @@ The prompt is written to the process's stdin, so it does not appear in the proce
 | `env` | map[string]string | no | Extra environment variables. |
 | `extra_args` | string[] | no | Extra arguments appended verbatim. |
 | `binary` | string | no | Executable to run instead of `claude`. |
+| `sandbox` | string | no | Run in this OpenShell sandbox instead of on the runner. |
+| `transport` | string | no | With `sandbox`: `cli` or `sdk` (default from the workflow file's `openshell:` block). |
 
 ### Limits
 
@@ -1271,7 +1275,7 @@ The markov binary for the child runs is `MARKOV_BIN` when set, else the running 
 
 ## OpenShell sandboxes
 
-The `openshell_*` steps run work in [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandboxes: build an image, create a sandbox from it, copy files in, run commands, copy results out, and delete it. They need an OpenShell gateway; on a Linux workstation that is the `openshell-gateway` user service with the Podman driver (`systemctl --user enable --now podman.socket openshell-gateway`, then `openshell gateway add https://127.0.0.1:17670 --local --name openshell`).
+The `openshell_*` steps run work in [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandboxes: register the credentials sandboxes may use, build an image, create a sandbox from it, copy files in, run commands, copy results out, and delete it. They need an OpenShell gateway; on a Linux workstation that is the `openshell-gateway` user service with the Podman driver (`systemctl --user enable --now podman.socket openshell-gateway`, then `openshell gateway add https://127.0.0.1:17670 --local --name openshell`).
 
 **Transport.** Every step except `openshell_build` reaches the gateway through a transport. Choose it, in order of precedence, with the step's `transport` param, `markov run --openshell-transport`, or the workflow file's `openshell:` block ([workflow file](workflow-file.md#openshell)). Both behave the same except where noted:
 
@@ -1422,6 +1426,55 @@ Copies a file or directory out of a sandbox into a local directory.
 |----------|------|-------------|
 | `sandbox` | string | The sandbox. |
 | `path` | string | Where `src` landed: `dest/<base name of src>`. |
+
+## openshell_provider
+
+Makes sure an OpenShell [provider](https://github.com/NVIDIA/OpenShell) exists with the given credentials, registering its provider profile first when `profile` names a file. A provider holds a secret in the gateway; a sandbox created with `providers: [<name>]` gets only a placeholder, which the gateway's proxy replaces with the real value on requests the profile allows (its hosts, from its binaries). Run it before `openshell_create`, so the workflow carries its own setup.
+
+It is idempotent: the profile is imported when missing and updated only when the file differs from the registered one; the provider is created when missing, and otherwise has its credentials replaced, so a rotated key takes effect on the next run.
+
+**Secrets.** `credentials` values are never in the step's output, never printed by `--verbose` (shown as `<redacted>`), and never on a command line (the `cli` transport hands them to `openshell` through its environment). Pass them from variables, `"{{ ANTHROPIC_API_KEY }}"`, rather than writing them in the workflow: the `step_started` event carries the step's params as written, before templates are rendered.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Provider name; `openshell_create` attaches it by this name. |
+| `type` | string | no | The provider profile's `id`. Default: `name`. |
+| `profile` | string | no | Provider profile YAML to import, or to update when it differs (`cli` transport only: only the openshell CLI parses profile files). |
+| `credentials` | map | no | Credential environment variable (as the profile names it) to secret value. |
+| `transport` | string | no | `cli` or `sdk`. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `name` | string | The provider. |
+| `type` | string | Its profile id. |
+| `created` | bool | The provider was created (otherwise its credentials were replaced). |
+| `profile` | string | `imported`, `updated`, `unchanged`, or empty without `profile`. |
+| `credential_keys` | string[] | The credential names set, never their values. |
+
+### Failure Conditions
+
+- The profile file is invalid, or the provider exists with a different type (delete it to change its type).
+
+### Example
+
+```yaml
+- name: relay-provider
+  type: openshell_provider
+  params:
+    name: relay-claude
+    profile: openshell/relay-claude.yaml
+    credentials:
+      ANTHROPIC_API_KEY: "{{ ANTHROPIC_API_KEY }}"
+- name: sandbox
+  type: openshell_create
+  register: sandbox
+  params:
+    providers: [relay-claude]
+```
 
 ## openshell_delete
 
