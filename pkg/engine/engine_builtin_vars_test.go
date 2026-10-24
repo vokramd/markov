@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -96,5 +98,31 @@ func TestEventLogsIsAnEmptyListWithoutJSONLCallbacks(t *testing.T) {
 	}
 	if got := rec.calls["n"]["count"]; got != 0 {
 		t.Fatalf("markov_event_logs | length = %#v, want 0", got)
+	}
+}
+
+func TestSourceDirIsTheAbsoluteDirectoryOfTheWorkflowSource(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "flow.yaml")
+	if err := os.WriteFile(file, []byte("x: 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, source := range []string{dir, file} {
+		wfFile := &parser.WorkflowFile{Entrypoint: "main", Workflows: []parser.Workflow{
+			{Name: "main", Steps: []parser.Step{
+				{Name: "top", Type: "rec", Params: map[string]any{"id": "top", "dir": "{{ markov_source_dir }}"}},
+				{Name: "call", Workflow: "child"},
+			}},
+			{Name: "child", Steps: []parser.Step{{Name: "in", Type: "rec", Params: map[string]any{"id": "in", "dir": "{{ markov_source_dir }}/fixtures/x.yaml"}}}},
+		}}
+		rec := &paramsByID{}
+		eng, _ := newTestEngine(t, wfFile, map[string]executor.Executor{"rec": rec})
+		eng.SourcePath = source
+		if _, err := eng.Run(context.Background(), "", nil); err != nil {
+			t.Fatalf("%s: %v", source, err)
+		}
+		if rec.calls["top"]["dir"] != dir || rec.calls["in"]["dir"] != dir+"/fixtures/x.yaml" {
+			t.Errorf("source %s: markov_source_dir = %v / %v, want %s", source, rec.calls["top"]["dir"], rec.calls["in"]["dir"], dir)
+		}
 	}
 }

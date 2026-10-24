@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -206,6 +208,9 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 	// resume sees the same value.
 	runCtx["markov_run_id"] = runID
 	runCtx["markov_event_logs"] = e.eventLogs()
+	if dir := sourceDir(e.SourcePath); dir != "" {
+		runCtx["markov_source_dir"] = dir
+	}
 	varsJSON, _ := json.Marshal(runCtx)
 
 	run := &state.Run{
@@ -1805,4 +1810,21 @@ func (e *Engine) buildContext(cliVars map[string]any, workflowVars map[string]an
 		ctx[k] = v
 	}
 	return ctx
+}
+
+// sourceDir is the absolute directory of a workflow source: the directory itself for a
+// directory workflow, the file's directory otherwise. Paths built on it reach the project's
+// files whatever the working directory (codify runs workflows from an empty one).
+func sourceDir(source string) string {
+	if source == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(source)
+	if err != nil {
+		return ""
+	}
+	if info, err := os.Stat(abs); err == nil && !info.IsDir() {
+		abs = filepath.Dir(abs)
+	}
+	return abs
 }

@@ -65,6 +65,7 @@ pass such values through a workflow var set in YAML.
 |---|---|
 | `markov_run_id` | The run's ID. It is saved with the run, so a resumed run sees the same value, and sub-workflows inherit it. Use it for unique output paths, such as `/results/{{ markov_run_id }}/summary.md`. |
 | `markov_current_run_id` | The ID of the (sub-)run executing the step: the run ID at the top level, `<parent>-<call step>` in a sub-workflow, `<parent>-<step>-<key>` in a `for_each` iteration. A sub-workflow called by step `task` from here will run as `{{ markov_current_run_id }}-task`, which is how to pick its events out of the event log. |
+| `markov_source_dir` | The absolute directory of the workflow source: the project directory for a directory workflow, the file's directory otherwise. Use it for files that belong to the project, such as `{{ markov_source_dir }}/fixtures/repo.yaml`: relative paths resolve against the working directory, which differs between runs (codify runs workflows from an empty one). |
 | `markov_event_logs` | The absolute paths of the run's `jsonl://` callback files (an empty list without any). Events are written and synced as they happen, so a step can read everything that happened before it started, for example to let an agent review how earlier steps ran. A resumed run sees the logs of the resuming process. |
 
 ## Setting Variables at Runtime
