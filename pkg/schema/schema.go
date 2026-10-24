@@ -106,6 +106,7 @@ func stepTypes() []StepType {
 			p("settings", ""), p("resume", "Resume a session"), p("session_id", ""), p("bare", "Skip hooks, plugins and CLAUDE.md discovery (needs an API key)"),
 			p("limits", "max_turns, max_tokens, max_duration, max_budget_usd"), p("events_limit", "Maximum events kept in the output"), p("env", ""), p("extra_args", ""), p("binary", ""),
 			p("sandbox", "Run in this OpenShell sandbox"), p("transport", "With sandbox: cli or sdk"),
+			p("json_schema", "JSON Schema the answer must follow; the parsed answer is the structured_output output"),
 		}},
 		StepType{Name: "ansible_playbook", Inputs: "params", Summary: "Run ansible-playbook.", Params: []Param{
 			req("playbook", "Playbook path(s)"), p("chdir", ""), p("inventory", "Path, inline host list, list, or inline inventory map"), p("limit", ""), p("tags", ""), p("skip_tags", ""),
@@ -166,6 +167,7 @@ func stepTypes() []StepType {
 		StepType{Name: "codify", Inputs: "params", Summary: "One iteration of markov codify on a workflow of the project: move one job out of its agent steps and promote the result when its outputs still match.", Params: []Param{
 			req("workflow", "The workflow to codify"), p("model", "Retro agent and judge model (default claude-haiku-5-5)"), p("keep", "Steps that must stay agent steps"),
 			p("project", "Project directory to codify (default the run's source)"), p("codify_dir", "History directory (default <project>.codify)"), p("prompt_file", "Replacement retro prompt"),
+			p("fixed", "Workflows the target reaches that must not change (a reset, a snapshot)"), p("live_hosts", "Hosts reached for real instead of replayed; only for services the workflow resets"),
 		}},
 		StepType{Name: "jev", Inputs: "params", Summary: "Ask a Jev decision service.", Params: []Param{}},
 		StepType{Name: "llm_invoke", Inputs: "params", Summary: "Invoke a language model.", Params: []Param{}},

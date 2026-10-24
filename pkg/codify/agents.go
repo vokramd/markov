@@ -34,6 +34,7 @@ type RetroInputs struct {
 	ScriptsDir    string
 	AgentSteps    []string
 	Keep          []string
+	Fixed         []string
 	Judged        bool
 }
 

@@ -389,6 +389,21 @@ func claudeArgs(params map[string]any, limits claudeLimits) ([]string, error) {
 		}
 		args = append(args, "--permission-mode", mode)
 	}
+	// A JSON Schema the final answer must follow; the result arrives parsed as structured_output.
+	if raw, ok := params["json_schema"]; ok && raw != nil {
+		schema, ok := raw.(string)
+		if !ok {
+			b, err := json.Marshal(raw)
+			if err != nil {
+				return nil, fmt.Errorf("%s: json_schema: %w", name, err)
+			}
+			schema = string(b)
+		}
+		if !json.Valid([]byte(schema)) {
+			return nil, fmt.Errorf("%s: json_schema must be a JSON Schema (a map, or a string holding JSON)", name)
+		}
+		args = append(args, "--json-schema", schema)
+	}
 	for _, f := range []struct{ key, flag string }{
 		{"model", "--model"},
 		{"effort", "--effort"},
@@ -662,7 +677,7 @@ func (s *claudeStream) output(exitCode int, stderr, breach string) map[string]an
 	if s.result != nil {
 		out["result"] = claudeString(s.result["result"], "")
 		out["is_error"] = breach != "" || s.resultIsError()
-		for _, k := range []string{"stop_reason", "terminal_reason", "duration_ms", "permission_denials"} {
+		for _, k := range []string{"stop_reason", "terminal_reason", "duration_ms", "permission_denials", "structured_output"} {
 			if v, ok := s.result[k]; ok {
 				out[k] = v
 			}

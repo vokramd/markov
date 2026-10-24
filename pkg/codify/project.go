@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -25,6 +26,9 @@ type Project struct {
 	files map[string]string
 	// Reach is the target and every workflow it calls, directly or through others.
 	Reach []string
+	// Fixed are reached workflows the candidate may not change: the parts of a cycle that set
+	// the stage and measure the result (a reset, a snapshot, the cycle itself).
+	Fixed []string
 }
 
 // ignored are files that are never part of a project's source.
@@ -37,7 +41,8 @@ func ignored(rel string, d fs.DirEntry) bool {
 }
 
 // LoadProject parses the directory workflow in dir and works out what codifying target may change.
-func LoadProject(dir, target string) (*Project, error) {
+// fixed names workflows the target reaches that must not change.
+func LoadProject(dir, target string, fixed ...string) (*Project, error) {
 	if info, err := os.Stat(filepath.Join(dir, "meta.yaml")); err != nil || info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory workflow (codify needs meta.yaml and workflows/); single-file workflows are not supported yet", dir)
 	}
@@ -67,7 +72,43 @@ func LoadProject(dir, target string) (*Project, error) {
 		}
 	}
 	p.Reach = reach(file, target)
+	for _, name := range fixed {
+		if !slices.Contains(p.Reach, name) {
+			return nil, fmt.Errorf("fixed workflow %q is not %s or a workflow it calls (it reaches: %s)", name, target, strings.Join(p.Reach, ", "))
+		}
+		if !slices.Contains(p.Fixed, name) {
+			p.Fixed = append(p.Fixed, name)
+		}
+	}
+	sort.Strings(p.Fixed)
+	if len(p.changeable()) == 0 {
+		return nil, fmt.Errorf("every workflow %s reaches is fixed; nothing is left to codify", target)
+	}
 	return p, nil
+}
+
+// FixedFiles returns those of rels that define a fixed workflow.
+func (p *Project) FixedFiles(rels []string) []string {
+	var out []string
+	for _, rel := range rels {
+		for _, name := range p.Fixed {
+			if p.files[name] == rel {
+				out = append(out, rel)
+			}
+		}
+	}
+	return out
+}
+
+// changeable is the reached workflows that are not fixed.
+func (p *Project) changeable() []string {
+	var out []string
+	for _, name := range p.Reach {
+		if !slices.Contains(p.Fixed, name) {
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 // reach lists target and the workflows it calls (templated calls: their workflow_names).
@@ -109,10 +150,10 @@ func (p *Project) HelperPrefix() string { return p.Target + "_" }
 func (p *Project) ScriptsDir() string { return "scripts/" + p.Target + "/" }
 
 // Editable reports whether a candidate may change (add, edit or remove) a project file: a file
-// defining a workflow the target reaches, a helper workflow file named for the target, or
-// anything under the target's scripts directory.
+// defining a workflow the target reaches (unless it is fixed), a helper workflow file named for
+// the target, or anything under the target's scripts directory.
 func (p *Project) Editable(rel string) bool {
-	for _, name := range p.Reach {
+	for _, name := range p.changeable() {
 		if p.files[name] == rel {
 			return true
 		}
@@ -126,7 +167,7 @@ func (p *Project) Editable(rel string) bool {
 // EditableFiles lists the editable files of the project as described above, for the prompt.
 func (p *Project) EditableFiles() []string {
 	var out []string
-	for _, name := range p.Reach {
+	for _, name := range p.changeable() {
 		if f := p.files[name]; f != "" {
 			out = append(out, f)
 		}
@@ -135,10 +176,11 @@ func (p *Project) EditableFiles() []string {
 	return out
 }
 
-// AgentSteps lists "workflow.step" for every model-backed step the target reaches.
+// AgentSteps lists "workflow.step" for every model-backed step the target reaches outside the
+// fixed workflows.
 func (p *Project) AgentSteps() []string {
 	var out []string
-	for _, name := range p.Reach {
+	for _, name := range p.changeable() {
 		wf := p.File.GetWorkflow(name)
 		for _, steps := range [][]parser.Step{wf.Steps, wf.Rescue, wf.Always} {
 			for _, st := range steps {

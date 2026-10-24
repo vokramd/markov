@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -432,5 +433,94 @@ func TestCodifyEmitsItsPhasesTheAgentsStreamsAndTheTargetsEvents(t *testing.T) {
 		if got := log.count(c.ty, c.wf, c.step); got != c.want {
 			t.Errorf("%s %s.%s: %d events, want %d", c.ty, c.wf, c.step, got, c.want)
 		}
+	}
+}
+
+// cycleProject is a cycle that calls the agent workflow and a snapshot workflow, as a reset and
+// snapshot cycle around an agent would.
+func cycleProject(t *testing.T, base string) string {
+	root := project(t, base)
+	write(t, root, "workflows/snap.yaml", "name: snap\nsteps:\n  - name: s\n    type: shell_exec\n    params:\n      command: echo snapshot\n")
+	write(t, root, "workflows/cycle.yaml", "name: cycle\nsteps:\n  - name: run-agent\n    workflow: target\n  - name: take-snapshot\n    workflow: snap\n")
+	return root
+}
+
+func TestFixedWorkflowsAreNotEditable(t *testing.T) {
+	root := cycleProject(t, "http://x")
+	p, err := LoadProject(root, "cycle", "snap", "cycle")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rel, want := range map[string]bool{
+		"workflows/target.yaml": true, "workflows/cycle_helper.yaml": true, "scripts/cycle/x.py": true,
+		"workflows/cycle.yaml": false, "workflows/snap.yaml": false, "workflows/main.yaml": false,
+	} {
+		if p.Editable(rel) != want {
+			t.Errorf("Editable(%s) = %v, want %v", rel, !want, want)
+		}
+	}
+	if got := strings.Join(p.EditableFiles(), ","); got != "workflows/target.yaml" {
+		t.Errorf("editable files = %s", got)
+	}
+	if got := strings.Join(p.AgentSteps(), ","); got != "target.agent" {
+		t.Errorf("agent steps = %s", got)
+	}
+	if got := p.FixedFiles([]string{"workflows/snap.yaml", "workflows/target.yaml", "vars.yaml"}); strings.Join(got, ",") != "workflows/snap.yaml" {
+		t.Errorf("fixed files = %v", got)
+	}
+	if _, err := LoadProject(root, "cycle", "nope"); err == nil || !strings.Contains(err.Error(), `fixed workflow "nope"`) {
+		t.Errorf("unknown fixed workflow: %v", err)
+	}
+	if _, err := LoadProject(root, "cycle", "cycle", "snap", "target"); err == nil || !strings.Contains(err.Error(), "nothing is left to codify") {
+		t.Errorf("everything fixed: %v", err)
+	}
+}
+
+func TestCodifyRejectsACandidateThatChangesAFixedWorkflow(t *testing.T) {
+	base, _, hook := server(t)
+	root := cycleProject(t, base)
+	fakeDir, fake := fakeClaude(t, `  printf '%s' "$prompt" | grep -q 'These workflows are fixed: cycle, snap' && touch "$retro.saw-fixed"
+  echo "  - name: cheat
+    type: shell_exec
+    params:
+      command: echo moved" >> workflows/snap.yaml
+  printf '{"changed": true, "extracted": "x"}' > "$retro"`)
+	t.Setenv("PATH", fakeDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	snapBefore, _ := os.ReadFile(filepath.Join(root, "workflows/snap.yaml"))
+	cfg := config(t, root, fake, hook)
+	cfg.Workflow, cfg.Fixed, cfg.MaxIterations = "cycle", []string{"cycle", "snap"}, 1
+	rows, err := Run(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	reasons := strings.Join(rows[0].Validation.Reasons, " ")
+	if rows[0].Validation.Status != "failed" || !strings.Contains(reasons, "fixed workflows changed") || !strings.Contains(reasons, "workflows/snap.yaml") {
+		t.Fatalf("validation = %+v", rows[0].Validation)
+	}
+	if after, _ := os.ReadFile(filepath.Join(root, "workflows/snap.yaml")); string(after) != string(snapBefore) {
+		t.Error("the fixed workflow changed in the project")
+	}
+	if seen, _ := filepath.Glob(filepath.Join(root+".codify", "iter-*", "retro.json.saw-fixed")); len(seen) == 0 {
+		t.Error("the retro prompt did not name the fixed workflows")
+	}
+}
+
+func TestLiveHostsAreTunnelledNotReplayed(t *testing.T) {
+	c := Config{Source: t.TempDir(), Workflow: "w", Markov: "markov", LiveHosts: []string{"github.local"}}
+	c.CodifyDir = filepath.Join(t.TempDir(), "codify")
+	if err := c.defaults(); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(c.Passthrough, "github.local") || !slices.Contains(c.Passthrough, "anthropic.com") {
+		t.Fatalf("passthrough = %v", c.Passthrough)
+	}
+	p := &Proxy{pass: c.Passthrough}
+	for host, want := range map[string]bool{"github.local:443": true, "api.github.local": true, "notgithub.local": false, "example.com:443": false} {
+		if p.passthrough(host) != want {
+			t.Errorf("passthrough(%s) = %v", host, !want)
+		}
+	}
+	if slices.Contains(DefaultPassthrough, "github.local") {
+		t.Error("live hosts must not be added to the shared default list")
 	}
 }

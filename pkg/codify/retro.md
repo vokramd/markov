@@ -16,25 +16,46 @@ It just ran once. Evidence of that run is in {{.Evidence}}:
 
 Agent steps today: {{if .AgentSteps}}{{join .AgentSteps ", "}}{{else}}none{{end}}.
 
-Codification is gradual. Each pass moves exactly ONE piece of work out of the agent:
+Codification is gradual. Each pass makes exactly ONE change:
 1. From the evidence, list the distinct jobs the agent steps did (for example: fetch a list,
-   fetch each item, choose fields, format, write the file) and decide which need no judgment.
-2. Pick the earliest such job in the data flow and implement it with native Markov steps.
-   Hand its results to the remaining claude step through template expressions in its prompt
-   (or a file in the working directory that the prompt names), and narrow that prompt so the
-   agent no longer does the extracted job.
-3. Leave every other job with the agent, even if it is mechanical too; later passes take it.
-4. Remove the last claude step only in a pass whose one job is that step's whole remaining
-   work, and only if that work needs no judgment.
+   fetch each item, choose fields, classify each item, write code, format, write the file) and
+   decide for each whether it needs judgment.
+2. If a job that needs no judgment is left with an agent, move the earliest one in the data flow
+   into native Markov steps. Hand its results to the remaining agent step through template
+   expressions in its prompt (or a file in the working directory that the prompt names), and
+   narrow that prompt so the agent no longer does the extracted job.
+3. Otherwise, if one agent step does more than one job that needs judgment (for example: triage
+   issues AND review pull requests AND write code), split exactly ONE of those jobs into its own
+   focused claude step:
+   - a short prompt for just that job, given only the inputs it needs through template
+     expressions (fetched by native steps);
+   - a json_schema for its answer, so native steps read the parsed answer from
+     `<register>.structured_output` instead of parsing text;
+   - for_each with one small call per item when the job applies to items independently;
+   - the model and limits that job needs (a small model for classification, a stronger one for
+     writing code); in an OpenShell sandbox only when the job needs one (copy the sandbox,
+     permission_mode and env params of the original step);
+   - native steps that carry its answers onward (for example: apply the label it chose).
+   Remove that job from the broad prompt.
+4. Leave every other job where it is, even if it is mechanical too; later passes take it.
+5. Remove a claude step only in a pass whose one job is that step's whole remaining work, and
+   only if that work needs no judgment.
 {{- if .Keep}}
-5. These steps must stay agent steps: {{join .Keep ", "}}. You may narrow their prompts.
+6. These steps must stay agent steps: {{join .Keep ", "}}. You may narrow their prompts.
 {{- end}}
+
+Splitting adds agent steps but makes each one smaller, cheaper and checkable on its own;
+progress is measured in agent tokens and cost, not in the number of agent steps.
 
 Prefer native steps (http_request, for_each, set_fact, write_file, assert, sub-workflows) over
 scripts. Use a script under {{.ScriptsDir}} with script_exec only for what the step types and
 templates cannot reasonably express, and say why in retro.json.
 
 Rules:
+{{- if .Fixed}}
+- These workflows are fixed: {{join .Fixed ", "}}. They set up each run and measure its result;
+  do not change them, and do not move their work into the workflows you edit.
+{{- end}}
 - Edit only these files: {{join .EditableFiles ", "}}; new helper workflows in
   workflows/{{.HelperPrefix}}<name>.yaml (one workflow per file, named {{.HelperPrefix}}<name>);
   files under {{.ScriptsDir}}. Everything else is compared byte for byte and the candidate is
@@ -53,14 +74,16 @@ Rules:
   workflow-file.md before writing steps. schema.json lists every step type and parameter.
 - Check the candidate with: {{.Markov}} validate .
   Do not run the workflow.
-- If nothing is left to codify (no agent steps remain, or what remains needs judgment), change
-  nothing.
+- If nothing is left to codify (no agent steps remain, no mechanical job is left with an agent,
+  and every agent step does a single job that needs judgment), change nothing.
 
 Finally write {{.RetroJSON}} containing a JSON object with keys:
 - "changed": true or false
-- "jobs": the jobs you listed in step 1, each an object with "job" and "where" ("agent" or
-  "native" after this pass)
+- "jobs": the jobs you listed in step 1, each an object with "job", "judgment" (true or false)
+  and "where" after this pass ("native", "script", "agent" for the broad step, or
+  "focused:<workflow>.<step>")
 - "extracted": the one job this pass moved out of the agent, or null
+- "move": "native", "script" or "split" (a focused agent step), or null when nothing changed
 - "summary": one or two sentences on what you changed and why
 - "script_justification": why a script was needed, or null when you added none
-- "remaining_agent_steps": the number of claude steps left in the workflows above
+- "remaining_agent_steps": the number of claude steps in the workflows above after this pass

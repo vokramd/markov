@@ -41,6 +41,12 @@ func codifyConfig(params map[string]any, source string) (codify.Config, error) {
 		return cfg, fmt.Errorf("codify: keep: %w", err)
 	}
 	cfg.Keep = keep
+	if cfg.Fixed, err = stringList(params["fixed"]); err != nil {
+		return cfg, fmt.Errorf("codify: fixed: %w", err)
+	}
+	if cfg.LiveHosts, err = stringList(params["live_hosts"]); err != nil {
+		return cfg, fmt.Errorf("codify: live_hosts: %w", err)
+	}
 	if bin := os.Getenv("MARKOV_BIN"); bin != "" {
 		cfg.Markov = bin
 	} else if cfg.Markov, err = os.Executable(); err != nil {

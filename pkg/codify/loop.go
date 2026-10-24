@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -33,12 +34,17 @@ type Config struct {
 	MaxIterations int
 	BudgetUSD     float64 // stop once the run's model spend reaches it (0: no limit)
 	Keep          []string
-	PromptFile    string
-	Markov        string // the markov binary for child runs
-	ClaudeBin     string // the claude CLI (tests)
-	RunTimeout    time.Duration
-	Passthrough   []string
-	Out           io.Writer
+	// Fixed are workflows the target reaches that the candidate may not change.
+	Fixed []string
+	// LiveHosts are host suffixes the target's runs reach for real, live run and candidates
+	// alike, instead of replaying a recording: only for services the target resets itself.
+	LiveHosts   []string
+	PromptFile  string
+	Markov      string // the markov binary for child runs
+	ClaudeBin   string // the claude CLI (tests)
+	RunTimeout  time.Duration
+	Passthrough []string
+	Out         io.Writer
 	// Callbacks receive codify's events: its phases as steps of the virtual "codify" workflow
 	// (the retro agent's and judge's claude streams as step_progress), and every event of the
 	// target workflow's runs.
@@ -93,6 +99,9 @@ func (c *Config) defaults() error {
 	if c.Passthrough == nil {
 		c.Passthrough = DefaultPassthrough
 	}
+	// Tunnelled, not forwarded: a forwarded HTTPS request is re-signed with codify's CA, which a
+	// step that pins its own CA rejects.
+	c.Passthrough = append(slices.Clone(c.Passthrough), c.LiveHosts...)
 	if c.Out == nil {
 		c.Out = io.Discard
 	}
@@ -152,7 +161,7 @@ func (c *Config) setup() (agents []string, docsDir string, proxy *Proxy, err err
 	if err := c.defaults(); err != nil {
 		return nil, "", nil, err
 	}
-	p, err := LoadProject(c.Source, c.Workflow)
+	p, err := LoadProject(c.Source, c.Workflow, c.Fixed...)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -310,7 +319,7 @@ func versions(dir string) []string {
 // iterate is one pass. It returns the row, the model spend, and a reason to stop.
 func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row, float64, string, error) {
 	row := Row{Time: time.Now().Format(time.RFC3339), Retro: map[string]any{}}
-	p, err := LoadProject(c.Source, c.Workflow)
+	p, err := LoadProject(c.Source, c.Workflow, c.Fixed...)
 	if err != nil {
 		return row, 0, "", err
 	}
@@ -366,7 +375,7 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 	in := RetroInputs{
 		Target: c.Workflow, Evidence: evidence, Docs: docsDir, Markov: c.Markov, RetroJSON: retroJSON,
 		EditableFiles: p.EditableFiles(), HelperPrefix: p.HelperPrefix(), ScriptsDir: p.ScriptsDir(),
-		AgentSteps: agents, Keep: c.Keep, Judged: true,
+		AgentSteps: agents, Keep: c.Keep, Fixed: p.Fixed, Judged: true,
 	}
 	model := c.Model
 	if model == "" {
@@ -443,7 +452,11 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 	v := Validation{ChangedFiles: changed}
 	switch {
 	case len(protected) > 0:
-		v.Status, v.Reasons = "failed", []string{"files outside " + c.Workflow + " changed: " + strings.Join(protected, ", ")}
+		reason := "files outside " + c.Workflow + " changed: " + strings.Join(protected, ", ")
+		if fixed := p.FixedFiles(protected); len(fixed) > 0 {
+			reason = "fixed workflows changed (they set up and measure each run): " + strings.Join(fixed, ", ") + "; " + reason
+		}
+		v.Status, v.Reasons = "failed", []string{reason}
 		return v, nil, 0
 	case len(changed) == 0:
 		v.Status = "no_change"
@@ -457,7 +470,7 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 		return v, nil, 0
 	}
 	if len(c.Keep) > 0 {
-		cp, err := LoadProject(candidate, c.Workflow)
+		cp, err := LoadProject(candidate, c.Workflow, c.Fixed...)
 		if err != nil {
 			v.Status, v.Reasons = "failed", []string{err.Error()}
 			return v, nil, 0

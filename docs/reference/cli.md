@@ -310,6 +310,8 @@ markov codify <directory> --workflow <name> [flags]
 | `--budget-usd X` | `5` | Stop once model spend (the workflow's agent steps, the retro agent, the judge) reaches this; `0` for no limit. |
 | `--codify-dir path` | `<directory>.codify` | Where history goes. Must be outside the project. |
 | `--keep step` | -- | A step (`step` or `workflow.step`) that must stay an agent step. Repeatable. |
+| `--fixed workflow` | -- | A workflow the target reaches that must not change: the parts of a cycle that set the stage and measure the result, such as a reset and a snapshot (see [Workflows with side effects](#workflows-with-side-effects)). The retro agent is told so, and a candidate that changes one is rejected. Repeatable or comma-separated. |
+| `--live-host host` | -- | A host (and its subdomains) the live run and the candidates reach for real, tunnelled through the proxy untouched, instead of replaying the recording. Only for services the workflow resets itself before it acts. Repeatable or comma-separated. |
 | `--prompt-file path` | built in | Replace the retro agent's strategy prompt, a Go template with the same fields as the built-in one (`pkg/codify/retro.md`). |
 | `--callback url` and the other callback flags | -- | As for `markov run`: receive codify's events (below). |
 
@@ -329,7 +331,26 @@ It stops when the retro agent finds nothing more to codify, no agent steps are l
 
 History in the codify directory: `versions/vNNNN/` (the codified files of each version, `v0000` the original), `metrics.jsonl` (one row per iteration, which the IDE's Codification tab charts), and `iter-NNNN/` (the live and candidate runs, recording, evidence, `retro.json`, `validation.json`).
 
-Requires a directory workflow and the `claude` CLI. The workflow's outputs must be files it writes relative to where it starts (a `claude` step without `chdir` writes there); side effects other than HTTP GETs are not supported yet.
+Requires a directory workflow and the `claude` CLI. The workflow's outputs must be files it writes relative to where it starts (a `claude` step without `chdir` writes there).
+
+#### Workflows with side effects
+
+An agent whose result is what it does to a service (comments, labels, pull requests) can be codified when every run starts from the same state and ends by writing that state as files. Codify a cycle around it rather than the agent itself:
+
+```
+agent-cycle:  reset the service to a fixture → run the agent → snapshot the service's state to files
+```
+
+- **Reset:** put the service in a fixture state (for example delete and recreate a test repository) so every run, live or candidate, gets the same inputs.
+- **Snapshot:** write the resulting state as stable files: leave out ids, timestamps, SHAs and names the agent picks freely, sort lists. Two runs that leave the service in the same state must write the same files.
+- **`--fixed`** the cycle, the reset and the snapshot, so only the agent's workflow can change.
+- **`--live-host`** the service, so candidates can reset it and act on it instead of failing on requests that are not in the recording or are not GETs.
+
+```
+markov codify . --workflow agent-cycle --fixed agent-cycle,reset,snapshot --live-host github.local
+```
+
+Never use `--live-host` for a service the cycle does not reset: every iteration's live run and candidate act on it for real. Traffic from an agent inside an OpenShell sandbox does not pass through codify's proxy at all; it goes through the OpenShell gateway.
 
 ### markov diagram
 

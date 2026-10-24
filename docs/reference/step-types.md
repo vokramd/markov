@@ -218,6 +218,7 @@ The prompt is written to the process's stdin, so it does not appear in the proce
 | `env` | map[string]string | no | Extra environment variables. |
 | `extra_args` | string[] | no | Extra arguments appended verbatim. |
 | `binary` | string | no | Executable to run instead of `claude`. |
+| `json_schema` | map or string | no | A JSON Schema the final answer must follow (`--json-schema`). The parsed answer is the `structured_output` output, so later steps can use `{{ triage.structured_output.label }}` instead of parsing text. Use it for a focused agent step whose result native steps consume. |
 | `sandbox` | string | no | Run in this OpenShell sandbox instead of on the runner. |
 | `transport` | string | no | With `sandbox`: `cli` or `sdk` (default from the workflow file's `openshell:` block). |
 
@@ -246,6 +247,7 @@ Markov counts turns and tokens from the stream as events arrive. When a limit is
 | `total_cost_usd` | float | Cost reported by the CLI. |
 | `limit_exceeded` | string | Name of the exceeded limit, or empty. |
 | `stop_reason`, `terminal_reason`, `duration_ms`, `permission_denials` | | Passed through from the CLI result when present. |
+| `structured_output` | any | With `json_schema`: the answer, parsed. |
 | `events` | list | Compact events (`kind` plus fields), capped by `events_limit`. Long strings are truncated. |
 | `events_truncated` | bool | True if events were dropped by the cap. |
 | `exit_code`, `stderr` | | Process exit code and standard error. |
@@ -1239,6 +1241,8 @@ One iteration of [`markov codify`](cli.md#markov-codify) on a workflow of the pr
 | `project` | string | no | The project directory to codify and install into. Default the run's source; set it when the run's source is a copy (an IDE run). |
 | `codify_dir` | string | no | History directory. Default `<project>.codify`. |
 | `prompt_file` | string | no | Replacement for the retro agent's prompt. |
+| `fixed` | string[] | no | Workflows the target reaches that must not change, such as a reset and a snapshot. See [workflows with side effects](cli.md#workflows-with-side-effects). |
+| `live_hosts` | string[] | no | Hosts the runs reach for real instead of replaying the recording; only for services the workflow resets itself. |
 
 ### Output Variables
 

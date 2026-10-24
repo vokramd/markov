@@ -419,3 +419,27 @@ func TestClaudeReportsAPIRetriesAndWhyASandboxRunFailed(t *testing.T) {
 		t.Errorf("err %v output %v", err, res.Output)
 	}
 }
+
+func TestClaudeJSONSchemaIsPassedAndItsAnswerReturned(t *testing.T) {
+	ft := &sandboxTransport{events: []map[string]any{
+		initEvent(),
+		{"type": "result", "subtype": "success", "is_error": false, "result": `{"label":"bug"}`, "num_turns": 2, "total_cost_usd": 0.004, "session_id": "s1", "structured_output": map[string]any{"label": "bug"}},
+	}}
+	e := NewClaude()
+	e.newTransport = func(openshell.Config) (openshell.Transport, error) { return ft, nil }
+	schema := map[string]any{"type": "object", "properties": map[string]any{"label": map[string]any{"type": "string", "enum": []any{"bug", "feature", "inquiry"}}}, "required": []any{"label"}}
+	res, err := e.Execute(context.Background(), map[string]any{"prompt": "classify", "sandbox": "sb", "json_schema": schema})
+	if err != nil {
+		t.Fatal(err)
+	}
+	argv := strings.Join(ft.req.Command, " ")
+	if !strings.Contains(argv, `--json-schema {"properties":{"label":{"enum":["bug","feature","inquiry"],"type":"string"}},"required":["label"],"type":"object"}`) {
+		t.Errorf("argv %s", argv)
+	}
+	if out, _ := res.Output["structured_output"].(map[string]any); out["label"] != "bug" {
+		t.Errorf("structured_output = %v", res.Output["structured_output"])
+	}
+	if _, err := e.Execute(context.Background(), map[string]any{"prompt": "x", "sandbox": "sb", "json_schema": "{not json"}); err == nil {
+		t.Error("an invalid schema string was accepted")
+	}
+}
