@@ -1241,6 +1241,7 @@ One iteration of [`markov codify`](cli.md#markov-codify) on a workflow of the pr
 | `project` | string | no | The project directory to codify and install into. Default the run's source; set it when the run's source is a copy (an IDE run). |
 | `codify_dir` | string | no | History directory. Default `<project>.codify`. |
 | `prompt_file` | string | no | Replacement for the retro agent's prompt. |
+| `mode` | string | no | `strict` (default) or `loose`; see [`markov codify`](cli.md#markov-codify). |
 | `fixed` | string[] | no | Workflows the target reaches that must not change, such as a reset and a snapshot. See [workflows with side effects](cli.md#workflows-with-side-effects). |
 | `live_hosts` | string[] | no | Hosts the runs reach for real instead of replaying the recording; only for services the workflow resets itself. |
 

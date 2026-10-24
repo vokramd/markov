@@ -41,6 +41,7 @@ func codifyConfig(params map[string]any, source string) (codify.Config, error) {
 		return cfg, fmt.Errorf("codify: keep: %w", err)
 	}
 	cfg.Keep = keep
+	cfg.Mode, _ = params["mode"].(string)
 	if cfg.Fixed, err = stringList(params["fixed"]); err != nil {
 		return cfg, fmt.Errorf("codify: fixed: %w", err)
 	}

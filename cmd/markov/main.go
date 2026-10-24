@@ -191,6 +191,7 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 	codifyCmd.Flags().Float64Var(&codifyCfg.BudgetUSD, "budget-usd", 5, "Stop once model spend reaches this (0: no limit)")
 	codifyCmd.Flags().StringVar(&codifyCfg.CodifyDir, "codify-dir", "", "Where history goes (default <directory>.codify)")
 	codifyCmd.Flags().StringArrayVar(&codifyCfg.Keep, "keep", nil, "A step (step or workflow.step) that must stay an agent step (repeatable)")
+	codifyCmd.Flags().StringVar(&codifyCfg.Mode, "mode", "strict", "strict: keep the outputs the same; loose: decompose agent work into atomic agent steps, comparing actions rather than agent-decided values")
 	codifyCmd.Flags().StringSliceVar(&codifyCfg.Fixed, "fixed", nil, "A workflow the target reaches that must not change, such as a reset or snapshot (repeatable or comma-separated)")
 	codifyCmd.Flags().StringSliceVar(&codifyCfg.LiveHosts, "live-host", nil, "A host the runs reach for real instead of replaying a recording; only for services the workflow resets itself (repeatable or comma-separated)")
 	codifyCmd.Flags().StringVar(&codifyCfg.PromptFile, "prompt-file", "", "Replace the retro agent's strategy prompt (a Go template; see the default in pkg/codify/retro.md)")

@@ -21,6 +21,9 @@ var defaultRetroPrompt string
 //go:embed judge.md
 var judgePrompt string
 
+//go:embed judge_loose.md
+var judgeLoosePrompt string
+
 // RetroInputs fill the retro prompt template. A replacement prompt (--prompt-file) gets the
 // same fields.
 type RetroInputs struct {
@@ -36,6 +39,8 @@ type RetroInputs struct {
 	Keep          []string
 	Fixed         []string
 	Judged        bool
+	// Loose selects the decomposition strategy: atomic agent steps joined by native ones.
+	Loose bool
 }
 
 func render(text string, data any) (string, error) {
@@ -126,8 +131,12 @@ type Verdict struct {
 }
 
 // judge compares two runs' outputs by content, for outputs an agent produces.
-func (c *Config) judge(ctx context.Context, target string, prompts []string, reference, candidate, verdictFile string) Verdict {
-	prompt, err := render(judgePrompt, map[string]any{"Target": target, "Reference": reference, "Candidate": candidate, "Prompts": prompts, "Verdict": verdictFile})
+func (c *Config) judge(ctx context.Context, target string, prompts, candidatePrompts []string, reference, candidate, verdictFile string) Verdict {
+	text := judgePrompt
+	if c.Loose() {
+		text = judgeLoosePrompt
+	}
+	prompt, err := render(text, map[string]any{"Target": target, "Reference": reference, "Candidate": candidate, "Prompts": prompts, "CandidatePrompts": candidatePrompts, "Verdict": verdictFile})
 	if err != nil {
 		return Verdict{AgentResult: AgentResult{Failed: err.Error()}}
 	}

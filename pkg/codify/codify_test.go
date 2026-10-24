@@ -524,3 +524,91 @@ func TestLiveHostsAreTunnelledNotReplayed(t *testing.T) {
 		t.Error("live hosts must not be added to the shared default list")
 	}
 }
+
+func TestRetroPromptFollowsTheMode(t *testing.T) {
+	base := RetroInputs{Target: "cycle", EditableFiles: []string{"workflows/agent.yaml"}, HelperPrefix: "cycle_", ScriptsDir: "scripts/cycle/", AgentSteps: []string{"agent.ask"}, Judged: true}
+	strict, err := render(defaultRetroPrompt, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base.Loose = true
+	loose, err := render(defaultRetroPrompt, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"LOOSE mode", "atomic agent step", "same actions on the same items", "json_schema must answer in it"} {
+		if !strings.Contains(loose, want) {
+			t.Errorf("loose prompt lacks %q", want)
+		}
+		if strings.Contains(strict, want) {
+			t.Errorf("strict prompt has %q", want)
+		}
+	}
+	if !strings.Contains(strict, "While an agent produces an output") || strings.Contains(loose, "While an agent produces an output") {
+		t.Error("only strict mode compares outputs by content")
+	}
+}
+
+func TestStructuredAnswerMisses(t *testing.T) {
+	started := func(wf, step string, schema bool) map[string]any {
+		params := map[string]any{"prompt": "x"}
+		if schema {
+			params["json_schema"] = map[string]any{"type": "object"}
+		}
+		return map[string]any{"event_type": "step_started", "workflow_name": wf, "step_name": step, "step_type": "claude", "params": params}
+	}
+	done := func(wf, step string, answer any) map[string]any {
+		return map[string]any{"event_type": "step_completed", "workflow_name": wf, "step_name": step, "step_type": "claude", "output": map[string]any{"structured_output": answer}}
+	}
+	events := []map[string]any{
+		started("triage", "classify", true), done("triage", "classify", map[string]any{"label": "bug"}),
+		started("triage", "classify", true), done("triage", "classify", nil), // a for_each call with no answer
+		started("label", "pick", true), done("label", "pick", map[string]any{"label": "bug"}),
+		{"event_type": "step_completed", "workflow_name": "label", "step_name": "pick", "step_type": "claude"}, // the for_each step closing
+		started("agent", "broad", false), done("agent", "broad", nil), // no schema: free text is fine
+		started("review", "judge-diff", true),
+		{"event_type": "step_failed", "workflow_name": "review", "step_name": "judge-diff", "step_type": "claude"},
+	}
+	if got := strings.Join(StructuredAnswerMisses(events), ","); got != "triage.classify,review.judge-diff" {
+		t.Errorf("misses = %s", got)
+	}
+}
+
+func TestModeMustBeStrictOrLoose(t *testing.T) {
+	c := Config{Source: t.TempDir(), Workflow: "w", Markov: "markov", Mode: "sloppy", CodifyDir: filepath.Join(t.TempDir(), "c")}
+	if err := c.defaults(); err == nil || !strings.Contains(err.Error(), "strict or loose") {
+		t.Errorf("err = %v", err)
+	}
+	c.Mode = ""
+	if err := c.defaults(); err != nil || c.Mode != "strict" || c.Loose() {
+		t.Errorf("default mode: %v %q", err, c.Mode)
+	}
+}
+
+func TestLooseModeKeepsGoingWhileTheAgentStillJudgesSeveralThings(t *testing.T) {
+	report := map[string]any{"jobs": []any{
+		map[string]any{"job": "label each issue", "judgment": true, "where": "agent"},
+		map[string]any{"job": "review each PR", "judgment": true, "where": "agent"},
+		map[string]any{"job": "list issues", "judgment": false, "where": "agent"},
+		map[string]any{"job": "pick a title", "judgment": true, "where": "atomic"},
+	}}
+	if got := judgmentJobsWithAgent(report); len(got) != 2 || got[0] != "label each issue" {
+		t.Fatalf("judgment jobs still with the agent: %v", got)
+	}
+	if got := judgmentJobsWithAgent(map[string]any{}); len(got) != 0 {
+		t.Fatalf("no report, no jobs: %v", got)
+	}
+}
+
+func TestHistoryNamesEachPassMoveModeAndReasons(t *testing.T) {
+	v := "v0001"
+	doc := historyDoc([]Row{
+		{Iteration: "iter-0001", Retro: map[string]any{"extracted": "fetch the issue list natively"}, Validation: Validation{Status: "failed", Reasons: []string{"labels differ"}}},
+		{Iteration: "iter-0002", Mode: "loose", Retro: map[string]any{"extracted": "create labels", "move": "native"}, Validation: Validation{Status: "passed"}, Promoted: &v},
+	})
+	for _, want := range []string{"## iter-0001 (strict)", "fetch the issue list natively", "reason: labels differ", "## iter-0002 (loose)", "(move: native)", "promoted v0001"} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("history lacks %q:\n%s", want, doc)
+		}
+	}
+}

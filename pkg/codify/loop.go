@@ -36,6 +36,11 @@ type Config struct {
 	Keep          []string
 	// Fixed are workflows the target reaches that the candidate may not change.
 	Fixed []string
+	// Mode is "strict" (the default: a candidate must produce the same outputs, agent-written
+	// content compared by meaning) or "loose" (agent work is decomposed into atomic agent steps
+	// joined by native ones; a candidate must take the same actions on the same items, and
+	// values agents decide only need to be valid).
+	Mode string
 	// LiveHosts are host suffixes the target's runs reach for real, live run and candidates
 	// alike, instead of replaying a recording: only for services the target resets itself.
 	LiveHosts   []string
@@ -58,6 +63,7 @@ type Config struct {
 type Row struct {
 	Iteration  string         `json:"iteration"`
 	Time       string         `json:"time"`
+	Mode       string         `json:"mode,omitempty"`
 	Task       Metrics        `json:"task"`
 	Retro      map[string]any `json:"retro"`
 	Validation Validation     `json:"validation"`
@@ -105,8 +111,18 @@ func (c *Config) defaults() error {
 	if c.Out == nil {
 		c.Out = io.Discard
 	}
+	switch c.Mode {
+	case "":
+		c.Mode = "strict"
+	case "strict", "loose":
+	default:
+		return fmt.Errorf("mode must be strict or loose, not %q", c.Mode)
+	}
 	return nil
 }
+
+// Loose reports whether the run decomposes agent work rather than keeping outputs identical.
+func (c *Config) Loose() bool { return c.Mode == "loose" }
 
 func (c *Config) printf(format string, args ...any) { fmt.Fprintf(c.Out, format, args...) }
 
@@ -318,7 +334,7 @@ func versions(dir string) []string {
 
 // iterate is one pass. It returns the row, the model spend, and a reason to stop.
 func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row, float64, string, error) {
-	row := Row{Time: time.Now().Format(time.RFC3339), Retro: map[string]any{}}
+	row := Row{Time: time.Now().Format(time.RFC3339), Mode: c.Mode, Retro: map[string]any{}}
 	p, err := LoadProject(c.Source, c.Workflow, c.Fixed...)
 	if err != nil {
 		return row, 0, "", err
@@ -375,7 +391,7 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 	in := RetroInputs{
 		Target: c.Workflow, Evidence: evidence, Docs: docsDir, Markov: c.Markov, RetroJSON: retroJSON,
 		EditableFiles: p.EditableFiles(), HelperPrefix: p.HelperPrefix(), ScriptsDir: p.ScriptsDir(),
-		AgentSteps: agents, Keep: c.Keep, Fixed: p.Fixed, Judged: true,
+		AgentSteps: agents, Keep: c.Keep, Fixed: p.Fixed, Judged: true, Loose: c.Loose(),
 	}
 	model := c.Model
 	if model == "" {
@@ -402,6 +418,14 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 
 	// 4. Deterministic checks, then the candidate against the recording.
 	v, cand, judgeCost := c.validate(ctx, p, candidate, retro, live, proxy, it)
+	// Loose mode is not done while one agent step still does several judgment jobs: the retro
+	// agent's own job list says so. Count the pass as failed so the run goes on.
+	if c.Loose() && v.Status == "no_change" {
+		if jobs := judgmentJobsWithAgent(retro.Report); len(jobs) >= 2 {
+			v.Status = "failed"
+			v.Reasons = []string{fmt.Sprintf("no change, but the agent still does %d judgment jobs (%s); in loose mode split one into an atomic agent step", len(jobs), strings.Join(jobs, "; "))}
+		}
+	}
 	spent += judgeCost
 	row.Validation = v
 	if cand != nil {
@@ -497,6 +521,14 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 		v.Reasons = append(v.Reasons, "the candidate failed: "+firstLine(cand.Err.Error())+"\n"+errorLines(cand.Log))
 		return v, cand, 0
 	}
+	// Loose mode: every atomic decision must have answered in its schema.
+	if c.Loose() {
+		if misses := StructuredAnswerMisses(LoadEvents(filepath.Join(cand.Dir, "events.jsonl"))); len(misses) > 0 {
+			v.Status = "failed"
+			v.Reasons = append(v.Reasons, "agent steps given a json_schema returned no structured answer: "+strings.Join(misses, ", "))
+			return v, cand, 0
+		}
+	}
 	same, why := SameOutputs(live.Outputs, cand.Outputs)
 	if same {
 		v.Status = "passed"
@@ -510,7 +542,11 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 	c.progress(it, "outputs differ (%s); judging their content…", why)
 	v.Judged = true
 	ph = c.em.begin("judge", "claude", map[string]any{"model": c.Model, "difference": why})
-	verdict := c.judge(ctx, c.Workflow, agentPrompts(p.File, p.Reach), filepath.Join(live.Dir, "work"), filepath.Join(cand.Dir, "work"), filepath.Join(it, "judge", "verdict.json"))
+	var candidatePrompts []string
+	if cp, err := LoadProject(candidate, c.Workflow, c.Fixed...); err == nil {
+		candidatePrompts = agentPrompts(cp.File, cp.Reach)
+	}
+	verdict := c.judge(ctx, c.Workflow, agentPrompts(p.File, p.Reach), candidatePrompts, filepath.Join(live.Dir, "work"), filepath.Join(cand.Dir, "work"), filepath.Join(it, "judge", "verdict.json"))
 	v.JudgeReason = verdict.Reason
 	ph.end(map[string]any{"equivalent": verdict.Equivalent, "reason": verdict.Reason, "total_cost_usd": verdict.CostUSD, "tokens": verdict.Tokens}, verdict.Failed)
 	switch {
@@ -584,6 +620,10 @@ func (c *Config) collectEvidence(live *RunResult, rec *Recording, dir, it string
 	}
 	writeJSON(filepath.Join(dir, "metrics.json"), live.Metrics)
 	_ = os.WriteFile(filepath.Join(dir, "requests.md"), []byte(requestsDoc(rec)), 0o644)
+	// Every earlier pass: what it tried, in which mode, and why it was rejected.
+	if rows, err := readRows(filepath.Join(c.CodifyDir, "metrics.jsonl")); err == nil && len(rows) > 0 {
+		_ = os.WriteFile(filepath.Join(dir, "history.md"), []byte(historyDoc(rows)), 0o644)
+	}
 	// What the previous pass tried and how it was judged.
 	if n := filepath.Base(it); strings.HasPrefix(n, "iter-") {
 		var k int
@@ -623,4 +663,75 @@ func writeJSON(path string, v any) {
 	_ = os.MkdirAll(filepath.Dir(path), 0o755)
 	b, _ := json.MarshalIndent(v, "", "  ")
 	_ = os.WriteFile(path, append(b, '\n'), 0o644)
+}
+
+// judgmentJobsWithAgent lists the jobs a retro report marks as needing judgment and still done
+// by the broad agent step.
+func judgmentJobsWithAgent(report map[string]any) []string {
+	jobs, _ := report["jobs"].([]any)
+	var out []string
+	for _, j := range jobs {
+		m, _ := j.(map[string]any)
+		if m["judgment"] == true && m["where"] == "agent" {
+			name, _ := m["job"].(string)
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// readRows reads metrics.jsonl.
+func readRows(path string) ([]Row, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var rows []Row
+	for _, line := range strings.Split(string(data), "\n") {
+		var r Row
+		if strings.TrimSpace(line) != "" && json.Unmarshal([]byte(line), &r) == nil {
+			rows = append(rows, r)
+		}
+	}
+	return rows, nil
+}
+
+// historyDoc summarizes every earlier pass for the retro agent: the move, the mode it was judged
+// in, and the outcome with its reasons. A strict-mode rejection over agent-decided values says
+// nothing about the same move in loose mode.
+func historyDoc(rows []Row) string {
+	var b strings.Builder
+	b.WriteString("# Earlier passes\n\nOldest first. `mode` is how the candidate was judged (strict: same outputs; loose: same actions on the same items, agent-decided values only valid). Rows written before modes existed were strict.\n\n")
+	for _, r := range rows {
+		mode := r.Mode
+		if mode == "" {
+			mode = "strict"
+		}
+		extracted, _ := r.Retro["extracted"].(string)
+		move, _ := r.Retro["move"].(string)
+		fmt.Fprintf(&b, "## %s (%s)\n\n- tried: %s", r.Iteration, mode, orNone(extracted))
+		if move != "" {
+			fmt.Fprintf(&b, " (move: %s)", move)
+		}
+		fmt.Fprintf(&b, "\n- outcome: %s", r.Validation.Status)
+		if r.Promoted != nil {
+			fmt.Fprintf(&b, ", promoted %s", *r.Promoted)
+		}
+		b.WriteString("\n")
+		for _, reason := range r.Validation.Reasons {
+			if len(reason) > 700 {
+				reason = reason[:700] + "…"
+			}
+			fmt.Fprintf(&b, "- reason: %s\n", strings.ReplaceAll(reason, "\n", " "))
+		}
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+func orNone(s string) string {
+	if s == "" {
+		return "(nothing)"
+	}
+	return s
 }

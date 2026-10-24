@@ -235,3 +235,35 @@ func quote(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
 }
+
+// StructuredAnswerMisses lists the claude steps ("workflow.step") that were given a json_schema
+// but finished without a structured answer, or failed. In loose mode these are atomic decisions
+// whose contract is the schema, so a candidate must honour it in every call.
+func StructuredAnswerMisses(events []map[string]any) []string {
+	schema := map[string]bool{}
+	missed := map[string]bool{}
+	var order []string
+	for _, ev := range events {
+		key := str(ev["workflow_name"]) + "." + str(ev["step_name"])
+		switch str(ev["event_type"]) {
+		case "step_started":
+			params, _ := ev["params"].(map[string]any)
+			if agentTypes[str(ev["step_type"])] && params["json_schema"] != nil {
+				schema[key] = true
+			}
+		case "step_completed", "step_failed":
+			if !schema[key] {
+				continue
+			}
+			out, ok := ev["output"].(map[string]any)
+			if !ok && str(ev["event_type"]) == "step_completed" {
+				continue // a for_each step's closing event; each item's call had its own
+			}
+			if (str(ev["event_type"]) == "step_failed" || out["structured_output"] == nil) && !missed[key] {
+				missed[key] = true
+				order = append(order, key)
+			}
+		}
+	}
+	return order
+}

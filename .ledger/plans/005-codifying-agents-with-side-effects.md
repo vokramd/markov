@@ -71,6 +71,25 @@ already records, not the number of agent steps (splitting raises the count while
 4. **IDE:** the Codify dialog gains fixed workflows and live hosts.
 5. **Trial:** codify `github-agent-cycle` with the fixed and live settings; record the result.
 
+6. **Loose mode** (after the trial showed strict comparison cannot tell a worse candidate from
+   a different roll of agent judgment): `--mode strict|loose` (codify step `mode`, IDE dialog).
+   Loose decomposes agent work into atomic agent steps (one decision or artifact per item, with
+   a json_schema answer) joined by native steps; a candidate passes when it takes the same
+   actions on the same items with valid agent-decided values (`judge_loose.md`, which also sees
+   the candidate's prompts), and every claude step with a json_schema answered in it
+   (`StructuredAnswerMisses`, checked before judging). Judgment is identified by the workflow:
+   values an agent step produces may vary, everything else must match.
+   First loose run promoted one move, then stopped with four judgment jobs left in the agent:
+   the retro agent saw only the previous pass, treated a strict-mode rejection as final, and
+   splits only "otherwise". Fixes: every pass's move, mode and reasons go to the evidence as
+   `history.md` (rows record `mode`); in loose mode a strict-mode or agent-value rejection does
+   not rule a move out, a blocked mechanical move means split instead; and a no-change pass
+   whose own job list still has two or more judgment jobs with the agent counts as failed, so
+   the run goes on.
+7. **IDE control socket** (markov-ide): `$XDG_RUNTIME_DIR/markov-ide/control.sock`, JSON lines
+   (state, open, select, tab, run, codify, stop, screenshot), opt-in by setting or `--control`;
+   `scripts/ide-ctl` is the client. For driving codify trials in the user's IDE while they watch.
+
 ## Open questions
 
 - Agent noise: two runs of the current version can differ in structure (one opens a PR, one

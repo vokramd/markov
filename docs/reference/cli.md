@@ -310,6 +310,7 @@ markov codify <directory> --workflow <name> [flags]
 | `--budget-usd X` | `5` | Stop once model spend (the workflow's agent steps, the retro agent, the judge) reaches this; `0` for no limit. |
 | `--codify-dir path` | `<directory>.codify` | Where history goes. Must be outside the project. |
 | `--keep step` | -- | A step (`step` or `workflow.step`) that must stay an agent step. Repeatable. |
+| `--mode strict\|loose` | `strict` | How far codify goes and how it judges a candidate (see [Modes](#modes)). |
 | `--fixed workflow` | -- | A workflow the target reaches that must not change: the parts of a cycle that set the stage and measure the result, such as a reset and a snapshot (see [Workflows with side effects](#workflows-with-side-effects)). The retro agent is told so, and a candidate that changes one is rejected. Repeatable or comma-separated. |
 | `--live-host host` | -- | A host (and its subdomains) the live run and the candidates reach for real, tunnelled through the proxy untouched, instead of replaying the recording. Only for services the workflow resets itself before it acts. Repeatable or comma-separated. |
 | `--prompt-file path` | built in | Replace the retro agent's strategy prompt, a Go template with the same fields as the built-in one (`pkg/codify/retro.md`). |
@@ -332,6 +333,20 @@ It stops when the retro agent finds nothing more to codify, no agent steps are l
 History in the codify directory: `versions/vNNNN/` (the codified files of each version, `v0000` the original), `metrics.jsonl` (one row per iteration, which the IDE's Codification tab charts), and `iter-NNNN/` (the live and candidate runs, recording, evidence, `retro.json`, `validation.json`).
 
 Requires a directory workflow and the `claude` CLI. The workflow's outputs must be files it writes relative to where it starts (a `claude` step without `chdir` writes there).
+
+#### Modes
+
+- **strict** (default): a candidate must produce the same outputs as the current version. While
+  agents produce them, a judge compares their content (formatting and wording may differ). Right
+  for mechanical work, and for agents whose result is facts that should not vary.
+- **loose**: codify decomposes the agent work into *atomic* agent steps, each making one decision
+  or producing one thing for one item (for example "answer with one label for this issue",
+  with a `json_schema`), joined by native steps that fetch the items and act on the answers.
+  Agent-decided values differ from run to run even for the same version, so a candidate passes
+  when it takes the same actions on the same items with valid agent-decided values (a label from
+  the allowed set, a reply that answers the command), and everything not decided by an agent
+  matches. Every claude step with a `json_schema` must answer in it on every call, or the
+  candidate is rejected. It stops when every agent step is atomic.
 
 #### Workflows with side effects
 
