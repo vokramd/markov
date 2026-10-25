@@ -175,6 +175,13 @@ run_started
 run_completed
 ```
 
+## Secret masking
+
+Every callback gets a copy of each event with secret values replaced by `<secret:NAME>`: vars
+listed in `secrets:` or named like secrets, outputs of steps marked `secret`, and secret step
+params. The run's own context is not changed. See
+[Secrets](variables-and-context.md#secrets).
+
 ## Error isolation
 
 Callback errors never affect workflow execution:

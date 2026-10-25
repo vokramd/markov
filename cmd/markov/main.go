@@ -257,7 +257,7 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 		flagRunID, flagWorkflow, flagNamespace, flagKubeconfig, state.RedactStoreLocation(flagStateStore), flagForks, flagVerbose)
 	debugLog("flags: --callback=%v --callback-header=%v --callback-tls-insecure=%v --callback-buffer-size=%d",
 		flagCallbacks, flagCallbackHeaders, flagCallbackTLSInsecure, flagCallbackBufferSize)
-	debugLog("flags: --var=%v", flagVars)
+	debugLog("flags: --var names=%v", varFlagNames(flagVars))
 
 	wfFile, err := loadWorkflow(args[0])
 	if err != nil {
@@ -280,6 +280,7 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 
 	eng := engine.New(wfFile, store, executors)
 	eng.Verbose = flagVerbose
+	maskLog(eng)
 	eng.RunID = flagRunID
 	eng.SourcePath = args[0]
 	eng.AllowReload = flagAllowReload
@@ -456,6 +457,7 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 
 	eng := engine.New(wfFile, store, executors)
 	eng.Verbose = flagVerbose
+	maskLog(eng)
 	eng.SourcePath = run.WorkflowFile
 	eng.AllowReload = flagAllowReload
 	eng.Loader = loadWorkflow
@@ -663,6 +665,22 @@ func buildCallbacks() ([]callback.Callback, error) {
 		cbs = append(cbs, cb)
 	}
 	return cbs, nil
+}
+
+// maskLog sends the standard logger through the engine's secret masker, so log lines never show
+// a secret value. Lines logged before the workflow's vars are known are not masked.
+func maskLog(eng *engine.Engine) {
+	log.SetOutput(eng.Secrets().Writer(os.Stderr))
+}
+
+// varFlagNames is the names of --var flags, for logging without their values.
+func varFlagNames(flags []string) []string {
+	names := make([]string, 0, len(flags))
+	for _, f := range flags {
+		name, _, _ := strings.Cut(f, "=")
+		names = append(names, name)
+	}
+	return names
 }
 
 // jsonlCallbackPaths lists the absolute paths of the jsonl:// callbacks, for markov_event_logs.

@@ -286,6 +286,53 @@ The `resolveContextPath` function (in `engine.go:1017`) resolves dot-separated p
 
 This function is used internally for `for_each` list resolution, `from` paths in lookup facts, and the `from_json` / `fromjson` direct resolution shortcut.
 
+## Secrets
+
+Markov masks secret values in what it writes out: every callback event (so the JSONL log,
+markovd, the IDE and `markov codify`'s evidence) and every log line. Each value is replaced with
+`<secret:NAME>` wherever it appears, including inside a rendered URL, shell output or an error
+message. Steps still get the real values.
+
+A value is secret when it is:
+
+- a var listed in the file's `secrets:` (`meta.yaml` in a directory workflow);
+- a var whose name ends in `token`, `secret`, `password`, `passwd`, `api_key`/`apikey`,
+  `private_key` or `credential`/`credentials`, in any case (`GITHUB_TOKEN`, `db_password`),
+  listed or not;
+- the output of a step marked `secret` (`true`, or a list of output paths), from the moment the
+  step returns;
+- a secret param of a step type (the `credentials` of `openshell_provider`).
+
+```yaml
+secrets: [ADMIN]
+vars:
+  ADMIN: change-me-admin-token
+workflows:
+  - name: main
+    steps:
+      - name: mint
+        type: http_request
+        register: mint
+        secret: [body.token]      # the minted token never shows, even in mint's own event
+        params:
+          method: POST
+          url: "{{ BASE }}/admin/api/tokens"
+          headers: {Authorization: "token {{ ADMIN }}"}
+```
+
+Vars of a sub-workflow and of each `for_each` item are checked the same way, and a secret value
+stays masked under any name it is passed on as.
+
+Limits:
+
+- Strings shorter than 8 characters are not masked. A value is also masked trimmed and
+  URL-query-escaped, but not in other forms (base64, part of the value, split across lines).
+- The state store keeps real values, because resume rebuilds the run's context from it. On
+  resume the masks are rebuilt from the stored vars and the outputs of completed `secret` steps.
+- Lines the CLI logs before the workflow is loaded are not masked; `--debug` lists `--var` names
+  only.
+- Markov cannot mask what a step sends somewhere itself, such as an agent posting a token.
+
 ## Jev support
 
 Jev step outputs are available through `register`. Decision-backed gate facts become ordinary numeric/string facts and persist in gate receipts. Credentials remain outside workflow context. See [Jev decisions](jev.md).

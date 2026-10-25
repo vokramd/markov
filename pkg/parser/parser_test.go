@@ -282,6 +282,9 @@ func TestParseDirMergesDirectoryWorkflow(t *testing.T) {
 	if wf.Forks != 2 {
 		t.Fatalf("Forks = %d, want 2", wf.Forks)
 	}
+	if len(wf.Secrets) != 1 || wf.Secrets[0] != "ADMIN" {
+		t.Fatalf("Secrets = %v, want [ADMIN]", wf.Secrets)
+	}
 	if wf.Vars["greeting"] != "hello from directory" {
 		t.Fatalf("Vars[greeting] = %v, want hello from directory", wf.Vars["greeting"])
 	}
@@ -584,6 +587,7 @@ func makeDirectoryWorkflow(t *testing.T) string {
 entrypoint: main
 namespace: markov-test
 forks: 2
+secrets: [ADMIN]
 `)
 	writeFile(t, filepath.Join(dir, "vars.yaml"), `
 greeting: hello from directory
@@ -699,6 +703,51 @@ workflows:
 		}
 		if tc.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErr)) {
 			t.Fatalf("%s %s: err = %v, want %q", tc.workflow, tc.names, err, tc.wantErr)
+		}
+	}
+}
+
+func TestParseSecrets(t *testing.T) {
+	wf, err := Parse([]byte(`
+entrypoint: main
+secrets: [ADMIN, BOT]
+workflows:
+  - name: main
+    steps:
+      - name: mint
+        type: http_request
+        secret: [token, body.token]
+      - name: facts
+        type: set_fact
+        secret: true
+        vars: {a: b}
+      - name: plain
+        type: shell_exec
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := wf.Secrets; len(got) != 2 || got[0] != "ADMIN" || got[1] != "BOT" {
+		t.Errorf("Secrets = %v", got)
+	}
+	steps := wf.Workflows[0].Steps
+	if got := steps[0].Secret; got.All || len(got.Paths) != 2 || got.Paths[1] != "body.token" {
+		t.Errorf("mint secret = %+v", got)
+	}
+	if !steps[1].Secret.All || steps[2].Secret.Set() {
+		t.Errorf("facts secret = %+v, plain secret = %+v", steps[1].Secret, steps[2].Secret)
+	}
+
+	for name, step := range map[string]string{
+		"not true or a list": "{name: s, type: shell_exec, secret: token}",
+		"an empty path":      "{name: s, type: shell_exec, secret: [\"\"]}",
+		"a malformed path":   "{name: s, type: shell_exec, secret: [body..token]}",
+		"on a sub-workflow":  "{name: s, workflow: main, secret: true}",
+		"on an assert step":  "{name: s, type: assert, that: [\"true\"], secret: true}",
+	} {
+		_, err := Parse([]byte("entrypoint: main\nworkflows:\n  - name: main\n    steps:\n      - " + step + "\n"))
+		if err == nil || !strings.Contains(err.Error(), "secret") {
+			t.Errorf("%s: err = %v, want a secret error", name, err)
 		}
 	}
 }

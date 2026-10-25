@@ -1,6 +1,12 @@
 package parser
 
-import "github.com/jctanner/markov/pkg/jev"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/jctanner/markov/pkg/jev"
+	"gopkg.in/yaml.v3"
+)
 
 type WorkflowFile struct {
 	Connections map[string]jev.Connection `yaml:"connections"`
@@ -9,10 +15,12 @@ type WorkflowFile struct {
 	Namespace   string                    `yaml:"namespace"`
 	Forks       int                       `yaml:"forks"`
 	Vars        map[string]any            `yaml:"vars"`
-	Rules       []Rule                    `yaml:"rules"`
-	StepTypes   map[string]StepType       `yaml:"step_types"`
-	Workflows   []Workflow                `yaml:"workflows"`
-	OpenShell   *OpenShell                `yaml:"openshell"`
+	// Secrets names vars whose values are masked in events and logs.
+	Secrets   []string            `yaml:"secrets"`
+	Rules     []Rule              `yaml:"rules"`
+	StepTypes map[string]StepType `yaml:"step_types"`
+	Workflows []Workflow          `yaml:"workflows"`
+	OpenShell *OpenShell          `yaml:"openshell"`
 	// ScriptDir is the directory used as the base for script_exec path values.
 	// It is set by the parser and is not part of the workflow YAML schema.
 	ScriptDir string `yaml:"-"`
@@ -97,6 +105,46 @@ type Step struct {
 	// FailedWhen, when set, alone decides whether the step failed. It sees the step's output as
 	// `result` (and under the register name); an executor error is in result.error.
 	FailedWhen string `yaml:"failed_when"`
+	// Secret marks the step's output, or parts of it, as secret: masked in events and logs.
+	Secret SecretOutput `yaml:"secret"`
+}
+
+// SecretOutput is a step's `secret` setting: true (every string in the output) or a list of
+// dotted paths into it ("token", "body.token").
+type SecretOutput struct {
+	All   bool
+	Paths []string
+}
+
+// Set reports whether the step marks anything secret.
+func (s SecretOutput) Set() bool { return s.All || len(s.Paths) > 0 }
+
+func (s *SecretOutput) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode && node.Tag == "!!bool" {
+		return node.Decode(&s.All)
+	}
+	if node.Kind == yaml.SequenceNode {
+		if err := node.Decode(&s.Paths); err != nil {
+			return fmt.Errorf("secret: %w", err)
+		}
+		for _, p := range s.Paths {
+			if p == "" || strings.HasPrefix(p, ".") || strings.HasSuffix(p, ".") || strings.Contains(p, "..") {
+				return fmt.Errorf("secret: %q is not a dotted path into the step's output", p)
+			}
+		}
+		return nil
+	}
+	return fmt.Errorf("line %d: secret must be true or a list of output paths", node.Line)
+}
+
+func (s SecretOutput) MarshalYAML() (any, error) {
+	if len(s.Paths) > 0 {
+		return s.Paths, nil
+	}
+	if s.All {
+		return true, nil
+	}
+	return nil, nil
 }
 
 type Artifact struct {

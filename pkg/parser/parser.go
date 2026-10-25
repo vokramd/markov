@@ -37,6 +37,7 @@ func ParseDir(path string) (*WorkflowFile, error) {
 		Namespace  string     `yaml:"namespace"`
 		Forks      int        `yaml:"forks"`
 		OpenShell  *OpenShell `yaml:"openshell"`
+		Secrets    []string   `yaml:"secrets"`
 	}
 	if err := readYAML(metaPath, &meta); err != nil {
 		return nil, err
@@ -45,6 +46,7 @@ func ParseDir(path string) (*WorkflowFile, error) {
 	wf.Namespace = meta.Namespace
 	wf.Forks = meta.Forks
 	wf.OpenShell = meta.OpenShell
+	wf.Secrets = meta.Secrets
 
 	vars, err := readVars(path)
 	if err != nil {
@@ -367,6 +369,9 @@ func validateSteps(wf *WorkflowFile, workflowName, section string, steps []Step,
 
 		if s.FailedWhen != "" && s.Workflow != "" {
 			return fmt.Errorf("workflow %q, step %q: failed_when applies to step types, not sub-workflows", workflowName, s.Name)
+		}
+		if s.Secret.Set() && (s.Workflow != "" || s.Type == "gate" || s.Type == "assert") {
+			return fmt.Errorf("workflow %q, step %q: secret marks a step's own output; sub-workflow, gate and assert steps have none (mark the steps inside the sub-workflow)", workflowName, s.Name)
 		}
 		if s.ForEachWhen != "" && s.ForEach == "" {
 			return fmt.Errorf("workflow %q, step %q: for_each_when requires for_each", workflowName, s.Name)

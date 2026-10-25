@@ -24,6 +24,7 @@ import (
 	"github.com/jctanner/markov/pkg/executor"
 	"github.com/jctanner/markov/pkg/jsonvalue"
 	"github.com/jctanner/markov/pkg/parser"
+	"github.com/jctanner/markov/pkg/secret"
 	"github.com/jctanner/markov/pkg/source"
 	"github.com/jctanner/markov/pkg/state"
 	"github.com/jctanner/markov/pkg/template"
@@ -64,6 +65,8 @@ type Engine struct {
 	reloads   int
 	callbacks []callback.Callback
 	debugger  *Debugger
+	// secrets masks secret values in events (and the CLI's log); see secrets.go.
+	secrets secret.Masker
 	// Rewind and RewindChanged make ResumeWithVars re-run from a step (see rewind.go).
 	Rewind        []RewindTarget
 	RewindChanged bool
@@ -163,7 +166,7 @@ func (e *Engine) CloseCallbacks() {
 func (e *Engine) fireEvent(fn func(callback.Callback) error) {
 	e.verbose("firing callback event to %d callback(s)", len(e.callbacks))
 	for _, cb := range e.callbacks {
-		if err := fn(cb); err != nil {
+		if err := fn(maskedCallback{cb: cb, m: &e.secrets}); err != nil {
 			log.Printf("callback error: %v", err)
 		}
 	}
@@ -211,6 +214,7 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 	if dir := sourceDir(e.SourcePath); dir != "" {
 		runCtx["markov_source_dir"] = dir
 	}
+	e.noteVars(file, runCtx)
 	varsJSON, _ := json.Marshal(runCtx)
 
 	run := &state.Run{
@@ -389,6 +393,14 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 	for k, v := range vars {
 		storedVars[k] = v
 		runCtx[k] = v
+	}
+	e.noteVars(file, runCtx)
+	for _, s := range steps {
+		if def := findStep(wf, s.StepName); def != nil && def.Secret.Set() && s.Status == state.StepCompleted && s.OutputJSON != "" {
+			var output map[string]any
+			decodeState(s.OutputJSON, &output)
+			e.noteStepOutput(def, output)
+		}
 	}
 	// The logs of this process, not the ones the run was started with.
 	runCtx["markov_event_logs"] = e.eventLogs()
@@ -762,6 +774,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		if err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("evaluating facts: %w", err))
 		}
+		e.noteStepOutput(&step, facts)
 		for k, v := range facts {
 			runCtx[k] = v
 			e.verbose("[run:%s]   %s = %v", runID, k, v)
@@ -952,6 +965,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 	if base == "script_exec" {
 		renderedParams["_script_dir"] = e.fileFor(ctx).ScriptDir
 	}
+	e.noteSecretParams(&step, base, renderedParams)
 
 	if base == "k8s_job" {
 		e.injectJobMeta(renderedParams, runID, workflowName, step.Name)
@@ -1055,6 +1069,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 	if result != nil {
 		output = result.Output
 	}
+	e.noteStepOutput(&step, output)
 	if step.FailedWhen != "" {
 		err = e.evalFailedWhen(step, output, err, runCtx)
 	}
@@ -1149,6 +1164,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 		}
 	}
 
+	e.noteVars(e.fileFor(ctx), subVars)
 	subRunID := fmt.Sprintf("%s-%s", runID, step.Name)
 	if err := e.checkSubRunWorkflow(ctx, subRunID, step, wf.Name); err != nil {
 		return err
@@ -1371,6 +1387,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					forEachKey = fmt.Sprintf("%v", extractItemField(itemVal, step.ForEachKey))
 				}
 
+				e.noteVars(e.fileFor(ctx), subVars)
 				subRunID := fmt.Sprintf("%s-%s-%s", runID, step.Name, forEachKey)
 				if err := e.checkSubRunWorkflow(ctx, subRunID, step, wf.Name); err != nil {
 					errOnce.Do(func() { failed.Store(true); firstErr = err })
@@ -1776,6 +1793,18 @@ func (e *Engine) failStepWithOutput(ctx context.Context, runID, workflowName, st
 		})
 	})
 	return err
+}
+
+// findStep is the step definition named stepName in wf, or nil.
+func findStep(wf *parser.Workflow, stepName string) *parser.Step {
+	for _, section := range [][]parser.Step{wf.Steps, wf.Rescue, wf.Always} {
+		for i := range section {
+			if section[i].Name == stepName {
+				return &section[i]
+			}
+		}
+	}
+	return nil
 }
 
 func isSetFactStep(wf *parser.Workflow, stepName string) bool {

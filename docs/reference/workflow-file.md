@@ -13,6 +13,7 @@ Markov accepts either a single workflow YAML file or a workflow directory. Both 
 | Namespace | `namespace` | string | no | `"default"` | Kubernetes namespace used for `k8s_job` steps. Can be overridden by CLI flag or in-cluster ServiceAccount namespace. |
 | Forks | `forks` | int | no | `5` | Default maximum concurrency for `for_each` fan-outs. Set to 0 or omit to use the default. |
 | Vars | `vars` | map[string]any | no | `{}` | Global variables available to all workflows. Overridden by workflow-level vars, step-level vars, and CLI `--var` flags. |
+| Secrets | `secrets` | string[] | no | `[]` | Names of vars whose values are secret: masked as `<secret:NAME>` in events and log lines. Vars named like secrets (`GITHUB_TOKEN`, `db_password`) are masked without being listed. In a directory workflow this goes in `meta.yaml`. See [Secrets](variables-and-context.md#secrets). |
 | Rules | `rules` | Rule[] | no | `[]` | Named rule definitions used by `gate` steps. Rules can also be loaded from external files. |
 | StepTypes | `step_types` | map[string]StepType | no | `{}` | User-defined step type definitions that wrap a primitive type with default parameters. |
 | Workflows | `workflows` | Workflow[] | yes | -- | List of workflow definitions. At least one must be defined, and the entrypoint must reference one by name. |
@@ -226,6 +227,7 @@ A step is the unit of execution within a workflow. Each step either runs a primi
 | Description | `description` | string | no | Free text for readers and tools (long-form notes on what the step is for). It does not change what the step does, and editing it does not count as a step change on resume. |
 | IgnoreErrors | `ignore_errors` | bool | no | When the step fails, record the failure and carry on. The registered output keeps whatever the step produced, plus `failed: true` and `error`. On a sub-workflow, the registered context gets the same two keys; on `for_each`, failed items are marked that way and the loop runs every item. Errors in the workflow itself, such as a template that doesn't parse, still fail the step. |
 | FailedWhen | `failed_when` | string | no | Expression that alone decides whether the step failed, evaluated after it runs. It sees the step's output as `result` and under the `register` name; an executor error is in `result.error`. True fails the step (and `ignore_errors` still applies); false makes it succeed even if the executor reported an error. Not allowed on sub-workflow steps. |
+| Secret | `secret` | bool or string[] | no | Marks the step's output as secret, so its values are masked in events and log lines from the moment the step returns (its own `step_completed` included). `true` marks every string in the output; a list marks dotted paths into it (`[token, body.token]`); on `set_fact` the paths are fact names. Later steps still get the real values. Not allowed on sub-workflow, `gate` and `assert` steps. See [Secrets](variables-and-context.md#secrets). |
 
 ```yaml
 steps:
@@ -435,6 +437,7 @@ and `params` maps of a custom step type may contain application-specific keys.
 9. **Gate steps must reference at least one rule**, and every referenced rule must exist in the top-level `rules` block.
 10. **`forks` defaults to 5** if set to 0 or a negative value.
 11. **Sub-workflow references** must point to a workflow name that exists in the file.
+12. **`secret`** is `true` or a list of dotted output paths, and is only allowed on steps that produce their own output (not sub-workflow, `gate` or `assert` steps).
 
 ---
 
