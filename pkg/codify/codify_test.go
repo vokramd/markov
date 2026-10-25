@@ -612,3 +612,96 @@ func TestHistoryNamesEachPassMoveModeAndReasons(t *testing.T) {
 		}
 	}
 }
+
+func TestRepeatCheck(t *testing.T) {
+	record := func(n int) map[string][]byte {
+		return map[string][]byte{"snapshot/second-run-changes.json": []byte(fmt.Sprintf(`{"counts": {"total": %d}, "issues": {}}`, n))}
+	}
+	c := &Config{RepeatChanges: "snapshot/second-run-changes.json"}
+	if path, key := c.repeatSpec(); path != "snapshot/second-run-changes.json" || key != "counts.total" {
+		t.Fatalf("spec = %q %q", path, key)
+	}
+	if r, reason := c.repeatCheck(record(4), record(4)); reason != "" || r.Live != 4 || r.Candidate != 4 {
+		t.Errorf("same count: %+v %q", r, reason)
+	}
+	if _, reason := c.repeatCheck(record(4), record(0)); reason != "" {
+		t.Errorf("fewer repeated changes should pass: %q", reason)
+	}
+	if r, reason := c.repeatCheck(record(1), record(3)); !strings.Contains(reason, "changed 3 thing(s)") || r.Candidate != 3 {
+		t.Errorf("more repeated changes should fail: %+v %q", r, reason)
+	}
+	if _, reason := c.repeatCheck(record(1), map[string][]byte{}); !strings.Contains(reason, "candidate's repeat-run record: no output") {
+		t.Errorf("a candidate without the record should fail: %q", reason)
+	}
+	keyed := &Config{RepeatChanges: "out.json:summary.repeat"}
+	if n, err := repeatCount(map[string][]byte{"out.json": []byte(`{"summary": {"repeat": 2}}`)}, "out.json", "summary.repeat"); err != nil || n != 2 {
+		t.Errorf("keyed count = %v %v", n, err)
+	}
+	if _, key := keyed.repeatSpec(); key != "summary.repeat" {
+		t.Errorf("key = %q", key)
+	}
+	if r, reason := (&Config{}).repeatCheck(record(1), record(9)); r != nil || reason != "" {
+		t.Errorf("no --repeat-changes, no check: %+v %q", r, reason)
+	}
+}
+
+func TestAgentCallsDocShowsPromptSizes(t *testing.T) {
+	events := []map[string]any{
+		{"event_type": "step_completed", "step_type": "claude", "workflow_name": "agent", "step_name": "ask", "run_id": "r1",
+			"output": map[string]any{"prompt_chars": 48000.0, "total_cost_usd": 0.01, "num_turns": 9.0, "usage": map[string]any{"input_tokens": 100.0, "cache_read_input_tokens": 12000.0}}},
+		{"event_type": "step_completed", "step_type": "claude", "workflow_name": "agent_triage-issue", "step_name": "answer", "run_id": "r1-triage-9",
+			"output": map[string]any{"prompt_chars": 400.0, "total_cost_usd": 0.001, "num_turns": 1.0, "usage": map[string]any{"input_tokens": 300.0}}},
+		{"event_type": "step_completed", "step_type": "claude", "workflow_name": "agent_triage-issue", "step_name": "answer", "run_id": "r1-triage-57",
+			"output": map[string]any{"prompt_chars": 450.0, "total_cost_usd": 0.001, "num_turns": 1.0, "usage": map[string]any{"input_tokens": 320.0}}},
+		{"event_type": "step_completed", "step_type": "claude", "workflow_name": "agent", "step_name": "triage"}, // a for_each's closing event
+		{"event_type": "step_completed", "step_type": "http_request", "workflow_name": "agent", "step_name": "fetch", "output": map[string]any{}},
+	}
+	calls := agentCalls(events)
+	if len(calls) != 3 || calls[0].InputTokens != 12100 || calls[0].PromptChars != 48000 {
+		t.Fatalf("calls = %+v", calls)
+	}
+	doc := agentCallsDoc(calls)
+	for _, want := range []string{"| agent.ask | 1 | 48000 / 48000 / 48000 | 12100 |", "| agent_triage-issue.answer | 2 | 400 / 450 / 450 | 320 |", "agent_triage-issue.answer (run r1-triage-57): 450 prompt chars"} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("doc lacks %q:\n%s", want, doc)
+		}
+	}
+	if !strings.Contains(agentCallsDoc(nil), "No agent calls.") {
+		t.Error("empty doc")
+	}
+}
+
+func TestPromptsCarryTheDeterministicAgenticSplit(t *testing.T) {
+	retro, err := render(defaultRetroPrompt, RetroInputs{Target: "agent", Loose: true, HelperPrefix: "agent_", RepeatChanges: "snapshot/second-run-changes.json", EditableFiles: []string{"workflows/agent.yaml"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"agents are not queueing systems and are bad at math", "agent_calls.md", "gather → compute what is pending → fan out", "workflows/agent_triage-issue", "assert: \"not issues.truncated\"", "snapshot/second-run-changes.json (in outputs/)"} {
+		if !strings.Contains(retro, want) {
+			t.Errorf("loose retro prompt lacks %q", want)
+		}
+	}
+	strict, err := render(defaultRetroPrompt, RetroInputs{Target: "agent", EditableFiles: []string{"workflows/agent.yaml"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(strict, "bad at math") || strings.Contains(strict, "second run") {
+		t.Error("strict mode gets the principle but not the loose-mode repeat rule")
+	}
+	judge, err := render(judgeLoosePrompt, map[string]any{"Target": "agent", "Repeat": &Repeat{File: "snapshot/second-run-changes.json", Live: 4, Candidate: 0}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"4 thing(s) for the current version, 0 for the proposed version", "missed items", "doing the job better"} {
+		if !strings.Contains(judge, want) {
+			t.Errorf("loose judge prompt lacks %q", want)
+		}
+	}
+	if j, _ := render(judgeLoosePrompt, map[string]any{"Target": "agent"}); strings.Contains(j, "second time") {
+		t.Error("no repeat record, no repeat paragraph")
+	}
+	doc := historyDoc([]Row{{Iteration: "iter-0001", Mode: "loose", Validation: Validation{Status: "failed", Repeat: &Repeat{File: "s.json", Live: 4, Candidate: 6}}}})
+	if !strings.Contains(doc, "repeat run changed (s.json): current 4, candidate 6") {
+		t.Errorf("history lacks the repeat counts:\n%s", doc)
+	}
+}

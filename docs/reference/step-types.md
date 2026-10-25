@@ -245,6 +245,7 @@ Markov counts turns and tokens from the stream as events arrive. When a limit is
 | `tokens` | int | New tokens counted against `max_tokens`. |
 | `usage` | map | `input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`. |
 | `total_cost_usd` | float | Cost reported by the CLI. |
+| `prompt_chars` | int | Length of the rendered prompt in characters (codify compares it across calls). |
 | `limit_exceeded` | string | Name of the exceeded limit, or empty. |
 | `stop_reason`, `terminal_reason`, `duration_ms`, `permission_denials` | | Passed through from the CLI result when present. |
 | `structured_output` | any | With `json_schema`: the answer, parsed. |

@@ -11,6 +11,9 @@ It just ran once. Evidence of that run is in {{.Evidence}}:
 - requests.md: every HTTP request the run made, with the start of each response. Use these
   exact URLs in native steps (http_request): the candidate is run against a recording of them.
 - metrics.json: agent and native steps, tokens and cost of the run.
+- agent_calls.md: every agent call, with the size of its rendered prompt and its input tokens. A
+  call whose prompt is much bigger than the others, or carries a whole list of items, is being
+  used as a work queue.
 - history.md, when present: every earlier pass, what it tried, the mode it was judged in and
   why a candidate was rejected. previous_retro.json and previous_validation.json are the last
   pass in full. Do not repeat a move that was rejected for a reason that still applies.{{if .Loose}}
@@ -18,6 +21,18 @@ It just ran once. Evidence of that run is in {{.Evidence}}:
   wording), does not apply in loose mode: such a move may be tried again.{{end}}
 
 Agent steps today: {{if .AgentSteps}}{{join .AgentSteps ", "}}{{else}}none{{end}}.
+
+What is deterministic and what is agentic: agents are not queueing systems and are bad at math.
+Given hundreds of items in one session they miss some, repeat some and miscount. So the workflow
+does the listing, paging, counting, filtering, sorting, comparing with what was already done,
+deciding what is pending, scheduling and retrying, and any exact matching or arithmetic. Agents
+make judgments, one item per call: classify it, choose among options, write code or text, review,
+decide whether two things mean the same. An agent is never the loop, the counter or the
+bookkeeper. Lists in an agent's prompt are fine when they are context for its one decision (the
+labels to choose from for this ticket, this issue's comments, this PR's files); a list of work
+items for the agent to go through is not. A call over many items stays only when the judgment
+itself spans them (deduplicate, rank, summarise), over a compact list (numbers and titles), with
+the reason in the step's description.
 
 {{if .Loose}}This run is in LOOSE mode: decompose the agent work into atomic agent steps joined by
 deterministic native steps. An atomic agent step makes exactly one decision, or produces one
@@ -44,6 +59,24 @@ Each pass makes exactly ONE change:
 4. Leave everything else; later passes take it.
 {{- if .Keep}}
 5. These steps must stay agent steps: {{join .Keep ", "}}. You may narrow their prompts.
+{{- end}}
+
+Shape the workflow as gather → compute what is pending → fan out:
+- Gather lists completely: page with http_request's paginate, and assert the list is complete
+  (`assert: "not issues.truncated"`). A list read as one page silently misses everything after it.
+- Check state before every action. Each write is a for_each over a list computed natively from
+  what is wanted and what already exists, e.g. the /mk-ping comments with no later reply from the
+  bot, or the issues with no triage label. Running the workflow a second time right after the
+  first should find nothing left to do and change nothing.
+- One sub-workflow per kind of item, named for its job (workflows/{{.HelperPrefix}}triage-issue,
+  {{.HelperPrefix}}answer-ping, {{.HelperPrefix}}review-pr, ...). It takes one item, checks that
+  item's own state, makes at most one agent call for it, and acts on the answer; the main workflow
+  calls it with for_each over the pending items.
+- An agent prompt that hands over a list of work items (all issues, every comment of every open
+  item) becomes such a fan-out; give each call only its item's data.
+{{- if .RepeatChanges}}
+- The run records what a second run changed in {{.RepeatChanges}} (in outputs/). A candidate may
+  not change more on that repeat than the current version; aim for nothing.
 {{- end}}
 
 The values an atomic step decides (which label, what wording) may differ from run to run; that

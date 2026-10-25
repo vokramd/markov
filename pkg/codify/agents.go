@@ -41,6 +41,8 @@ type RetroInputs struct {
 	Judged        bool
 	// Loose selects the decomposition strategy: atomic agent steps joined by native ones.
 	Loose bool
+	// RepeatChanges is the output recording what a second run changed (--repeat-changes), or "".
+	RepeatChanges string
 }
 
 func render(text string, data any) (string, error) {
@@ -131,12 +133,12 @@ type Verdict struct {
 }
 
 // judge compares two runs' outputs by content, for outputs an agent produces.
-func (c *Config) judge(ctx context.Context, target string, prompts, candidatePrompts []string, reference, candidate, verdictFile string) Verdict {
+func (c *Config) judge(ctx context.Context, target string, prompts, candidatePrompts []string, reference, candidate, verdictFile string, repeat *Repeat) Verdict {
 	text := judgePrompt
 	if c.Loose() {
 		text = judgeLoosePrompt
 	}
-	prompt, err := render(text, map[string]any{"Target": target, "Reference": reference, "Candidate": candidate, "Prompts": prompts, "CandidatePrompts": candidatePrompts, "Verdict": verdictFile})
+	prompt, err := render(text, map[string]any{"Target": target, "Reference": reference, "Candidate": candidate, "Prompts": prompts, "CandidatePrompts": candidatePrompts, "Verdict": verdictFile, "Repeat": repeat})
 	if err != nil {
 		return Verdict{AgentResult: AgentResult{Failed: err.Error()}}
 	}

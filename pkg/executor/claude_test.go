@@ -129,6 +129,9 @@ func TestClaudeRunsAndStreamsEvents(t *testing.T) {
 	if out["total_cost_usd"] != 0.5 {
 		t.Errorf("cost = %v", out["total_cost_usd"])
 	}
+	if out["prompt_chars"] != len("do the thing") {
+		t.Errorf("prompt_chars = %v, want %d", out["prompt_chars"], len("do the thing"))
+	}
 	if got := strings.Join(rec.kinds, ","); got != "init,tool_use,usage,tool_result,text,usage,result" {
 		t.Errorf("progress kinds = %s", got)
 	}

@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jctanner/markov/pkg/openshell"
 )
@@ -179,6 +180,9 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 	}
 
 	output := s.output(exitCode, stderr.String(), breach)
+	// The size of what the step was asked, as rendered: codify compares it across calls to see
+	// whether a prompt carries one item or a whole list.
+	output["prompt_chars"] = utf8.RuneCountInString(prompt)
 	res := &Result{Output: output}
 
 	// Why it failed, beyond the limit or exit status: the API never answering, and in a sandbox,

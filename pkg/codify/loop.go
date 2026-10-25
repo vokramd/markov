@@ -43,13 +43,17 @@ type Config struct {
 	Mode string
 	// LiveHosts are host suffixes the target's runs reach for real, live run and candidates
 	// alike, instead of replaying a recording: only for services the target resets itself.
-	LiveHosts   []string
-	PromptFile  string
-	Markov      string // the markov binary for child runs
-	ClaudeBin   string // the claude CLI (tests)
-	RunTimeout  time.Duration
-	Passthrough []string
-	Out         io.Writer
+	LiveHosts []string
+	// RepeatChanges names the output ("path", or "path:key" for a dotted key; default key
+	// counts.total) in which the target records how many things a second run, right after the
+	// first, changed. A candidate may not change more on that repeat than the current version.
+	RepeatChanges string
+	PromptFile    string
+	Markov        string // the markov binary for child runs
+	ClaudeBin     string // the claude CLI (tests)
+	RunTimeout    time.Duration
+	Passthrough   []string
+	Out           io.Writer
 	// Callbacks receive codify's events: its phases as steps of the virtual "codify" workflow
 	// (the retro agent's and judge's claude streams as step_progress), and every event of the
 	// target workflow's runs.
@@ -79,6 +83,8 @@ type Validation struct {
 	Judged       bool     `json:"judged"`
 	JudgeReason  string   `json:"judge_reason,omitempty"`
 	Candidate    *Metrics `json:"candidate,omitempty"`
+	// Repeat is what a second run changed, current version and candidate (with --repeat-changes).
+	Repeat *Repeat `json:"repeat,omitempty"`
 }
 
 func (c *Config) defaults() error {
@@ -370,6 +376,13 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 		row.Validation = Validation{Status: "live_failed", Reasons: []string{"the current version wrote no files in its working directory"}}
 		return row, spent, c.Workflow + " wrote no files in the directory it runs in, so there is nothing to keep equal; make it write its result there (relative paths; claude steps need tools such as Write, and permission_mode acceptEdits)", nil
 	}
+	if c.RepeatChanges != "" {
+		path, key := c.repeatSpec()
+		if _, err := repeatCount(live.Outputs, path, key); err != nil {
+			row.Validation = Validation{Status: "live_failed", Reasons: []string{"--repeat-changes: " + err.Error()}}
+			return row, spent, "--repeat-changes names " + c.RepeatChanges + ", but the current version's outputs do not have it (" + err.Error() + ")", nil
+		}
+	}
 	agents := p.AgentSteps()
 	if len(agents) == 0 {
 		row.Validation = Validation{Status: "no_change", Reasons: []string{"no agent steps left"}}
@@ -393,6 +406,7 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 		EditableFiles: p.EditableFiles(), HelperPrefix: p.HelperPrefix(), ScriptsDir: p.ScriptsDir(),
 		AgentSteps: agents, Keep: c.Keep, Fixed: p.Fixed, Judged: true, Loose: c.Loose(),
 	}
+	in.RepeatChanges, _ = c.repeatSpec()
 	model := c.Model
 	if model == "" {
 		model = "the default model"
@@ -529,6 +543,13 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 			return v, cand, 0
 		}
 	}
+	repeat, reason := c.repeatCheck(live.Outputs, cand.Outputs)
+	v.Repeat = repeat
+	if reason != "" {
+		v.Status = "failed"
+		v.Reasons = append(v.Reasons, reason)
+		return v, cand, 0
+	}
 	same, why := SameOutputs(live.Outputs, cand.Outputs)
 	if same {
 		v.Status = "passed"
@@ -546,7 +567,7 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 	if cp, err := LoadProject(candidate, c.Workflow, c.Fixed...); err == nil {
 		candidatePrompts = agentPrompts(cp.File, cp.Reach)
 	}
-	verdict := c.judge(ctx, c.Workflow, agentPrompts(p.File, p.Reach), candidatePrompts, filepath.Join(live.Dir, "work"), filepath.Join(cand.Dir, "work"), filepath.Join(it, "judge", "verdict.json"))
+	verdict := c.judge(ctx, c.Workflow, agentPrompts(p.File, p.Reach), candidatePrompts, filepath.Join(live.Dir, "work"), filepath.Join(cand.Dir, "work"), filepath.Join(it, "judge", "verdict.json"), repeat)
 	v.JudgeReason = verdict.Reason
 	ph.end(map[string]any{"equivalent": verdict.Equivalent, "reason": verdict.Reason, "total_cost_usd": verdict.CostUSD, "tokens": verdict.Tokens}, verdict.Failed)
 	switch {
@@ -619,6 +640,7 @@ func (c *Config) collectEvidence(live *RunResult, rec *Recording, dir, it string
 		}
 	}
 	writeJSON(filepath.Join(dir, "metrics.json"), live.Metrics)
+	_ = os.WriteFile(filepath.Join(dir, "agent_calls.md"), []byte(agentCallsDoc(agentCalls(LoadEvents(filepath.Join(live.Dir, "events.jsonl"))))), 0o644)
 	_ = os.WriteFile(filepath.Join(dir, "requests.md"), []byte(requestsDoc(rec)), 0o644)
 	// Every earlier pass: what it tried, in which mode, and why it was rejected.
 	if rows, err := readRows(filepath.Join(c.CodifyDir, "metrics.jsonl")); err == nil && len(rows) > 0 {
@@ -718,6 +740,9 @@ func historyDoc(rows []Row) string {
 			fmt.Fprintf(&b, ", promoted %s", *r.Promoted)
 		}
 		b.WriteString("\n")
+		if rp := r.Validation.Repeat; rp != nil {
+			fmt.Fprintf(&b, "- repeat run changed (%s): current %v, candidate %v\n", rp.File, rp.Live, rp.Candidate)
+		}
 		for _, reason := range r.Validation.Reasons {
 			if len(reason) > 700 {
 				reason = reason[:700] + "…"

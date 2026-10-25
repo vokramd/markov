@@ -194,6 +194,7 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 	codifyCmd.Flags().StringVar(&codifyCfg.Mode, "mode", "strict", "strict: keep the outputs the same; loose: decompose agent work into atomic agent steps, comparing actions rather than agent-decided values")
 	codifyCmd.Flags().StringSliceVar(&codifyCfg.Fixed, "fixed", nil, "A workflow the target reaches that must not change, such as a reset or snapshot (repeatable or comma-separated)")
 	codifyCmd.Flags().StringSliceVar(&codifyCfg.LiveHosts, "live-host", nil, "A host the runs reach for real instead of replaying a recording; only for services the workflow resets itself (repeatable or comma-separated)")
+	codifyCmd.Flags().StringVar(&codifyCfg.RepeatChanges, "repeat-changes", "", "An output (path, or path:key for a dotted key; default key counts.total) recording how many things a second run right after the first changed; a candidate may not change more on it than the current version")
 	codifyCmd.Flags().StringVar(&codifyCfg.PromptFile, "prompt-file", "", "Replace the retro agent's strategy prompt (a Go template; see the default in pkg/codify/retro.md)")
 	_ = codifyCmd.MarkFlagRequired("workflow")
 	addCallbackFlags(codifyCmd)

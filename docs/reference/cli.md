@@ -313,6 +313,7 @@ markov codify <directory> --workflow <name> [flags]
 | `--mode strict\|loose` | `strict` | How far codify goes and how it judges a candidate (see [Modes](#modes)). |
 | `--fixed workflow` | -- | A workflow the target reaches that must not change: the parts of a cycle that set the stage and measure the result, such as a reset and a snapshot (see [Workflows with side effects](#workflows-with-side-effects)). The retro agent is told so, and a candidate that changes one is rejected. Repeatable or comma-separated. |
 | `--live-host host` | -- | A host (and its subdomains) the live run and the candidates reach for real, tunnelled through the proxy untouched, instead of replaying the recording. Only for services the workflow resets itself before it acts. Repeatable or comma-separated. |
+| `--repeat-changes path[:key]` | -- | An output in which the target records how many things a second run, right after the first, changed (the number at the dotted `key`, default `counts.total`). A candidate that changes more on that repeat than the current version is rejected, and the judge is told both numbers (see [Running it twice](#running-it-twice)). The current version must write it. |
 | `--prompt-file path` | built in | Replace the retro agent's strategy prompt, a Go template with the same fields as the built-in one (`pkg/codify/retro.md`). |
 | `--callback url` and the other callback flags | -- | As for `markov run`: receive codify's events (below). |
 
@@ -321,9 +322,9 @@ markov codify <directory> --workflow <name> [flags]
 Each iteration:
 
 1. **Runs the current version** as `markov run <directory> --workflow <name>`, started in an empty directory, through a recording HTTP(S) proxy. The files it writes in that directory are its outputs; what it fetched is recorded. The proxy has its own certificate authority, which the run trusts through `HTTPS_PROXY`, `SSL_CERT_FILE`, `CURL_CA_BUNDLE`, `REQUESTS_CA_BUNDLE` and `NODE_EXTRA_CA_CERTS`; the claude CLI's own API traffic is tunnelled untouched.
-2. **Collects evidence**: the run's events, its claude transcripts, its outputs, the recorded requests (with the start of each response), and the previous pass's result.
+2. **Collects evidence**: the run's events, its claude transcripts, its outputs, the recorded requests (with the start of each response), every agent call's rendered prompt size and input tokens (`agent_calls.md`, from the claude steps' `prompt_chars` and `usage`), and the earlier passes' results.
 3. **Lets the retro agent edit a copy of the project**, moving one job out of the agent steps (native steps before scripts). It may change the files defining the workflow and the workflows it calls, add `workflows/<name>_*.yaml` helpers and files under `scripts/<name>/`.
-4. **Checks the copy**: no other file changed, scripts come with a justification, `markov validate` passes, `--keep` steps are still agent steps.
+4. **Checks the copy**: no other file changed, scripts come with a justification, `markov validate` passes, `--keep` steps are still agent steps. After it runs: in loose mode every `json_schema` call answered in its schema, and with `--repeat-changes` it did not redo more work on a second run than the current version.
 5. **Runs the copy against the recording.** A request that was not recorded, or is not a GET or HEAD, fails.
 6. **Compares outputs** with the current version's. Identical outputs pass. Otherwise, because an agent produced the current version's outputs, a judge (the `--model`) compares their content: the same items, values, order and links; formatting may differ.
 7. **Installs a passing copy** in the project and archives the version.
@@ -366,6 +367,32 @@ markov codify . --workflow agent-cycle --fixed agent-cycle,reset,snapshot --live
 ```
 
 Never use `--live-host` for a service the cycle does not reset: every iteration's live run and candidate act on it for real. Traffic from an agent inside an OpenShell sandbox does not pass through codify's proxy at all; it goes through the OpenShell gateway.
+
+#### Running it twice
+
+A workflow that acts on a service should check what is already done before acting: run again
+right after a run, it should find nothing left to do. Measure that in the cycle by running the
+agent a second time, snapshotting after each run, and writing what the second run changed:
+
+```
+agent-cycle:  reset → snapshot → agent → snapshot → agent → snapshot → diff the last two
+```
+
+and pass the diff's output with its count to `--repeat-changes`
+(`--repeat-changes snapshot/second-run-changes.json` reads `counts.total`). A candidate that
+changes more on the second run than the current version is rejected without a judge; one that
+changes less is doing the job better, and in loose mode the judge counts it so. Put intermediate
+snapshots in a dot directory (`.snapshots/`) so they are not outputs.
+
+#### What is deterministic and what is agentic
+
+The retro agent is told to divide the work this way, in both modes: agents are not queueing
+systems and are bad at math, so the workflow lists, pages, counts, filters, compares with what is
+already done, decides what is pending and fans out; agents make one judgment per item per call.
+Lists in a prompt are fine as context for that one decision (the labels to choose from); a list of
+work items for the agent to go through is turned into a `for_each` over a per-item sub-workflow.
+In loose mode the judge accepts a candidate that acts on items the current version missed (past
+the first page, say), or does not redo finished work, as doing the job better.
 
 ### markov diagram
 
