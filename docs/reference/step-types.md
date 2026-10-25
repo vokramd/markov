@@ -713,6 +713,7 @@ Makes HTTP requests with automatic JSON body encoding and response parsing.
 | `ignore_status` | bool or list[int] | -- | Treat matching HTTP error status codes as success. `true` ignores all `>= 400` responses. |
 | `tls_insecure` | bool | `false` | Skip TLS certificate verification for HTTPS requests. Intended for local development or trusted test environments. |
 | `tls_ca_cert` | string | -- | Path to a PEM-encoded CA certificate bundle to trust for this request. Useful for self-signed or private CA certificates. |
+| `paginate` | bool or map | -- | Follow a paginated list and return all its items as one list. `true` follows `Link` headers; a map says how the API pages (see Pagination). |
 
 When a `body` is provided, the `Content-Type` header is set to `application/json`. A custom `Content-Type` value in `headers` overrides that default. If both `basic_auth` and a custom `Authorization` header are provided, `basic_auth` takes precedence.
 
@@ -725,11 +726,34 @@ Either `url` or `base_url` must be specified. When both `base_url` and `path` ar
 | Variable | Type | Description |
 |----------|------|-------------|
 | `status_code` | int | HTTP response status code |
-| `body` | any | Response body. Auto-parsed as JSON if the response is valid JSON (whole numbers become integers); otherwise returned as a string. |
+| `body` | any | Response body. Auto-parsed as JSON if the response is valid JSON (whole numbers become integers); otherwise returned as a string. With `paginate`, the items of every page in one list. |
+| `headers` | map | Response headers by canonical name (`Content-Type`, `Link`); repeated values are joined with `, `. With `paginate`, the last page's. |
+| `pages` | int | With `paginate`: how many pages were fetched. |
+| `truncated` | bool | With `paginate`: true when `max_pages` stopped it before the last page. |
+
+### Pagination
+
+`paginate` fetches page after page and returns their items as one list in `body`. Without it a
+request returns one page, and a list longer than a page is silently cut short.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `next` | `link` | How to find the next page's URL: `link` follows the `Link` header's `rel="next"` (GitHub, GitLab); any other value is a dotted path into the body (`links.next`, `_links.next.href`). A relative URL is resolved against the current page's. |
+| `cursor` | -- | A dotted path to the next page's cursor in the body; the next page is the same URL with `cursor_param` set to it. Ends when the cursor is missing, null or empty. |
+| `cursor_param` | -- | The query parameter the cursor is sent in. Required with `cursor`. |
+| `page_param` | -- | A page-number query parameter, counted up from the URL's value (or 1) until a page has no items. For APIs that send no next link. |
+| `items` | the body | A dotted path to each page's list when the body is an object (`data`, `data.values`). |
+| `max_pages` | `10` | The most pages fetched. When more remain, the step stops there and sets `truncated: true`; check it with an `assert` when a cut-short list would be wrong. |
+
+Use one of `next`, `cursor` and `page_param`; none means `next: link`. The request (method,
+headers, body) is the same for every page; only the URL changes. Ask for large pages
+(`per_page=100` on GitHub) to make fewer requests. A page that fails stops the step with the
+error, naming the page; an error status allowed by `ignore_status` ends the list there.
 
 ### Failure Conditions
 
 - Neither `url` nor `base_url` is provided.
+- `paginate` is malformed, or a page's items (the body, or `items`) are not a list.
 - The HTTP request fails at the transport level (DNS, connection refused, etc.).
 - The response status code is >= 400 and is not allowed by `ignore_status`. The step fails, but output variables (including the response body) are still populated.
 
@@ -750,6 +774,38 @@ GET request with registered output:
   type: shell_exec
   params:
     command: "echo 'Found {{ issue_list.body.total }} issues'"
+```
+
+Every issue in a GitHub repository, however many pages, and a check that none were cut off:
+
+```yaml
+- name: fetch_issues
+  type: http_request
+  params:
+    url: "{{ api }}/repos/{{ repo }}/issues?state=all&per_page=100"
+    headers:
+      Authorization: "Bearer {{ github_token }}"
+    paginate:
+      max_pages: 50
+  register: issues
+
+- name: all_issues_fetched
+  type: assert
+  that: "not issues.truncated"
+```
+
+An API that puts its list and a cursor in an object:
+
+```yaml
+- name: fetch_events
+  type: http_request
+  params:
+    url: "https://api.example.com/events?limit=200"
+    paginate:
+      items: data
+      cursor: meta.next_cursor
+      cursor_param: cursor
+  register: events
 ```
 
 POST request with JSON body:

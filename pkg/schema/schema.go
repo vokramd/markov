@@ -121,6 +121,7 @@ func stepTypes() []StepType {
 		StepType{Name: "http_request", Inputs: "params", Summary: "Make an HTTP request.", Params: []Param{
 			p("method", "Default GET"), p("url", "Full URL (or base_url)"), p("base_url", ""), p("path", ""), p("body", "JSON-encoded automatically"), p("headers", ""),
 			p("basic_auth", "username and password"), p("ignore_status", "true or a list of status codes treated as success"), p("tls_insecure", ""), p("tls_ca_cert", ""),
+			p("paginate", "true (follow Link headers) or a map: next, cursor, cursor_param, page_param, items, max_pages"),
 		}},
 		StepType{Name: "k8s_job", Inputs: "params", Summary: "Run a Kubernetes Job and wait for it.", Params: []Param{
 			req("image", "Container image"), p("command", ""), p("args", ""), p("env", ""), p("secrets", ""), p("volumes", ""), p("init_containers", ""), p("resources", ""), p("affinity", ""),

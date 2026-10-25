@@ -39,48 +39,110 @@ func (e *HTTPRequest) Execute(ctx context.Context, params map[string]any) (*Resu
 		url = baseURL + path
 	}
 
+	pages, err := pagingFromParams(params["paginate"])
+	if err != nil {
+		return nil, err
+	}
+	client, err := e.clientForParams(params)
+	if err != nil {
+		return nil, err
+	}
+	if pages == nil {
+		output, _, err := e.send(ctx, client, method, url, params)
+		return resultOrNil(output), err
+	}
+
+	// Follow the pages, collecting their items into one list.
+	var items []any
+	for page := 1; ; page++ {
+		output, header, err := e.send(ctx, client, method, url, params)
+		if err != nil {
+			if output == nil {
+				return nil, fmt.Errorf("%w (page %d)", err, page)
+			}
+			return &Result{Output: output}, fmt.Errorf("%w (page %d)", err, page)
+		}
+		output["pages"] = page
+		output["truncated"] = false
+		if code, _ := output["status_code"].(int); code >= 400 {
+			// An error status ignore_status allows ends the list.
+			if items == nil {
+				items = []any{}
+			}
+			output["body"] = items
+			return &Result{Output: output}, nil
+		}
+		pageItems, err := pages.pageItems(output["body"], page)
+		if err != nil {
+			return &Result{Output: output}, err
+		}
+		items = append(items, pageItems...)
+		next, err := pages.nextURL(url, header, output["body"], pageItems)
+		if err != nil {
+			return &Result{Output: output}, err
+		}
+		if next != "" && page >= pages.maxPages {
+			output["truncated"] = true
+		}
+		if next == "" || page >= pages.maxPages {
+			if items == nil {
+				items = []any{}
+			}
+			output["body"] = items
+			return &Result{Output: output}, nil
+		}
+		url = next
+	}
+}
+
+func resultOrNil(output map[string]any) *Result {
+	if output == nil {
+		return nil
+	}
+	return &Result{Output: output}
+}
+
+// send makes one request. The output is set whenever a response arrived, also when its status
+// is an error that ignore_status does not allow.
+func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url string, params map[string]any) (map[string]any, http.Header, error) {
 	var bodyReader io.Reader
 	if body, ok := params["body"]; ok {
 		encoded, err := json.Marshal(body)
 		if err != nil {
-			return nil, fmt.Errorf("http_request: encoding body: %w", err)
+			return nil, nil, fmt.Errorf("http_request: encoding body: %w", err)
 		}
 		bodyReader = strings.NewReader(string(encoded))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, strings.ToUpper(method), url, bodyReader)
 	if err != nil {
-		return nil, fmt.Errorf("http_request: creating request: %w", err)
+		return nil, nil, fmt.Errorf("http_request: creating request: %w", err)
 	}
 
 	if bodyReader != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if err := applyHeaders(req, params["headers"]); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := applyBasicAuth(req, params["basic_auth"]); err != nil {
-		return nil, err
-	}
-
-	client, err := e.clientForParams(params)
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("http_request: %w", err)
+		return nil, nil, fmt.Errorf("http_request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("http_request: reading response: %w", err)
+		return nil, nil, fmt.Errorf("http_request: reading response: %w", err)
 	}
 
 	output := map[string]any{
 		"status_code": resp.StatusCode,
+		"headers":     headerOutput(resp.Header),
 		"body":        string(respBody),
 	}
 
@@ -90,13 +152,13 @@ func (e *HTTPRequest) Execute(ctx context.Context, params map[string]any) (*Resu
 
 	ignoreStatus, err := shouldIgnoreStatus(resp.StatusCode, params["ignore_status"])
 	if err != nil {
-		return &Result{Output: output}, err
+		return output, resp.Header, err
 	}
 	if resp.StatusCode >= 400 && !ignoreStatus {
-		return &Result{Output: output}, fmt.Errorf("http_request: status %d", resp.StatusCode)
+		return output, resp.Header, fmt.Errorf("http_request: status %d", resp.StatusCode)
 	}
 
-	return &Result{Output: output}, nil
+	return output, resp.Header, nil
 }
 
 func (e *HTTPRequest) clientForParams(params map[string]any) (*http.Client, error) {

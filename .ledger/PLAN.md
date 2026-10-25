@@ -12,6 +12,7 @@
 - [Agentic Codification](plans/003-agentic-codification.md) — phases 1–5 done (notes/codify-phase1-run.md, ADR-0006, markov-ide plan 002); phase 6 (`markov codify`, any workflow) done; retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
 - [OpenShell sandboxes](plans/004-openshell-sandboxes.md) — phases 1–3 done (CLI and SDK transports, IDE); native steps to build images and create, upload to, exec in, download from and delete OpenShell sandboxes, over the openshell CLI or the Go SDK.
 - [Codifying agents that act on live services](plans/005-codifying-agents-with-side-effects.md) — phases 1–5 done (trial: notes/codify-github-agent-trial.md), agent noise next; reset/snapshot cycles, fixed workflows, live hosts, and splitting broad prompts into focused agent steps.
+- [Codified workflows that page, fan out and are safe to run again](plans/006-idempotent-codified-workflows.md) — phase 1 done (http_request paginate); emulator links, 150-issue fixture, two-run idempotency check, sub-workflow and state-before-action retro rules next.
 
 ## Active Tasks
 
