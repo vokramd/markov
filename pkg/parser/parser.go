@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,11 +34,12 @@ func ParseDir(path string) (*WorkflowFile, error) {
 
 	metaPath := filepath.Join(path, "meta.yaml")
 	var meta struct {
-		Entrypoint string     `yaml:"entrypoint"`
-		Namespace  string     `yaml:"namespace"`
-		Forks      int        `yaml:"forks"`
-		OpenShell  *OpenShell `yaml:"openshell"`
-		Secrets    []string   `yaml:"secrets"`
+		Entrypoint string           `yaml:"entrypoint"`
+		Namespace  string           `yaml:"namespace"`
+		Forks      int              `yaml:"forks"`
+		OpenShell  *OpenShell       `yaml:"openshell"`
+		Secrets    []string         `yaml:"secrets"`
+		MaxOutput  outputlimit.Size `yaml:"max_output"`
 	}
 	if err := readYAML(metaPath, &meta); err != nil {
 		return nil, err
@@ -47,6 +49,7 @@ func ParseDir(path string) (*WorkflowFile, error) {
 	wf.Forks = meta.Forks
 	wf.OpenShell = meta.OpenShell
 	wf.Secrets = meta.Secrets
+	wf.MaxOutput = meta.MaxOutput
 
 	vars, err := readVars(path)
 	if err != nil {
@@ -363,6 +366,11 @@ func validateSteps(wf *WorkflowFile, workflowName, section string, steps []Step,
 			if !IsTemplated(s.Workflow) && !hasWorkflow(wf, s.Workflow) {
 				return fmt.Errorf("workflow %q, step %q: references unknown workflow %q", workflowName, s.Name, s.Workflow)
 			}
+			if child := wf.GetWorkflow(s.Workflow); child != nil && !IsTemplated(s.Workflow) {
+				if missing := missingCallParams(wf, s, child); len(missing) > 0 {
+					return fmt.Errorf("workflow %q, step %q: workflow %q needs %s (declared with no default); pass it with pass: or vars:", workflowName, s.Name, s.Workflow, strings.Join(missing, ", "))
+				}
+			}
 		} else if s.Type == "" {
 			return fmt.Errorf("workflow %q, step %q: must have type or workflow", workflowName, s.Name)
 		}
@@ -372,6 +380,19 @@ func validateSteps(wf *WorkflowFile, workflowName, section string, steps []Step,
 		}
 		if s.Secret.Set() && (s.Workflow != "" || s.Type == "gate" || s.Type == "assert") {
 			return fmt.Errorf("workflow %q, step %q: secret marks a step's own output; sub-workflow, gate and assert steps have none (mark the steps inside the sub-workflow)", workflowName, s.Name)
+		}
+		if len(s.Pass) > 0 {
+			if s.Workflow == "" {
+				return fmt.Errorf("workflow %q, step %q: pass hands vars to a called workflow; this step calls none", workflowName, s.Name)
+			}
+			for _, name := range s.Pass {
+				if name == "" || strings.ContainsAny(name, ".[] ") || IsTemplated(name) {
+					return fmt.Errorf("workflow %q, step %q: pass: %q is not a var name (use vars: to pick out or rename)", workflowName, s.Name, name)
+				}
+			}
+		}
+		if err := checkGlobalWrites(wf, workflowName, s); err != nil {
+			return err
 		}
 		if s.ForEachWhen != "" && s.ForEach == "" {
 			return fmt.Errorf("workflow %q, step %q: for_each_when requires for_each", workflowName, s.Name)
@@ -397,6 +418,44 @@ func validateSteps(wf *WorkflowFile, workflowName, section string, steps []Step,
 				if wf.GetRule(rn) == nil {
 					return fmt.Errorf("workflow %q, step %q: references unknown rule %q", workflowName, s.Name, rn)
 				}
+			}
+		}
+	}
+	return nil
+}
+
+// checkGlobalWrites rejects a step that would change a global (a file-level var) or a built-in:
+// they are set when the run starts and are the same everywhere. A call may still shadow one for
+// the workflow it calls, through pass: or vars:, and a workflow that declares the name in its own
+// vars: has a parameter of that name, which is its own to change.
+func checkGlobalWrites(wf *WorkflowFile, workflowName string, s Step) error {
+	var own map[string]any
+	if w := wf.GetWorkflow(workflowName); w != nil {
+		own = w.Vars
+	}
+	global := func(name string) bool {
+		if strings.HasPrefix(name, "markov_") {
+			return true
+		}
+		if _, ok := own[name]; ok {
+			return false
+		}
+		_, ok := wf.Vars[name]
+		return ok
+	}
+	fail := func(what, name string) error {
+		return fmt.Errorf("workflow %q, step %q: %s %q is a global (a file-level var), which no step may change; use another name, or pass a different value to a called workflow", workflowName, s.Name, what, name)
+	}
+	if s.Register != "" && global(s.Register) {
+		return fail("register", s.Register)
+	}
+	if s.As != "" && global(s.As) {
+		return fail("as", s.As)
+	}
+	if s.Type == "set_fact" {
+		for name := range s.Vars {
+			if global(name) {
+				return fail("set_fact", name)
 			}
 		}
 	}

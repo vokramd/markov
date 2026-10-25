@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/jctanner/markov/pkg/jev"
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,7 +17,9 @@ type WorkflowFile struct {
 	Forks       int                       `yaml:"forks"`
 	Vars        map[string]any            `yaml:"vars"`
 	// Secrets names vars whose values are masked in events and logs.
-	Secrets   []string            `yaml:"secrets"`
+	Secrets []string `yaml:"secrets"`
+	// MaxOutput is the output limit of every step that sets none (and whose step type sets none).
+	MaxOutput outputlimit.Size    `yaml:"max_output"`
 	Rules     []Rule              `yaml:"rules"`
 	StepTypes map[string]StepType `yaml:"step_types"`
 	Workflows []Workflow          `yaml:"workflows"`
@@ -57,11 +60,13 @@ type Rule struct {
 }
 
 type StepType struct {
-	Base        string         `yaml:"base"`
-	Description string         `yaml:"description"`
-	Defaults    map[string]any `yaml:"defaults"`
-	Job         map[string]any `yaml:"job"`
-	Params      map[string]any `yaml:"params"`
+	Base        string `yaml:"base"`
+	Description string `yaml:"description"`
+	// MaxOutput is the output limit of the steps of this type that set none.
+	MaxOutput outputlimit.Size `yaml:"max_output"`
+	Defaults  map[string]any   `yaml:"defaults"`
+	Job       map[string]any   `yaml:"job"`
+	Params    map[string]any   `yaml:"params"`
 }
 
 type Workflow struct {
@@ -93,13 +98,16 @@ type Step struct {
 	Workflow    string `yaml:"workflow"`
 	// WorkflowNames lists the workflows a templated Workflow may resolve to: each must exist,
 	// and a run that resolves to another name fails.
-	WorkflowNames []string            `yaml:"workflow_names"`
-	Vars          map[string]any      `yaml:"vars"`
-	Artifacts     map[string]Artifact `yaml:"artifacts"`
-	That          []string            `yaml:"that"`
-	Msg           string              `yaml:"msg"`
-	Rules         []string            `yaml:"rules"`
-	Facts         map[string]any      `yaml:"facts"`
+	WorkflowNames []string       `yaml:"workflow_names"`
+	Vars          map[string]any `yaml:"vars"`
+	// Pass hands the called workflow these of the caller's vars by name, as they are (not
+	// rendered). Only on a step that calls a workflow.
+	Pass      []string            `yaml:"pass"`
+	Artifacts map[string]Artifact `yaml:"artifacts"`
+	That      []string            `yaml:"that"`
+	Msg       string              `yaml:"msg"`
+	Rules     []string            `yaml:"rules"`
+	Facts     map[string]any      `yaml:"facts"`
 	// IgnoreErrors records a failure in the step's output (failed: true, error) and carries on.
 	IgnoreErrors bool `yaml:"ignore_errors"`
 	// FailedWhen, when set, alone decides whether the step failed. It sees the step's output as
@@ -107,6 +115,8 @@ type Step struct {
 	FailedWhen string `yaml:"failed_when"`
 	// Secret marks the step's output, or parts of it, as secret: masked in events and logs.
 	Secret SecretOutput `yaml:"secret"`
+	// MaxOutput is how much the step may produce (0: no limit); over it, the step fails.
+	MaxOutput outputlimit.Size `yaml:"max_output"`
 }
 
 // SecretOutput is a step's `secret` setting: true (every string in the output) or a list of

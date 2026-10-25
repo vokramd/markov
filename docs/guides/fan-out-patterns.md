@@ -168,7 +168,7 @@ Use `from_json` to parse JSON output from a previous step. The older `fromjson` 
 
 ## Collecting Results
 
-Use `register` on a for_each step to collect all iteration contexts into a list:
+Use `register` on a for_each step to collect one result per iteration into a list:
 
 ```yaml
 - name: fan-out
@@ -185,7 +185,7 @@ Use `register` on a for_each step to collect all iteration contexts into a list:
     command: "echo 'Completed {{ results | length }} items'"
 ```
 
-Each entry in `results` is the full context map from that iteration's sub-workflow.
+Each entry in `results` is that iteration's sub-workflow context without the globals: the `value` it was passed, the item, and what its steps registered or set. The sub-workflow sees only the globals, its own `vars:`, the item and what the call passes (`pass:` or `vars:`), not the caller's registers; see [Variable Scoping](../reference/variables-and-context.md#variable-scoping).
 
 ## Error Handling
 

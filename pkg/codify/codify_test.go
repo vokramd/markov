@@ -547,6 +547,12 @@ func TestRetroPromptFollowsTheMode(t *testing.T) {
 	if !strings.Contains(strict, "While an agent produces an output") || strings.Contains(loose, "While an agent produces an output") {
 		t.Error("only strict mode compares outputs by content")
 	}
+	// Both modes say how variables reach a called workflow; the example template survives.
+	for _, p := range []string{strict, loose} {
+		if !strings.Contains(p, "pass: [name]") || !strings.Contains(p, `comments: "{{ comments_by_number[issue.number] }}"`) {
+			t.Error("prompt lacks the variable scope rules")
+		}
+	}
 }
 
 func TestStructuredAnswerMisses(t *testing.T) {
@@ -621,16 +627,16 @@ func TestRepeatCheck(t *testing.T) {
 	if path, key := c.repeatSpec(); path != "snapshot/second-run-changes.json" || key != "counts.total" {
 		t.Fatalf("spec = %q %q", path, key)
 	}
-	if r, reason := c.repeatCheck(record(4), record(4)); reason != "" || r.Live != 4 || r.Candidate != 4 {
+	if r, reason := c.repeatCheck(record(4), record(4), nil); reason != "" || r.Live != 4 || r.Candidate != 4 {
 		t.Errorf("same count: %+v %q", r, reason)
 	}
-	if _, reason := c.repeatCheck(record(4), record(0)); reason != "" {
+	if _, reason := c.repeatCheck(record(4), record(0), nil); reason != "" {
 		t.Errorf("fewer repeated changes should pass: %q", reason)
 	}
-	if r, reason := c.repeatCheck(record(1), record(3)); !strings.Contains(reason, "changed 3 thing(s)") || r.Candidate != 3 {
+	if r, reason := c.repeatCheck(record(1), record(3), nil); !strings.Contains(reason, "changed 3 thing(s)") || r.Candidate != 3 {
 		t.Errorf("more repeated changes should fail: %+v %q", r, reason)
 	}
-	if _, reason := c.repeatCheck(record(1), map[string][]byte{}); !strings.Contains(reason, "candidate's repeat-run record: no output") {
+	if _, reason := c.repeatCheck(record(1), map[string][]byte{}, nil); !strings.Contains(reason, "candidate's repeat-run record: no output") {
 		t.Errorf("a candidate without the record should fail: %q", reason)
 	}
 	keyed := &Config{RepeatChanges: "out.json:summary.repeat"}
@@ -640,8 +646,45 @@ func TestRepeatCheck(t *testing.T) {
 	if _, key := keyed.repeatSpec(); key != "summary.repeat" {
 		t.Errorf("key = %q", key)
 	}
-	if r, reason := (&Config{}).repeatCheck(record(1), record(9)); r != nil || reason != "" {
+	if r, reason := (&Config{}).repeatCheck(record(1), record(9), nil); r != nil || reason != "" {
 		t.Errorf("no --repeat-changes, no check: %+v %q", r, reason)
+	}
+}
+
+// With the kinds a pass's work makes declared, only those are held to the current version, one by
+// one: the trial's ping slice answered no ping twice, while the agent work it left alone
+// re-reviewed two PRs.
+func TestRepeatCheckByKind(t *testing.T) {
+	record := func(counts string) map[string][]byte {
+		return map[string][]byte{"r.json": []byte(`{"counts": {` + counts + `}}`)}
+	}
+	c := &Config{RepeatChanges: "r.json"}
+	live := record(`"comments_added": 1, "total": 1`)
+	cand := record(`"reviews_added": 2, "total": 2`)
+	r, reason := c.repeatCheck(live, cand, []string{"comments_added"})
+	if reason != "" {
+		t.Fatalf("the pass's own kind repeated less: %q", reason)
+	}
+	if len(r.Kinds) != 2 || r.Kinds[0] != (RepeatKind{Kind: "comments_added", Live: 1, Candidate: 0, Touched: true}) || r.Kinds[1] != (RepeatKind{Kind: "reviews_added", Live: 0, Candidate: 2}) {
+		t.Fatalf("kinds = %+v", r.Kinds)
+	}
+	if _, reason := c.repeatCheck(live, cand, nil); !strings.Contains(reason, "changed 2 thing(s)") {
+		t.Errorf("undeclared, the totals decide: %q", reason)
+	}
+	_, reason = c.repeatCheck(live, record(`"comments_added": 3, "total": 3`), []string{"comments_added", "labels_added"})
+	if !strings.Contains(reason, "comments_added 3 (current version 1)") {
+		t.Errorf("more of its own kind fails: %q", reason)
+	}
+	retro, err := render(defaultRetroPrompt, RetroInputs{Target: "t", Loose: true, RepeatChanges: "r.json", EditableFiles: []string{"workflows/t.yaml"}})
+	if err != nil || !strings.Contains(retro, `"repeat_kinds"`) || !strings.Contains(retro, "answering pings:\n  comments_added") {
+		t.Errorf("retro prompt lacks repeat_kinds: %v", err)
+	}
+	if got := declaredKinds(map[string]any{"repeat_kinds": []any{"comments_added", " ", 3}}); len(got) != 1 || got[0] != "comments_added" {
+		t.Errorf("declaredKinds = %v", got)
+	}
+	judge, err := render(judgeLoosePrompt, map[string]any{"Target": "t", "Repeat": r})
+	if err != nil || !strings.Contains(judge, "- comments_added: 1 / 0 (the work this step changed)") || !strings.Contains(judge, "- reviews_added: 0 / 2\n") || !strings.Contains(judge, "varies from run to run") {
+		t.Errorf("judge prompt: %v\n%s", err, judge)
 	}
 }
 

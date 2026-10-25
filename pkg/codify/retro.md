@@ -14,13 +14,21 @@ It just ran once. Evidence of that run is in {{.Evidence}}:
 - agent_calls.md: every agent call, with the size of its rendered prompt and its input tokens. A
   call whose prompt is much bigger than the others, or carries a whole list of items, is being
   used as a work queue.
+- output_sizes.md: how much each step produced, and any step that failed for producing more than
+  its max_output, with the largest values inside it. previous_candidate_output_sizes.md, when
+  present, is the same for the last candidate.
 - history.md, when present: every earlier pass, what it tried, the mode it was judged in and
   why a candidate was rejected. previous_retro.json and previous_validation.json are the last
   pass in full. Do not repeat a move that was rejected for a reason that still applies.{{if .Loose}}
   A rejection in strict mode, or one over values an agent decided (a label it chose, its
   wording), does not apply in loose mode: such a move may be tried again.{{end}}
 
-Agent steps today: {{if .AgentSteps}}{{join .AgentSteps ", "}}{{else}}none{{end}}.
+{{if .LiveFailure}}The current version did not complete: {{.LiveFailure}}. Fix that first, in this pass:
+change the step (or what feeds it) so it produces only what is used, following the table under
+"When a step produces too much" below. Its outputs are partial, so the candidate is judged on
+completing and doing the job, not on matching them.
+
+{{end}}Agent steps today: {{if .AgentSteps}}{{join .AgentSteps ", "}}{{else}}none{{end}}.
 
 What is deterministic and what is agentic: agents are not queueing systems and are bad at math.
 Given hundreds of items in one session they miss some, repeat some and miscount. So the workflow
@@ -40,14 +48,14 @@ thing, for one item: for example "given this issue's title and body, answer with
 bug, feature or inquiry", or "given this issue, write the change and open a pull request".
 Everything around it (fetching, finding the items, applying its answer) is native.
 
-Each pass makes exactly ONE change:
+Each pass makes ONE coherent change: one kind of item, end to end.
 1. From the evidence, list the distinct jobs the agent steps did and decide for each whether it
-   needs judgment.
-2. If a job that needs no judgment is left with an agent, move the earliest one in the data flow
-   into native steps, and narrow the agent prompt that did it.
-3. Otherwise (no mechanical job is left with an agent, or the one you would move is blocked by a
-   rejection that still applies), take ONE judgment job out of an agent step that does more
-   than one, as its own atomic claude step:
+   needs judgment. Group them by the kind of item they serve (the issues to triage, the /mk-ping
+   comments, the /mk-code requests, the PRs to review, ...), apart from the gathering they share.
+2. Take ONE kind of item whose work is still done by a broad agent step, and move all of it:
+   gather what it needs natively (shared with later kinds), compute natively which items are
+   pending, and fan out over them with a sub-workflow per item. Within it, native steps do what
+   needs no judgment (posting the fixed reply "pong"), and each judgment is an atomic claude step:
    - a short prompt for that one decision, given only the inputs it needs through template
      expressions (fetched by native steps);
    - a json_schema for its answer (a decision is an enum or a small object), so native steps
@@ -55,8 +63,12 @@ Each pass makes exactly ONE change:
    - for_each with one call per item;
    - the model and limits that job needs; an OpenShell sandbox only when the job needs one
      (copy the sandbox, permission_mode and env params of the original step).
-   Remove that job from the broad prompt.
-4. Leave everything else; later passes take it.
+   Remove that kind of item from the broad prompt. Prefer the kind whose work is most mechanical
+   (it is the cheapest to get right), unless a rejection that still applies says otherwise.
+3. If the previous pass moved a whole kind of item and was rejected for a reason that still
+   applies to a change that size, make a smaller change this pass: ONE job of that kind (the
+   earliest in its data flow, or one judgment split out as in 2). Say so in the summary.
+4. Leave the other kinds of item with the agent; later passes take them.
 {{- if .Keep}}
 5. These steps must stay agent steps: {{join .Keep ", "}}. You may narrow their prompts.
 {{- end}}
@@ -75,8 +87,12 @@ Shape the workflow as gather → compute what is pending → fan out:
 - An agent prompt that hands over a list of work items (all issues, every comment of every open
   item) becomes such a fan-out; give each call only its item's data.
 {{- if .RepeatChanges}}
-- The run records what a second run changed in {{.RepeatChanges}} (in outputs/). A candidate may
-  not change more on that repeat than the current version; aim for nothing.
+- The run records what a second run changed in {{.RepeatChanges}} (in outputs/), counted by
+  kind of change beside the total (comments_added, labels_added, reviews_added, ...). Name in
+  retro.json "repeat_kinds" every kind of change the work you moved makes (answering pings:
+  comments_added). The candidate may not repeat more of those kinds than the current version;
+  aim for none. Repeats of other kinds come from work you left with the agent, which varies from
+  run to run; they do not fail the pass on their own.
 {{- end}}
 
 The values an atomic step decides (which label, what wording) may differ from run to run; that
@@ -117,6 +133,28 @@ progress is measured in agent tokens and cost, not in the number of agent steps.
 {{end}}Prefer native steps (http_request, for_each, set_fact, write_file, assert, sub-workflows) over
 scripts. Use a script under {{.ScriptsDir}} with script_exec only for what the step types and
 templates cannot reasonably express, and say why in retro.json.
+
+How variables reach a workflow (`markov validate` rejects a candidate that gets this wrong):
+- A called workflow sees only the file-level vars (globals), the markov_* built-ins, its own
+  `vars:` and what the call gives it. Not the caller's registers or facts. Declare what a helper
+  takes in its `vars:` (`~` for required) and pass it from the caller: `pass: [name]` hands over
+  a register or list as it is; `vars:` renders, so use it to pick out one item's part
+  (`comments: "{{"{{"}} comments_by_number[issue.number] {{"}}"}}"`), not to copy a whole register.
+- No step may `register`, `set_fact` or loop `as` the name of a file-level var.
+- A typed step's for_each register holds, per item, the item and that step's output; filter or
+  reshape it with set_fact or a script before handing it on, rather than bundling registers.
+
+When a step produces too much (output_sizes.md: over its max_output, or a large share of it, or
+growing with the data):
+| The evidence shows | Usually |
+|---|---|
+| A register held inside another register's items | pass only the fields needed (`pass:`, or `vars:` with `map(attribute=...)`), not the whole register |
+| A big list rendered into a set_fact or template | write it to a file and have a script_exec read it: the script filters, and the workflow gets back only its result |
+| A big list given to an agent | fan out with one call per item, or give the agent a file to read |
+| A listing much bigger than what is used | filter on the server (`state=open`, `since=`, `labels=`) or fetch per item |
+| One huge text field (a log, a transcript) | save it as an artifact and register its path or a summary |
+A step may set a larger `max_output:` only when the size is the job's own (a listing that really
+is that big), with the reason in a comment.
 
 Rules:
 {{- if .Fixed}}
@@ -159,5 +197,7 @@ Finally write {{.RetroJSON}} containing a JSON object with keys:
 - "extracted": the one job this pass moved out of the agent, or null
 - "move": "native", "script" or "split" (a focused agent step), or null when nothing changed
 - "summary": one or two sentences on what you changed and why
-- "script_justification": why a script was needed, or null when you added none
+- "script_justification": why a script was needed, or null when you added none{{if .RepeatChanges}}
+- "repeat_kinds": the kinds of change (keys beside the total in the repeat record) that the
+  work you moved makes, or [] when the pass moved none{{end}}
 - "remaining_agent_steps": the number of claude steps in the workflows above after this pass

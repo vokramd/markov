@@ -13,7 +13,7 @@ The initial context is constructed by `buildContext` (in `engine.go:1136`) in th
 | 2 | Workflow `vars` | The `vars:` block on the specific workflow being run (non-nil values only) |
 | 3 (highest) | CLI `--var` overrides | Variables passed via `--var key=value` on the command line |
 
-**Important:** Nil values in workflow `vars` are treated as parameter declarations, not overrides. They signal that the workflow accepts a parameter but do not clear any existing value from global vars.
+**Important:** a workflow's `vars` are its parameters. A nil value (`~`) declares a required parameter without a default: the run fails at the start unless `--var` (or a file-level var of the same name) sets it. It does not clear a global's value. See [Variable Scoping](#variable-scoping).
 
 ```yaml
 # File-level vars (priority 1)
@@ -24,7 +24,7 @@ vars:
 workflows:
   - name: deploy
     # Workflow vars (priority 2)
-    # "target" is nil -- declares a parameter without setting a default
+    # "target" is nil -- a required parameter, with no default
     # "environment" overrides the global value
     vars:
       target:
@@ -118,49 +118,114 @@ Rules in a `gate` step can include `set_fact` maps. When a rule fires, its facts
 
 ## Variable Scoping
 
-### Sub-workflow isolation
+There are three kinds of variable, and what a workflow sees depends on which kind it is.
 
-Sub-workflows receive a **copy** of the parent context plus their own vars. Changes made inside a sub-workflow do **not** propagate back to the parent.
+| Declared | Kind | Seen by |
+|---|---|---|
+| File-level `vars:` (`vars.yaml` and `vars/*.yaml` in a directory workflow) | **global** | every workflow in the run |
+| A workflow's own `vars:` | that workflow's **parameters**, with defaults (`~`: required) | that workflow; callers fill them |
+| `register`, `set_fact`, a loop's `as`, loaded artifacts, gate facts | **locals** | the workflow that made them; a called workflow only if passed |
+| `markov_*` | built-in | everywhere |
+
+### Globals
+
+The file-level vars are set when the run starts (then `--var` overrides them) and stay the same for the whole run. No step may change one: a `register`, `set_fact` or `as` that names a global is rejected when the file is parsed, so concurrent `for_each` iterations never share mutable state. A workflow that declares the name in its own `vars:` has a parameter of that name instead, which is its own to change.
+
+A call may **shadow** a global for the workflow it calls, and everything that workflow calls, by passing the name:
 
 ```yaml
-# Parent workflow
+vars:
+  GITHUB_TOKEN: ""          # global; empty until a workflow mints one
+
+workflows:
+  - name: cycle
+    steps:
+      - name: bootstrap
+        workflow: bootstrap
+        register: bootstrap
+      - name: agent
+        workflow: agent
+        vars:
+          GITHUB_TOKEN: "{{ bootstrap.github_token }}"   # agent, and what it calls, see this one
+```
+
+A value only some workflows should see belongs in the `vars:` of the workflow that uses it, passed by its callers, not among the globals.
+
+### Called workflows see what they are given
+
+A workflow called with `workflow:` starts with:
+
+1. the globals and built-ins, as the caller sees them (so a shadowed global reaches the grandchildren);
+2. its own `vars:` defaults (non-nil values);
+3. in a `for_each`, the item, under `as`;
+4. what the call passes by name with `pass:`, as it is;
+5. the call's `vars:`, rendered against the caller (strings coerced).
+
+Nothing else of the caller's: a register or fact the caller made is visible to the child only when passed.
+
+```yaml
+- name: triage-each
+  workflow: triage-issue
+  for_each: "untriaged.stdout | from_json"
+  as: issue
+  pass: [repo_labels]                  # by name, the value itself
+  vars:
+    comments: "{{ comments_by_number[issue.number] }}"   # rendered against the caller
+
+# The called workflow declares what it takes; ~ means required.
+- name: triage-issue
+  vars:
+    issue: ~
+    repo_labels: ~
+    comments: []
+  steps: [...]
+```
+
+`pass:` is the way to hand over a register or a list: the value is not rendered to text and parsed back, so it keeps its type and costs nothing however large it is. Use `vars:` to pick out part of a value or rename it.
+
+A parameter declared `~` that the call does not give (not passed, not in `vars:`, not a global, not the loop variable) is an error when the file is parsed, or when the call is made for a templated `workflow:` name.
+
+Changes made inside a called workflow do **not** propagate back to the caller. The only way back is `register`, which stores the called workflow's final context **without** the globals and built-ins: what it was passed and what it made.
+
+```yaml
 - name: run_child
   workflow: child_workflow
   vars:
     input_data: "{{ some_value }}"
-  register: child_output   # only way to get data back
-
-# In child_workflow: modifications to context stay local
-# Parent only sees what's in ctx["child_output"]
+  register: child_output   # input_data, and whatever child_workflow registered or set
 ```
 
-The only way to pass data back from a sub-workflow to the parent is via `register`, which stores the sub-workflow's entire final context map.
-
-### for_each isolation
+### for_each
 
 Each iteration of a `for_each` gets its own copy of the context with the current item set at `ctx[as]`. Iterations run concurrently and do not share state.
 
-If `register` is set on a `for_each` step, it stores a **list of all iteration contexts** (one map per iteration).
+A typed step with `for_each` (a `type`, no `workflow`) is not a call: each iteration sees the whole context of its workflow plus the item. If the step has `register`, the register is a list with one element per iteration, each holding the item (under `as`), the step's output (under the register name), and anything else the iteration set (facts; `failed` and `error` under `ignore_errors`). Not the iteration's whole context: a loop that collects over an earlier loop's register stays the size of its data.
+
+```yaml
+- name: list-comments
+  type: http_request
+  for_each: issues.body
+  as: issue
+  register: comments
+  params:
+    url: "{{ api }}/issues/{{ issue.number }}/comments"
+# comments[0] == {"issue": {...}, "comments": {"status_code": 200, "body": [...], ...}}
+```
+
+A `for_each` that calls a workflow registers one element per iteration, as a single call does.
+
+### Checking what a workflow can see
+
+`markov validate` reports names a workflow reads (in templates, `when`, `for_each`, `for_each_when`, `failed_when`, assertions, gate facts) that it cannot see: not a global, a built-in, its own parameter, or something its own steps register, set, load or loop over. The check is best effort (a computed key is not followed):
+
+- **error**: a workflow that is called reads a name it cannot see; a call passes a name the called workflow does not declare in its `vars:`; or a workflow reads a name its callers pass without declaring it. A workflow says what it takes.
+- **warning**: a workflow nothing calls (an entry workflow) reads an undeclared name, which must then come from `--var`.
+
+`markov run` logs the same findings as warnings (an entry workflow's names given with `--var` are left out) and goes ahead.
 
 ## Sub-Workflow Var Merging
 
-The context for a sub-workflow is built by `executeSubWorkflow` (in `engine.go:704`) in this order:
-
-| Step | Operation |
-|---|---|
-| 1 | Copy all key-value pairs from the parent context |
-| 2 | Merge the sub-workflow's own `vars:` block (non-nil values only) |
-| 3 | If the step has `vars:`, template-render them against the **parent** context, then merge (string values are coerced) |
-
-```yaml
-- name: invoke_analysis
-  workflow: analyze
-  vars:
-    target: "{{ item.name }}"     # rendered against parent context
-    threshold: "{{ min_score }}"  # rendered against parent context
-```
-
-String values from step-level vars are passed through `coerceString` after rendering, so `"42"` becomes `int(42)`, `"true"` becomes `bool(true)`, etc. Non-string values are stored directly.
+The context for a called workflow is built by `childContext` (in `scope.go`); see [Called workflows see what they are given](#called-workflows-see-what-they-are-given) for the order. String values from step-level vars are passed through `coerceString` after rendering, so `"42"` becomes `int(42)`, `"true"` becomes `bool(true)`, etc. Non-string values are stored directly. `pass:` values are stored as they are.
 
 ## register Behavior
 
@@ -172,8 +237,9 @@ What gets stored by `register` depends on the step type:
 | `k8s_job` | The executor's `Result.Output` map (contains job output) |
 | `k8s_job_wait` | The executor's `Result.Output` map (contains `job_name`, `namespace`, `status`, and optional `logs`) |
 | `http_request` | The executor's `Result.Output` map (typically contains `body`, `status_code`, `headers`) |
-| Sub-workflow (`workflow:`) | The entire sub-workflow context map (all vars at end of execution) |
-| `for_each` | A list (`[]map[string]any`) of all iteration contexts |
+| Sub-workflow (`workflow:`) | The called workflow's final context, without the globals and built-ins |
+| `for_each` on a typed step | A list (`[]map[string]any`), one element per iteration: the item, the step's output, and what the iteration set |
+| `for_each` calling a workflow | A list, one element per iteration, each as for a single call |
 
 ## set_fact Evaluation
 

@@ -1,6 +1,10 @@
 package callback
 
-import "time"
+import (
+	"time"
+
+	"github.com/jctanner/markov/pkg/outputlimit"
+)
 
 type EventHeader struct {
 	Timestamp time.Time `json:"timestamp"`
@@ -88,6 +92,13 @@ type StepFailedEvent struct {
 	StepName     string `json:"step_name"`
 	StepType     string `json:"step_type"`
 	Error        string `json:"error"`
+	// ErrorKind classifies some failures: "max_output" when the step produced more than its
+	// max_output allows, with the sizes below.
+	ErrorKind   string             `json:"error_kind,omitempty"`
+	OutputBytes int64              `json:"output_bytes,omitempty"`
+	LimitBytes  int64              `json:"limit_bytes,omitempty"`
+	Stream      string             `json:"stream,omitempty"`
+	Largest     []outputlimit.Part `json:"largest,omitempty"`
 	// Output is what the step's executor returned before failing, when it returned anything.
 	Output   map[string]any `json:"output,omitempty"`
 	Duration float64        `json:"duration_seconds"`

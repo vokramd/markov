@@ -1,7 +1,6 @@
 package codify
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"os"
@@ -47,11 +46,12 @@ func (m Metrics) Coverage() float64 {
 // dir/work, an empty directory, so the files it writes there are its outputs; env is added to
 // its environment (the recording proxy).
 func RunWorkflow(ctx context.Context, markov, source, workflow, dir string, env []string, timeout time.Duration) *RunResult {
-	return runWorkflow(ctx, markov, source, workflow, dir, env, timeout, nil)
+	return runWorkflow(ctx, markov, source, workflow, dir, env, timeout, 0, nil)
 }
 
-// runWorkflow is RunWorkflow that also hands each event to onEvent as the child writes it.
-func runWorkflow(ctx context.Context, markov, source, workflow, dir string, env []string, timeout time.Duration, onEvent func([]byte)) *RunResult {
+// runWorkflow is RunWorkflow that also hands each event to onEvent as the child writes it, and
+// contains the run to mem bytes of memory (0: not contained; see contain.go).
+func runWorkflow(ctx context.Context, markov, source, workflow, dir string, env []string, timeout time.Duration, mem int64, onEvent func([]byte)) *RunResult {
 	r := &RunResult{Dir: dir}
 	work := filepath.Join(dir, "work")
 	if err := os.MkdirAll(work, 0o755); err != nil {
@@ -61,10 +61,11 @@ func runWorkflow(ctx context.Context, markov, source, workflow, dir string, env 
 	events := filepath.Join(dir, "events.jsonl")
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, markov, "run", source, "--workflow", workflow,
-		"--state-store", filepath.Join(dir, "state.db"), "--callback", "jsonl://"+events)
+	name, args, unit := contained(mem, markov, []string{"run", source, "--workflow", workflow,
+		"--state-store", filepath.Join(dir, "state.db"), "--callback", "jsonl://" + events})
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = work
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(append(os.Environ(), env...), OOMScoreAdjEnv+"=1000")
 	// On a stop, ask the child to stop (it cancels its steps, which stop their own processes)
 	// rather than killing it outright, which would orphan a running claude.
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
@@ -85,6 +86,9 @@ func runWorkflow(ctx context.Context, markov, source, workflow, dir string, env 
 		followed.Wait()
 	}
 	_ = os.WriteFile(filepath.Join(dir, "output.log"), out, 0o644)
+	if err != nil && ctx.Err() == nil {
+		err = outOfMemory(err, unit, mem)
+	}
 	r.Err = err
 	r.Log = tail(string(out), 3000)
 	r.Outputs, _ = Files(work)
@@ -99,7 +103,8 @@ func tail(s string, n int) string {
 	return "…" + s[len(s)-n:]
 }
 
-// LoadEvents reads a jsonl event log.
+// LoadEvents reads a jsonl event log a line at a time; a line too long to keep is read as a
+// summary of itself (see summarizeLine).
 func LoadEvents(path string) []map[string]any {
 	f, err := os.Open(path)
 	if err != nil {
@@ -107,14 +112,12 @@ func LoadEvents(path string) []map[string]any {
 	}
 	defer f.Close()
 	var out []map[string]any
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 64*1024), 64<<20)
-	for sc.Scan() {
+	_ = eachEventLine(f, func(line []byte) {
 		var ev map[string]any
-		if json.Unmarshal(sc.Bytes(), &ev) == nil {
+		if json.Unmarshal(line, &ev) == nil {
 			out = append(out, ev)
 		}
-	}
+	})
 	return out
 }
 

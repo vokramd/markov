@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"github.com/jctanner/markov/pkg/parser"
 )
 
@@ -65,6 +66,9 @@ func fieldsOf(v any) []Field {
 }
 
 func kindName(t reflect.Type) string {
+	if t == reflect.TypeOf(outputlimit.Size{}) {
+		return "string" // a size: 64MB, or bytes
+	}
 	switch t.Kind() {
 	case reflect.String:
 		return "string"

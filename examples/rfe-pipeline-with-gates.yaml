@@ -388,6 +388,11 @@ workflows:
           model: "{{ model }}"
 
   - name: epic-breakdown
+    vars:
+      epic_key: ~          # required: passed by per_epic_work
+      epic_title: ~
+      epic_type: ~
+      strat_key: ~
     steps:
       - name: start
         type: shell_exec

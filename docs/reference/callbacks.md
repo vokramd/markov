@@ -103,7 +103,7 @@ All events share a common header:
 |------------|------------|------------|
 | `step_started` | Step begins | `workflow_name`, `step_name`, `step_type`, `resolved_type`, `params` |
 | `step_completed` | Step succeeds | `workflow_name`, `step_name`, `step_type`, `output`, `duration_seconds` |
-| `step_failed` | Step fails | `workflow_name`, `step_name`, `step_type`, `error`, `duration_seconds`, and `output` when the step's executor returned any before failing (a shell step's `stdout`/`stderr`, a `claude` step's events and `sandbox_network`) |
+| `step_failed` | Step fails | `workflow_name`, `step_name`, `step_type`, `error`, `duration_seconds`, and `output` when the step's executor returned any before failing (a shell step's `stdout`/`stderr`, a `claude` step's events and `sandbox_network`). A step over its `max_output` has `error_kind: "max_output"`, `output_bytes`, `limit_bytes`, `stream` (what a streaming executor cut off) and `largest` (`[{path, bytes, items}]`), and no `output` ([Output limits](workflow-file.md#output-limits)) |
 | `step_skipped` | Step skipped (when: false) | `workflow_name`, `step_name`, `reason` |
 | `step_progress` | Live progress from inside a running step (emitted by `claude`, `openshell_exec` and `openshell_build`) | `workflow_name`, `step_name`, `step_type`, `kind`, `data` |
 

@@ -12,7 +12,8 @@ one-page repository:
   in one workflow instead of reusable per-item sub-workflows.
 
 **Status:** phases 1–4 done (2026-10-24; phase 3 cycle checked with v0008: it misses #1, #9,
-#23, #140 and redoes 4 things on the second run). Phase 5, the trial, next.
+#23, #140 and redoes 4 things on the second run). Phase 5, the trial, started 2026-10-24 and
+stopped at iteration 6 by an out-of-memory kill; it restarts after plans 008 and 009.
 
 ## Approach
 
@@ -114,7 +115,32 @@ follow from this.
      items the job calls for, or not redoing finished work, is doing the job better.
    - Tests for the check, the evidence, the prompts and the history; docs in `cli.md`
      ("Running it twice", "What is deterministic and what is agentic").
-5. **Trial** from v0000 in loose mode, driven through the IDE.
+5. **Trial** from v0000 in loose mode, driven through the IDE (started 2026-10-24, 8 iterations,
+   $5 budget, `--repeat-changes snapshot/second-run-changes.json`). v0000's preflight did the
+   whole fixture except re-reviewing #152, and changed nothing on its second run. Iterations
+   1-5 ($0.94): v0001 (repeat 13 -> 0), v0002 (adds #1's /mk-code PR), v0003 (lists issues and
+   answers pings natively, an `assert` that the listing is complete; labels, PRs and reviews still
+   one agent call) promoted; iteration 3 rejected (its second run redid 5 things), iteration 5
+   (a script without a justification). Every version re-reviews #152. The current version's
+   repeat count varied between iterations (13 for v0002 in iteration 3, 0 in iteration 2), since
+   it is run again each time. Iteration 6's candidate grew to 13.6 GB and was killed by the
+   kernel, taking breadboard's pods with it: chained `for_each` registers (plan 008) with no
+   output limit (plan 009). Restart from v0000 once both are in.
+
+   Trial 3 (2026-10-25, after plans 008 and 009; archived in
+   `github-workflow-example.codify-trial3`, v0002 in `project-at-v0002/`): stopped by hand after
+   4 iterations, $1.51, about 13.5 minutes each (two cycle runs of 5 minutes, retro and judge
+   1.7 each). v0001 (listing natively; repeat 3 -> 3), v0002 (classify as an atomic agent step;
+   0 -> 0); rejected: finding the commands with the pending check left to the agent (0 -> 3), and
+   the /mk-ping slice end to end (the judge: a re-review of #152, which the agent itself does on
+   some runs). Memory stayed under 100 MB per run, each in its own scope.
+
+   One job per pass was too slow, and its half-moves (commands found natively, pending left to
+   the agent) were harder to get right than a whole kind of item. Loose mode now moves one kind
+   of item end to end per pass (gather, pending check, per-item sub-workflow), falling back to one
+   job of it after such a move is rejected for a reason that still applies; `--retro-model` gives
+   the retro agent its own model. Trial 4: the same settings with `--retro-model
+   claude-sonnet-5-5`.
 
 ## Open questions
 

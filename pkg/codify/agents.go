@@ -43,6 +43,9 @@ type RetroInputs struct {
 	Loose bool
 	// RepeatChanges is the output recording what a second run changed (--repeat-changes), or "".
 	RepeatChanges string
+	// LiveFailure is why the current version did not complete, when it ran out of room (a step
+	// over its max_output, or out of memory); "" otherwise.
+	LiveFailure string
 }
 
 func render(text string, data any) (string, error) {
@@ -64,6 +67,15 @@ type AgentResult struct {
 	Failed  string // why the call failed, if it did
 }
 
+// modelFor is the model of one of codify's agents: the retro agent's own model when set, else
+// the shared one.
+func (c *Config) modelFor(step string) string {
+	if step == "retro" && c.RetroModel != "" {
+		return c.RetroModel
+	}
+	return c.Model
+}
+
 // runAgent runs the claude CLI non-interactively through Markov's claude executor.
 func (c *Config) runAgent(ctx context.Context, step, prompt, dir string, addDirs, tools []string) AgentResult {
 	if c.em != nil {
@@ -74,8 +86,8 @@ func (c *Config) runAgent(ctx context.Context, step, prompt, dir string, addDirs
 		"allowed_tools": toAny(tools), "add_dirs": toAny(addDirs),
 		"limits": map[string]any{"max_turns": 60, "max_tokens": 2_000_000, "max_duration": 1800},
 	}
-	if c.Model != "" {
-		params["model"] = c.Model
+	if m := c.modelFor(step); m != "" {
+		params["model"] = m
 	}
 	if c.ClaudeBin != "" {
 		params["binary"] = c.ClaudeBin
@@ -133,12 +145,12 @@ type Verdict struct {
 }
 
 // judge compares two runs' outputs by content, for outputs an agent produces.
-func (c *Config) judge(ctx context.Context, target string, prompts, candidatePrompts []string, reference, candidate, verdictFile string, repeat *Repeat) Verdict {
+func (c *Config) judge(ctx context.Context, target string, prompts, candidatePrompts []string, reference, candidate, verdictFile string, repeat *Repeat, liveFailure string) Verdict {
 	text := judgePrompt
 	if c.Loose() {
 		text = judgeLoosePrompt
 	}
-	prompt, err := render(text, map[string]any{"Target": target, "Reference": reference, "Candidate": candidate, "Prompts": prompts, "CandidatePrompts": candidatePrompts, "Verdict": verdictFile, "Repeat": repeat})
+	prompt, err := render(text, map[string]any{"Target": target, "Reference": reference, "Candidate": candidate, "Prompts": prompts, "CandidatePrompts": candidatePrompts, "Verdict": verdictFile, "Repeat": repeat, "LiveFailure": liveFailure})
 	if err != nil {
 		return Verdict{AgentResult: AgentResult{Failed: err.Error()}}
 	}

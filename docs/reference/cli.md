@@ -31,6 +31,7 @@ markov run <file.yaml|directory> [flags]
 | `--var key=value` | string (repeatable) | -- | Override workflow variables. Can be specified multiple times. Values are parsed as strings. |
 | `--workflow name` | string | -- | Run a specific workflow by its `name:` field instead of the file's `entrypoint`. |
 | `--forks N` | int | `0` (use file default) | Override the global `forks` concurrency limit. A value of 0 defers to the workflow file setting (which defaults to 5). |
+| `--max-output SIZE` | string | `64MB` | The output limit of steps that set no `max_output` (nor their step type or the file): `200MB`, `2GB`, bytes, or `0` for none. See [Output limits](workflow-file.md#output-limits). Also on `markov resume`. |
 | `--namespace ns` | string | -- | Override the Kubernetes namespace for `k8s_job` steps. |
 | `--openshell-transport t` | `cli` or `sdk` | -- | Transport for `openshell_*` steps, overriding the workflow file's `openshell.transport`. A step's own `transport` param still wins. |
 | `--kubeconfig path` | string | -- | Path to a kubeconfig file for Kubernetes client configuration. |
@@ -272,7 +273,14 @@ markov validate <file.yaml|directory>
 
 **No additional flags.**
 
-On success, prints `valid` and exits with code 0. On failure, prints the validation error and exits with code 1.
+It also checks what each workflow can see of its variables ([Variable Scoping](variables-and-context.md#checking-what-a-workflow-can-see)), printing one line per finding:
+
+```
+warning: workflow "main", step "report": reads "target", which is not declared: it must come from --var, or declare it in the workflow's vars:
+error: workflow "child", step "use": reads "listing", which this workflow cannot see: declare it in the workflow's vars: (and have callers pass it), or make it a file-level var
+```
+
+On success (warnings at most), prints `valid` and exits with code 0. On failure, prints the validation error, or the findings and their count, and exits with code 1. `markov run` logs the same findings as warnings and runs anyway.
 
 **Examples:**
 
@@ -305,7 +313,8 @@ markov codify <directory> --workflow <name> [flags]
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--workflow name` | (required) | The workflow to codify. It and the workflows it calls may change; nothing else may. |
-| `--model name` | `claude-haiku-5-5` | Model for the retro agent and the judge. |
+| `--model name` | `claude-haiku-5-5` | Model for the judge, and for the retro agent unless `--retro-model` is given. |
+| `--retro-model name` | `--model` | Model for the retro agent, which edits the workflow. A stronger model here makes bigger correct changes per pass; the runs, not the retro, take most of an iteration's time. |
 | `--max-iterations N` | `8` | Stop after this many iterations. |
 | `--budget-usd X` | `5` | Stop once model spend (the workflow's agent steps, the retro agent, the judge) reaches this; `0` for no limit. |
 | `--codify-dir path` | `<directory>.codify` | Where history goes. Must be outside the project. |
@@ -313,7 +322,8 @@ markov codify <directory> --workflow <name> [flags]
 | `--mode strict\|loose` | `strict` | How far codify goes and how it judges a candidate (see [Modes](#modes)). |
 | `--fixed workflow` | -- | A workflow the target reaches that must not change: the parts of a cycle that set the stage and measure the result, such as a reset and a snapshot (see [Workflows with side effects](#workflows-with-side-effects)). The retro agent is told so, and a candidate that changes one is rejected. Repeatable or comma-separated. |
 | `--live-host host` | -- | A host (and its subdomains) the live run and the candidates reach for real, tunnelled through the proxy untouched, instead of replaying the recording. Only for services the workflow resets itself before it acts. Repeatable or comma-separated. |
-| `--repeat-changes path[:key]` | -- | An output in which the target records how many things a second run, right after the first, changed (the number at the dotted `key`, default `counts.total`). A candidate that changes more on that repeat than the current version is rejected, and the judge is told both numbers (see [Running it twice](#running-it-twice)). The current version must write it. |
+| `--run-memory SIZE` | a quarter of the machine's memory | The memory limit of each run of the workflow (`4GB`; `0` for none). See [Containing runs](#containing-runs). |
+| `--repeat-changes path[:key]` | -- | An output in which the target records how many things a second run, right after the first, changed (the number at the dotted `key`, default `counts.total`). A candidate that changes more on that repeat than the current version is rejected (only in the kinds of change its pass declares, when it declares any), and the judge is told the numbers (see [Running it twice](#running-it-twice)). The current version must write it. |
 | `--prompt-file path` | built in | Replace the retro agent's strategy prompt, a Go template with the same fields as the built-in one (`pkg/codify/retro.md`). |
 | `--callback url` and the other callback flags | -- | As for `markov run`: receive codify's events (below). |
 
@@ -322,14 +332,18 @@ markov codify <directory> --workflow <name> [flags]
 Each iteration:
 
 1. **Runs the current version** as `markov run <directory> --workflow <name>`, started in an empty directory, through a recording HTTP(S) proxy. The files it writes in that directory are its outputs; what it fetched is recorded. The proxy has its own certificate authority, which the run trusts through `HTTPS_PROXY`, `SSL_CERT_FILE`, `CURL_CA_BUNDLE`, `REQUESTS_CA_BUNDLE` and `NODE_EXTRA_CA_CERTS`; the claude CLI's own API traffic is tunnelled untouched.
-2. **Collects evidence**: the run's events, its claude transcripts, its outputs, the recorded requests (with the start of each response), every agent call's rendered prompt size and input tokens (`agent_calls.md`, from the claude steps' `prompt_chars` and `usage`), and the earlier passes' results.
-3. **Lets the retro agent edit a copy of the project**, moving one job out of the agent steps (native steps before scripts). It may change the files defining the workflow and the workflows it calls, add `workflows/<name>_*.yaml` helpers and files under `scripts/<name>/`.
+2. **Collects evidence**: the run's events, its claude transcripts, its outputs, the recorded requests (with the start of each response), every agent call's rendered prompt size and input tokens (`agent_calls.md`, from the claude steps' `prompt_chars` and `usage`), how much each step produced and which went over its `max_output` (`output_sizes.md`), and the earlier passes' results.
+3. **Lets the retro agent edit a copy of the project**, moving one job out of the agent steps (in loose mode, one kind of item end to end; native steps before scripts). It may change the files defining the workflow and the workflows it calls, add `workflows/<name>_*.yaml` helpers and files under `scripts/<name>/`.
 4. **Checks the copy**: no other file changed, scripts come with a justification, `markov validate` passes, `--keep` steps are still agent steps. After it runs: in loose mode every `json_schema` call answered in its schema, and with `--repeat-changes` it did not redo more work on a second run than the current version.
 5. **Runs the copy against the recording.** A request that was not recorded, or is not a GET or HEAD, fails.
 6. **Compares outputs** with the current version's. Identical outputs pass. Otherwise, because an agent produced the current version's outputs, a judge (the `--model`) compares their content: the same items, values, order and links; formatting may differ.
 7. **Installs a passing copy** in the project and archives the version.
 
-It stops when the retro agent finds nothing more to codify, no agent steps are left, the iterations or budget run out, three candidates in a row are rejected, or the current version fails or writes no files.
+It stops when the retro agent finds nothing more to codify, no agent steps are left, the iterations or budget run out, three candidates in a row are rejected, or the current version fails or writes no files. A current version that fails only by running out of room (a step over its `max_output`, or the run out of memory) does not stop it: that is the clearest sign of what to codify next, so the retro agent is told first, and a candidate that completes is judged on doing the job, since there are no complete outputs or repeat record to compare it with.
+
+#### Containing runs
+
+A runaway candidate should cost one rejected iteration, not the machine. Each run (live and candidate) is started in a systemd user scope with `MemoryMax` set to `--run-memory` and no swap, where systemd's user manager is available; the kernel then kills inside the scope only, and the iteration is rejected with "ran out of memory: the kernel killed it at its limit of …". Without systemd, the run raises its own `oom_score_adj` to 1000, so a machine-wide out-of-memory kill takes it before anything else (a SIGKILL is then reported as most likely out of memory). Event logs are read a line at a time: a line over 16 MB is read as a summary of its header and length, in the evidence too, so one huge event cannot take codify down. A candidate that fails over a limit is rejected with the step, the size and its largest parts, and the next retro gets `previous_candidate_output_sizes.md`.
 
 History in the codify directory: `versions/vNNNN/` (the codified files of each version, `v0000` the original), `metrics.jsonl` (one row per iteration, which the IDE's Codification tab charts), and `iter-NNNN/` (the live and candidate runs, recording, evidence, `retro.json`, `validation.json`).
 
@@ -347,7 +361,11 @@ Requires a directory workflow and the `claude` CLI. The workflow's outputs must 
   when it takes the same actions on the same items with valid agent-decided values (a label from
   the allowed set, a reply that answers the command), and everything not decided by an agent
   matches. Every claude step with a `json_schema` must answer in it on every call, or the
-  candidate is rejected. It stops when every agent step is atomic.
+  candidate is rejected. It stops when every agent step is atomic. Each pass moves one kind of
+  item end to end (the issues to triage, the `/mk-ping` comments, ...): native gathering, a
+  native pending check, and a per-item sub-workflow with an atomic agent step for each judgment.
+  After such a move is rejected for a reason that still applies, the next pass moves one job of
+  it instead.
 
 #### Workflows with side effects
 
@@ -383,6 +401,15 @@ and pass the diff's output with its count to `--repeat-changes`
 changes more on the second run than the current version is rejected without a judge; one that
 changes less is doing the job better, and in loose mode the judge counts it so. Put intermediate
 snapshots in a dot directory (`.snapshots/`) so they are not outputs.
+
+**By kind.** While part of the work is still with a broad agent, that agent's repeats vary from
+run to run (one run redoes a review, the next does not), and comparing totals would let them
+decide whether an unrelated change passes. So the record may count kinds of change beside the
+total (`counts.comments_added`, `counts.reviews_added`, ...: the other numbers in the object that
+holds the key), and the retro agent names in `retro.json` `repeat_kinds` the kinds the work it
+moved makes. The candidate may then not repeat more of each of those kinds than the current
+version; repeats of other kinds go to the judge, which is told that work the pass did not change
+varies between runs. A pass that names no kinds is checked on the total.
 
 #### What is deterministic and what is agentic
 

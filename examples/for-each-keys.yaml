@@ -47,6 +47,10 @@ workflows:
           command: "echo 'All tickets processed'"
 
   - name: handle_ticket
+    vars:
+      ticket_key: ~        # required: passed by process_tickets
+      ticket_title: ~
+      ticket_priority: ~
     steps:
       - name: log_start
         type: shell_exec

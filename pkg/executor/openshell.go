@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/jctanner/markov/pkg/openshell"
+	"github.com/jctanner/markov/pkg/outputlimit"
 )
 
 // OpenShell runs one of the openshell_* step types. Every step but openshell_build reaches the
@@ -213,9 +214,18 @@ func (e *OpenShell) exec(ctx context.Context, tr openshell.Transport, params map
 
 	var stdout, stderr bytes.Buffer
 	outLines, errLines := newProgressLines(ctx, "stdout"), newProgressLines(ctx, "stderr")
-	code, err := tr.Exec(ctx, req, io.MultiWriter(&stdout, outLines), io.MultiWriter(&stderr, errLines))
+	// Past the step's output limit, the writes fail and the command is cancelled.
+	execCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	counter := outputlimit.NewCounter(outputlimit.Limit(ctx))
+	code, err := tr.Exec(execCtx, req,
+		counter.Writer(io.MultiWriter(&stdout, outLines), "stdout", cancel),
+		counter.Writer(io.MultiWriter(&stderr, errLines), "stderr", cancel))
 	outLines.Flush()
 	errLines.Flush()
+	if lim := counter.Err(); lim != nil {
+		return nil, limitErr(e.name(), lim)
+	}
 	if err != nil {
 		return nil, e.errf("%v", err)
 	}

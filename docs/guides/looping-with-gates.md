@@ -136,7 +136,7 @@ When a gate rule fires and has `set_fact`, those values are merged into the work
 
 ### Variables Must Be Passed Explicitly
 
-Since sub-workflows get a copy of the parent context, the incremented `iteration` value must be explicitly passed back into the recursive call:
+A called workflow sees only the globals, its own `vars:` and what the call passes, so the incremented `iteration` value must be explicitly passed into the recursive call. `iterate` declares `iteration` in its own `vars:`, which makes it a parameter it may change even though a global has the same name:
 
 ```yaml
 - name: increment

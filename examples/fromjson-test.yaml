@@ -38,6 +38,9 @@ workflows:
           item_title: "{{ item.title }}"
 
   - name: handle_item
+    vars:
+      item_key: ~          # required: passed by process_items
+      item_title: ~
     steps:
       - name: log_item
         type: shell_exec

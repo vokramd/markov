@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -357,19 +357,17 @@ func (b *ansibleBuilder) run(ctx context.Context, params map[string]any, playboo
 	cmd := exec.CommandContext(ctx, b.binary, b.args...)
 	cmd.Dir = b.chdir
 	cmd.Env = b.envList
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	out, stderr, err := runCapped(ctx, cmd)
+	if _, over := outputlimit.As(err); over {
+		return nil, limitErr(b.name, err)
+	}
 	exitCode := -1
 	if cmd.ProcessState != nil {
 		exitCode = cmd.ProcessState.ExitCode()
 	}
-	out := stdout.String()
 	output := map[string]any{
 		"stdout":    out,
-		"stderr":    stderr.String(),
+		"stderr":    stderr,
 		"exit_code": exitCode,
 	}
 	if playbook {
@@ -380,7 +378,7 @@ func (b *ansibleBuilder) run(ctx context.Context, params map[string]any, playboo
 		output["changed"] = adhocChangedRe.MatchString(out)
 	}
 	if err != nil {
-		return &Result{Output: output}, fmt.Errorf("%s: %w\nstderr: %s", b.name, err, stderr.String())
+		return &Result{Output: output}, fmt.Errorf("%s: %w\nstderr: %s", b.name, err, stderr)
 	}
 	return &Result{Output: output}, nil
 }

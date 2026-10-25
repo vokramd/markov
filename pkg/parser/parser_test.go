@@ -751,3 +751,203 @@ workflows:
 		}
 	}
 }
+
+func TestParsePass(t *testing.T) {
+	wf, err := Parse([]byte(`
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: call
+        workflow: child
+        pass: [listing, labels]
+  - name: child
+    steps:
+      - name: s
+        type: shell_exec
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := wf.Workflows[0].Steps[0].Pass; len(got) != 2 || got[1] != "labels" {
+		t.Errorf("Pass = %v", got)
+	}
+	for name, src := range map[string]string{
+		"not a call": `
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: s
+        type: shell_exec
+        pass: [x]
+`,
+		"a path": `
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: call
+        workflow: child
+        pass: [issues.body]
+  - name: child
+    steps:
+      - name: s
+        type: shell_exec
+`,
+	} {
+		if _, err := Parse([]byte(src)); err == nil || !strings.Contains(err.Error(), "pass") {
+			t.Errorf("%s: err = %v, want a pass error", name, err)
+		}
+	}
+}
+
+// Globals (file-level vars) and built-ins are set when the run starts; no step changes them.
+func TestParseRejectsWritesToGlobals(t *testing.T) {
+	for _, step := range []string{
+		"{name: s, type: shell_exec, register: api}",
+		"{name: s, type: set_fact, vars: {api: x}}",
+		"{name: s, type: shell_exec, for_each: items, as: api}",
+		"{name: s, type: shell_exec, register: markov_run_id}",
+	} {
+		_, err := Parse([]byte(`
+entrypoint: main
+vars: {api: https://example, items: [1]}
+workflows:
+  - name: main
+    steps:
+      - ` + step + `
+`))
+		if err == nil || !strings.Contains(err.Error(), "is a global") {
+			t.Errorf("%s: err = %v, want a global write error", step, err)
+		}
+	}
+	// A call may shadow one for the workflow it calls.
+	if _, err := Parse([]byte(`
+entrypoint: main
+vars: {api: https://example}
+workflows:
+  - name: main
+    steps:
+      - {name: call, workflow: child, vars: {api: https://other}}
+  - name: child
+    steps:
+      - {name: s, type: shell_exec}
+`)); err != nil {
+		t.Errorf("shadowing: %v", err)
+	}
+}
+
+func lintMessages(t *testing.T, src string) []string {
+	t.Helper()
+	wf, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, i := range Lint(wf) {
+		out = append(out, i.String())
+	}
+	return out
+}
+
+func TestLintNamesAWorkflowCannotSee(t *testing.T) {
+	got := lintMessages(t, `
+entrypoint: main
+vars: {api: https://example}
+workflows:
+  - name: main
+    steps:
+      - {name: listing, type: shell_exec, register: listing}
+      - {name: call, workflow: child, pass: [listing], vars: {n: 1}}
+  - name: child
+    vars: {listing: ~}
+    steps:
+      - name: use
+        type: shell_exec
+        when: "listing.rc == 0 and other | length > 0"
+        params:
+          url: "{{ api }}/{{ n }}/{{ issue.number }}/{{ markov_run_id }}"
+          body: "{% for x in listing.items %}{{ x.name }}{% endfor %}{{ 'quoted' }}"
+`)
+	want := []string{
+		`error: workflow "main", step "call": passes "n", which workflow "child" does not declare in its vars:`,
+		`error: workflow "child", step "use": reads "issue", which this workflow cannot see: declare it in the workflow's vars: (and have callers pass it), or make it a file-level var`,
+		`error: workflow "child", step "use": reads "n", which its callers pass but it does not declare in its vars:`,
+		`error: workflow "child", step "use": reads "other", which this workflow cannot see: declare it in the workflow's vars: (and have callers pass it), or make it a file-level var`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("Lint:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// What a workflow's own steps make is visible to it: registers, facts, loop variables, loaded
+// artifacts (under a hyphenated step name too), gate facts.
+func TestLintSeesWhatAWorkflowMakes(t *testing.T) {
+	got := lintMessages(t, `
+entrypoint: main
+rules:
+  - {name: r, when: "true", set_fact: {decided: true}}
+workflows:
+  - name: main
+    steps:
+      - {name: s, type: shell_exec, register: out}
+      - {name: f, type: set_fact, vars: {fact: "{{ out.rc }}"}}
+      - {name: load-it, type: load_artifact, artifacts: {a: {path: x.yaml}}}
+      - {name: g, type: gate, rules: [r], facts: {score: "{{ fact }}"}}
+      - name: each
+        type: shell_exec
+        for_each: "out.lines"
+        as: line
+        when: "load-it.artifacts.a and decided and score > 1"
+        failed_when: "result.rc != 0"
+        params: {cmd: "{{ line }} {{ fact }}"}
+`)
+	if len(got) != 0 {
+		t.Fatalf("Lint = %v, want nothing", got)
+	}
+}
+
+func TestParseRejectsACallMissingARequiredParameter(t *testing.T) {
+	_, err := Parse([]byte(`
+entrypoint: main
+vars: {token: t}
+workflows:
+  - name: main
+    steps:
+      - {name: call, workflow: child, vars: {n: 1}}
+  - name: child
+    vars: {n: ~, issue: ~, token: ~}
+    steps:
+      - {name: s, type: shell_exec}
+`))
+	if err == nil || !strings.Contains(err.Error(), `workflow "child" needs issue (declared`) {
+		t.Fatalf("err = %v, want issue missing (token is a global, n is passed)", err)
+	}
+}
+
+func TestParseMaxOutput(t *testing.T) {
+	wf, err := Parse([]byte(`
+entrypoint: main
+max_output: 32MB
+step_types:
+  agent: {base: claude, max_output: 16MB}
+workflows:
+  - name: main
+    steps:
+      - {name: big, type: http_request, max_output: 200MB}
+      - {name: unlimited, type: shell_exec, max_output: 0}
+      - {name: plain, type: shell_exec}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	steps := wf.Workflows[0].Steps
+	if wf.MaxOutput.Bytes != 32<<20 || wf.StepTypes["agent"].MaxOutput.Bytes != 16<<20 ||
+		steps[0].MaxOutput.Bytes != 200<<20 || !steps[1].MaxOutput.Set || steps[1].MaxOutput.Bytes != 0 || steps[2].MaxOutput.Set {
+		t.Fatalf("file %+v, type %+v, steps %+v %+v %+v", wf.MaxOutput, wf.StepTypes["agent"].MaxOutput, steps[0].MaxOutput, steps[1].MaxOutput, steps[2].MaxOutput)
+	}
+	if _, err := Parse([]byte("entrypoint: main\nworkflows:\n  - name: main\n    steps:\n      - {name: s, type: shell_exec, max_output: lots}\n")); err == nil || !strings.Contains(err.Error(), "not a size") {
+		t.Fatalf("bad size: %v", err)
+	}
+}

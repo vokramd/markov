@@ -17,6 +17,7 @@ import (
 	"github.com/jctanner/markov/pkg/engine"
 	"github.com/jctanner/markov/pkg/executor"
 	"github.com/jctanner/markov/pkg/openshell"
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"github.com/jctanner/markov/pkg/parser"
 	"github.com/jctanner/markov/pkg/schema"
 	"github.com/jctanner/markov/pkg/state"
@@ -30,6 +31,7 @@ var (
 	flagVars                []string
 	flagWorkflow            string
 	flagForks               int
+	flagMaxOutput           string
 	flagStateStore          string
 	flagNamespace           string
 	flagOpenShellTransport  string
@@ -102,6 +104,8 @@ func addDebugFlags(cmd *cobra.Command) {
 }
 
 func main() {
+	// A run codify started asks to be the first a machine-wide out-of-memory kill takes.
+	codify.RaiseOOMScore()
 	stateStorePath := defaultStateStorePath()
 
 	root := &cobra.Command{
@@ -118,6 +122,7 @@ func main() {
 	runCmd.Flags().StringArrayVar(&flagVars, "var", nil, "Override vars (key=value, repeatable)")
 	runCmd.Flags().StringVar(&flagWorkflow, "workflow", "", "Run a specific workflow instead of entrypoint")
 	runCmd.Flags().IntVar(&flagForks, "forks", 0, "Override global forks")
+	runCmd.Flags().StringVar(&flagMaxOutput, "max-output", "", "Output limit of steps that set no max_output (nor their step type or file), e.g. 200MB; 0 for none (default 64MB)")
 	addStateStoreFlag(runCmd, stateStorePath)
 	runCmd.Flags().StringVar(&flagNamespace, "namespace", "", "Override K8s namespace")
 	runCmd.Flags().StringVar(&flagOpenShellTransport, "openshell-transport", "", "Transport for openshell_* steps: cli or sdk (overrides the workflow file)")
@@ -144,6 +149,7 @@ func main() {
 	resumeCmd.Flags().BoolVar(&flagVerbose, "verbose", false, "Show detailed execution output")
 	resumeCmd.Flags().BoolVar(&flagDebug, "debug", false, "Show debug logging for flag parsing, callback setup, and K8s client init")
 	resumeCmd.Flags().IntVar(&flagForks, "forks", 0, "Override global forks")
+	resumeCmd.Flags().StringVar(&flagMaxOutput, "max-output", "", "Output limit of steps that set no max_output (nor their step type or file), e.g. 200MB; 0 for none (default 64MB)")
 	resumeCmd.Flags().StringVar(&flagSourceIntegrity, "source-integrity", "warn", "Source drift policy: warn, strict, or off")
 	resumeCmd.Flags().StringArrayVar(&flagRewind, "rewind", nil, `Re-run from a step of the entrypoint workflow, as JSON, e.g. {"workflow":"main","step":"build"} (repeatable; the earliest wins)`)
 	resumeCmd.Flags().BoolVar(&flagRewindChanged, "rewind-changed", false, "Re-run from the earliest completed step whose definition changed since it ran")
@@ -152,6 +158,7 @@ func main() {
 	addDebugFlags(resumeCmd)
 
 	var codifyCfg codify.Config
+	var runMemory string
 	codifyCmd := &cobra.Command{
 		Use:   "codify <directory>",
 		Short: "Codify a workflow: move work that needs no model out of its agent steps, one validated step at a time",
@@ -167,6 +174,12 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 			}
 			codifyCfg.Source = args[0]
 			codifyCfg.Markov = bin
+			codifyCfg.RunMemory = codify.DefaultRunMemory()
+			if runMemory != "" {
+				if codifyCfg.RunMemory, err = outputlimit.ParseSize(runMemory); err != nil {
+					return fmt.Errorf("--run-memory: %w", err)
+				}
+			}
 			codifyCfg.Out = os.Stdout
 			cbs, err := buildCallbacks()
 			if err != nil {
@@ -186,7 +199,8 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 		},
 	}
 	codifyCmd.Flags().StringVar(&codifyCfg.Workflow, "workflow", "", "The workflow to codify (it and the workflows it calls)")
-	codifyCmd.Flags().StringVar(&codifyCfg.Model, "model", "claude-haiku-5-5", "Model for the retro agent and the judge")
+	codifyCmd.Flags().StringVar(&codifyCfg.Model, "model", "claude-haiku-5-5", "Model for the judge, and for the retro agent unless --retro-model is given")
+	codifyCmd.Flags().StringVar(&codifyCfg.RetroModel, "retro-model", "", "Model for the retro agent, which edits the workflow (default: --model)")
 	codifyCmd.Flags().IntVar(&codifyCfg.MaxIterations, "max-iterations", 8, "Stop after this many iterations")
 	codifyCmd.Flags().Float64Var(&codifyCfg.BudgetUSD, "budget-usd", 5, "Stop once model spend reaches this (0: no limit)")
 	codifyCmd.Flags().StringVar(&codifyCfg.CodifyDir, "codify-dir", "", "Where history goes (default <directory>.codify)")
@@ -195,6 +209,7 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 	codifyCmd.Flags().StringSliceVar(&codifyCfg.Fixed, "fixed", nil, "A workflow the target reaches that must not change, such as a reset or snapshot (repeatable or comma-separated)")
 	codifyCmd.Flags().StringSliceVar(&codifyCfg.LiveHosts, "live-host", nil, "A host the runs reach for real instead of replaying a recording; only for services the workflow resets itself (repeatable or comma-separated)")
 	codifyCmd.Flags().StringVar(&codifyCfg.RepeatChanges, "repeat-changes", "", "An output (path, or path:key for a dotted key; default key counts.total) recording how many things a second run right after the first changed; a candidate may not change more on it than the current version")
+	codifyCmd.Flags().StringVar(&runMemory, "run-memory", "", "Memory limit of each run of the workflow, e.g. 4GB (default a quarter of the machine's memory; 0 for none); a run over it is killed alone and its iteration rejected")
 	codifyCmd.Flags().StringVar(&codifyCfg.PromptFile, "prompt-file", "", "Replace the retro agent's strategy prompt (a Go template; see the default in pkg/codify/retro.md)")
 	_ = codifyCmd.MarkFlagRequired("workflow")
 	addCallbackFlags(codifyCmd)
@@ -218,9 +233,11 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 
 	validateCmd := &cobra.Command{
 		Use:   "validate <file.yaml|directory>",
-		Short: "Validate a workflow file or directory",
+		Short: "Validate a workflow file or directory, and check what each workflow can see of its variables",
 		Args:  cobra.ExactArgs(1),
 		RunE:  validateWorkflow,
+		// A workflow error is not a usage error.
+		SilenceUsage: true,
 	}
 
 	diagramCmd := &cobra.Command{
@@ -266,6 +283,7 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 	}
 
 	vars := parseVarFlags(flagVars)
+	lintWarnings(wfFile, vars)
 
 	debugLog("state store: %s", state.RedactStoreLocation(flagStateStore))
 	store, err := state.OpenStore(flagStateStore)
@@ -293,6 +311,9 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	eng.EventLogs = jsonlCallbackPaths()
+	if err := setMaxOutput(eng); err != nil {
+		return err
+	}
 	debugLog("callbacks: %d created from %d --callback flags", len(cbs), len(flagCallbacks))
 	if len(cbs) > 0 {
 		eng.SetCallbacks(cbs)
@@ -488,6 +509,9 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	eng.EventLogs = jsonlCallbackPaths()
+	if err := setMaxOutput(eng); err != nil {
+		return err
+	}
 	if len(cbs) > 0 {
 		eng.SetCallbacks(cbs)
 		defer eng.CloseCallbacks()
@@ -634,12 +658,46 @@ func showDiagram(cmd *cobra.Command, args []string) error {
 }
 
 func validateWorkflow(cmd *cobra.Command, args []string) error {
-	_, err := parser.ParseFile(args[0])
+	wf, err := parser.ParseFile(args[0])
 	if err != nil {
 		return err
 	}
+	errors := 0
+	for _, issue := range parser.Lint(wf) {
+		fmt.Println(issue)
+		if issue.Error {
+			errors++
+		}
+	}
+	if errors > 0 {
+		return fmt.Errorf("%d error(s)", errors)
+	}
 	fmt.Println("valid")
 	return nil
+}
+
+// setMaxOutput applies --max-output.
+func setMaxOutput(eng *engine.Engine) error {
+	if flagMaxOutput == "" {
+		return nil
+	}
+	n, err := outputlimit.ParseSize(flagMaxOutput)
+	if err != nil {
+		return fmt.Errorf("--max-output: %w", err)
+	}
+	eng.MaxOutput = outputlimit.Size{Bytes: n, Set: true}
+	return nil
+}
+
+// lintWarnings logs what `markov validate` would report about a workflow's variables. A run
+// goes ahead: the check is best effort, so it warns rather than stopping a run.
+func lintWarnings(wf *parser.WorkflowFile, vars map[string]any) {
+	for _, issue := range parser.Lint(wf) {
+		if _, ok := vars[issue.Name]; ok && !issue.Error {
+			continue // an entry workflow's input, given with --var
+		}
+		log.Printf("%s", strings.Replace(issue.String(), "error: ", "warning: ", 1))
+	}
 }
 
 func buildCallbacks() ([]callback.Callback, error) {

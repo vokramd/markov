@@ -283,14 +283,16 @@ Use `markov validate` to check syntax without executing:
 markov validate my-pipeline.yaml
 ```
 
-This checks that the entrypoint exists, workflow/step names are unique, types resolve correctly, `for_each` has the required `as` field, and unsupported structured YAML fields are rejected. Executor-specific keys remain valid under `params`.
+This checks that the entrypoint exists, workflow/step names are unique, types resolve correctly, `for_each` has the required `as` field, and unsupported structured YAML fields are rejected. Executor-specific keys remain valid under `params`. It also checks what each workflow can see of its variables: a called workflow that reads a name it is not given, or a call that passes a name the called workflow does not declare, is an error ([Variable Scoping](../reference/variables-and-context.md#checking-what-a-workflow-can-see)).
 
 ## Common Mistakes
 
 - **Missing `as` with `for_each`**: Every `for_each` step must declare an `as` variable name.
 - **Referencing non-existent workflows**: The `workflow` field must match a defined workflow name.
 - **Using templates in non-rendered fields**: `name`, `type`, `register`, `for_each_key`, `for_each_sort`, and `as` fields are not template-rendered.
-- **Expecting sub-workflow changes to propagate**: Sub-workflows get a copy of the parent context. Changes inside a sub-workflow don't affect the parent unless captured via `register`.
+- **Expecting sub-workflow changes to propagate**: Changes inside a sub-workflow don't affect the parent unless captured via `register`.
+- **Expecting a sub-workflow to see the caller's registers**: A called workflow sees the globals (file-level vars), its own `vars:`, and what the call passes with `pass:` or `vars:`. Declare what it takes in its `vars:` (`~` for required) and pass it; `markov validate` reports names a workflow reads but cannot see.
+- **Changing a global**: A `register`, `set_fact` or `as` may not name a file-level var. Shadow it for a called workflow by passing a value instead.
 
 ## What's Next
 

@@ -12,7 +12,8 @@ Markov accepts either a single workflow YAML file or a workflow directory. Both 
 | Entrypoint | `entrypoint` | string | yes | -- | Name of the workflow to execute first. Must match a workflow defined in `workflows`. |
 | Namespace | `namespace` | string | no | `"default"` | Kubernetes namespace used for `k8s_job` steps. Can be overridden by CLI flag or in-cluster ServiceAccount namespace. |
 | Forks | `forks` | int | no | `5` | Default maximum concurrency for `for_each` fan-outs. Set to 0 or omit to use the default. |
-| Vars | `vars` | map[string]any | no | `{}` | Global variables available to all workflows. Overridden by workflow-level vars, step-level vars, and CLI `--var` flags. |
+| Vars | `vars` | map[string]any | no | `{}` | The run's globals: visible in every workflow, overridden by CLI `--var` flags, and read-only (no `register`, `set_fact` or `as` may name one). A call may shadow one for the workflow it calls by passing the name. See [Variable Scoping](variables-and-context.md#variable-scoping). |
+| MaxOutput | `max_output` | size | no | `64MB` | The output limit of every step that sets none and whose step type sets none. In a directory workflow this goes in `meta.yaml`. See [Output limits](#output-limits). |
 | Secrets | `secrets` | string[] | no | `[]` | Names of vars whose values are secret: masked as `<secret:NAME>` in events and log lines. Vars named like secrets (`GITHUB_TOKEN`, `db_password`) are masked without being listed. In a directory workflow this goes in `meta.yaml`. See [Secrets](variables-and-context.md#secrets). |
 | Rules | `rules` | Rule[] | no | `[]` | Named rule definitions used by `gate` steps. Rules can also be loaded from external files. |
 | StepTypes | `step_types` | map[string]StepType | no | `{}` | User-defined step type definitions that wrap a primitive type with default parameters. |
@@ -148,7 +149,7 @@ A workflow is a named sequence of steps. Workflows can invoke other workflows as
 |-------|----------|------|----------|---------|-------------|
 | Name | `name` | string | yes | -- | Unique workflow name. Referenced by `entrypoint` and by steps that invoke sub-workflows. |
 | Description | `description` | string | no | `""` | Human-readable description of what this workflow does. |
-| Vars | `vars` | map[string]any | no | `{}` | Workflow-scoped variables. Non-nil values override global vars. Use `null` values to declare required variables that must be passed by the caller. |
+| Vars | `vars` | map[string]any | no | `{}` | The workflow's parameters, with their defaults; non-nil values override globals. `null` (`~`) declares a required parameter that callers must pass (or `--var` set, for the entry workflow), unless a global of that name exists. A called workflow sees only the globals, these and what the call passes. |
 | Steps | `steps` | Step[] | yes | -- | Ordered list of normal steps to execute. |
 | Rescue | `rescue` | Step[] | no | `[]` | Ordered failure handlers. Runs after a normal step fails, before `always`. |
 | Always | `always` | Step[] | no | `[]` | Ordered teardown handlers. Runs after normal success or failure. |
@@ -212,7 +213,8 @@ A step is the unit of execution within a workflow. Each step either runs a primi
 | Register | `register` | string | no | Variable name to store the step's output. The result is available to subsequent steps. |
 | Timeout | `timeout` | int | no | Step timeout in seconds. Behavior depends on the step type (e.g., k8s_job watch timeout). |
 | Params | `params` | map[string]any | no | Step-type-specific parameters. Values can contain Pongo2 template expressions. |
-| Vars | `vars` | map[string]any | no | Variables to pass to a sub-workflow invocation. Only meaningful when `workflow` is set. |
+| Vars | `vars` | map[string]any | no | Variables to pass to a sub-workflow invocation, rendered against the caller. Only meaningful when `workflow` is set. On `set_fact`, the facts to set. |
+| Pass | `pass` | list of strings | no | Names of the caller's variables to hand to the called workflow as they are (not rendered, so types and size are kept). Only on a step with `workflow`. Plain names; use `vars` to pick out part of a value or rename it. |
 | Artifacts | `artifacts` | map[string]Artifact | no | Artifact definitions to load after the step completes. Each key becomes a variable name. |
 | ForEach | `for_each` | string | no | Expression that resolves to a list. The step is executed once per item in the list (fan-out). |
 | ForEachKey | `for_each_key` | string | no | Field name on each item to use as a stable iteration key. Ensures deterministic ordering and state tracking across runs. |
@@ -227,6 +229,7 @@ A step is the unit of execution within a workflow. Each step either runs a primi
 | Description | `description` | string | no | Free text for readers and tools (long-form notes on what the step is for). It does not change what the step does, and editing it does not count as a step change on resume. |
 | IgnoreErrors | `ignore_errors` | bool | no | When the step fails, record the failure and carry on. The registered output keeps whatever the step produced, plus `failed: true` and `error`. On a sub-workflow, the registered context gets the same two keys; on `for_each`, failed items are marked that way and the loop runs every item. Errors in the workflow itself, such as a template that doesn't parse, still fail the step. |
 | FailedWhen | `failed_when` | string | no | Expression that alone decides whether the step failed, evaluated after it runs. It sees the step's output as `result` and under the `register` name; an executor error is in `result.error`. True fails the step (and `ignore_errors` still applies); false makes it succeed even if the executor reported an error. Not allowed on sub-workflow steps. |
+| MaxOutput | `max_output` | size | no | How much the step may produce: `512KB`, `64MB`, `2GB` (powers of 1024) or a number of bytes; `0` for no limit. Over it, the step fails. Defaults to its step type's, then the file's, then `--max-output`, then 64 MB. See [Output limits](#output-limits). |
 | Secret | `secret` | bool or string[] | no | Marks the step's output as secret, so its values are masked in events and log lines from the moment the step returns (its own `step_completed` included). `true` marks every string in the output; a list marks dotted paths into it (`[token, body.token]`); on `set_fact` the paths are fact names. Later steps still get the real values. Not allowed on sub-workflow, `gate` and `assert` steps. See [Secrets](variables-and-context.md#secrets). |
 
 ```yaml
@@ -339,8 +342,32 @@ Step types let you create reusable abstractions over primitive types. A step typ
 | Defaults | `defaults` | map[string]any | no | `{}` | Default parameter values. Merged after `job` params and before `params`. |
 | Job | `job` | map[string]any | no | `{}` | Base parameters merged first (lowest priority). Typically used for image, command, and other job-level settings. |
 | Params | `params` | map[string]any | no | `{}` | Additional parameters merged after `defaults`. |
+| MaxOutput | `max_output` | size | no | -- | The output limit of the steps of this type that set none, for example 16MB for every `claude`-based type. |
 
 Parameter merge order (later wins): `job` -> `defaults` -> `params` -> step-level `params`.
+
+## Output limits
+
+A step's output is held in the run's context and written to its `step_completed` event, its state row and any template that renders it, so one runaway value can take the whole process, and the machine, down. Every step has a limit on how much it produces, most specific first: its `max_output`, its step type's, the file's (`meta.yaml` in a directory workflow), `markov run --max-output`, then **64 MB**. `0` means no limit.
+
+```yaml
+- name: list-issues
+  type: http_request
+  max_output: 200MB      # this listing really is that big
+```
+
+Where the limit is checked:
+
+- **While reading**, for executors that stream: `shell_exec`, `script_exec` and `ansible` (stdout and stderr together; the process is killed at the limit), `http_request` (the response body, counted across every page when paginating), and `openshell_exec` (the command is cancelled). `k8s_job` logs have their own byte limit; a `claude` step keeps a bounded transcript, and its output is checked when it ends.
+- **When the step completes**, on its output measured as JSON: every executor's output, `set_fact` facts, `load_artifact` and step `artifacts:`, a sub-workflow's `register`, and a `for_each` register (the whole list, against the `for_each` step's limit). The size is counted without building the JSON.
+
+Going over **fails the step**, and its output is dropped rather than kept anywhere. `ignore_errors` records the failure (`failed: true`, `error`) and carries on; `failed_when` is not evaluated, since there is no output to see. The error names the size, the limit and the largest values inside the output:
+
+```
+output is 537 MB, over max_output 64 MB (largest: command_inputs 537 MB, command_inputs.pull_reviews 427 MB, command_inputs.pull_comments 107 MB); give the step a larger max_output, or have it produce less (fan out, filter, or write to a file)
+```
+
+The `step_failed` event carries the same as fields: `error_kind: max_output`, `output_bytes`, `limit_bytes`, `stream` (for a streaming executor, what was cut off) and `largest` (paths, sizes and list lengths). Output is not truncated instead: a script or agent given a cut-off list would miss items without knowing.
 
 ```yaml
 step_types:

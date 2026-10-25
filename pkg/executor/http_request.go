@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/jctanner/markov/pkg/jsonvalue"
+	"github.com/jctanner/markov/pkg/outputlimit"
 )
 
 type HTTPRequest struct {
@@ -47,6 +48,8 @@ func (e *HTTPRequest) Execute(ctx context.Context, params map[string]any) (*Resu
 	if err != nil {
 		return nil, err
 	}
+	// Every page counts against the step's one output limit.
+	ctx, _ = withCounter(ctx)
 	if pages == nil {
 		output, _, err := e.send(ctx, client, method, url, params)
 		return resultOrNil(output), err
@@ -135,7 +138,11 @@ func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	_, counter := withCounter(ctx)
+	respBody, err := readCapped(resp.Body, counter, "body")
+	if _, over := outputlimit.As(err); over {
+		return nil, nil, limitErr("http_request", err)
+	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("http_request: reading response: %w", err)
 	}

@@ -7,7 +7,12 @@ that less of it runs on a model. Two versions of the workflow ran on exactly the
 The current version's agent steps were asked to:
 {{range .Prompts}}- {{.}}
 {{end}}
-Decide whether the proposed version's outputs deliver the same result: the same items, values,
+{{if .LiveFailure}}The current version did not complete: {{.LiveFailure}}. Its outputs are partial or
+missing. Decide whether the proposed version's outputs deliver the result its prompts call for,
+including everything the current version's partial outputs have; a proposed version that
+completes where the current one could not is doing the job better.
+
+{{end}}Decide whether the proposed version's outputs deliver the same result: the same items, values,
 order, links and other facts. Formatting, whitespace, styling and wording that carries no
 information may differ (an agent formats freely; the proposed version fixes one format).
 Missing, extra, reordered or changed facts are not equivalent. Read every output file.

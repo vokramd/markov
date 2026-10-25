@@ -31,15 +31,8 @@ step_types:
     job:
       image: pipeline-agent:latest
       command: ["/bin/bash", "/app/scripts/run_skill.sh"]
-      args:
-        - "--skill"
-        - "{{ skill }}"
-        - "--issue"
-        - "{{ issue }}"
-        - "--model"
-        - "{{ model }}"
-        - "--runner"
-        - "{{ runner }}"
+      # Each step gives its own args: a step type's templates render against the workflow's
+      # variables, not against the step's params, so the skill cannot come from a param.
       namespace: markov-test
       service_account: pipeline-dashboard
       ttl_seconds: 86400
@@ -148,8 +141,7 @@ workflows:
       - name: rfe-analysis
         type: agent_skill
         params:
-          skill: rfe-creator
-          issue: "{{ issue }}"
+          args: ["--skill", "rfe-creator", "--issue", "{{ issue }}", "--model", "{{ model }}", "--runner", "{{ runner }}"]
         artifacts:
           result:
             path: "/app/artifacts/{{ issue }}/rfe-analysis/result.yaml"
@@ -163,8 +155,7 @@ workflows:
       - name: create-strategy
         type: agent_skill
         params:
-          skill: strategy-create
-          issue: "{{ issue }}"
+          args: ["--skill", "strategy-create", "--issue", "{{ issue }}", "--model", "{{ model }}", "--runner", "{{ runner }}"]
         artifacts:
           strategy:
             path: "/app/artifacts/{{ issue }}/strategy/strategy.yaml"
@@ -181,9 +172,15 @@ workflows:
       - name: refine-strategy
         type: agent_skill
         params:
-          skill: strategy-refine
-          issue: "{{ issue }}"
-          model: "{{ rfe-analysis.artifacts.result.complexity == 'high' | ternary('opus', 'sonnet') }}"
+          args:
+            - "--skill"
+            - "strategy-refine"
+            - "--issue"
+            - "{{ issue }}"
+            - "--model"
+            - "{{ rfe-analysis.artifacts.result.complexity == 'high' | ternary('opus', 'sonnet') }}"
+            - "--runner"
+            - "{{ runner }}"
         artifacts:
           result:
             path: "/app/artifacts/{{ issue }}/refinement/result.yaml"
@@ -192,12 +189,11 @@ workflows:
       - name: security-review
         type: agent_skill
         params:
-          skill: strat-security-review
-          issue: "{{ issue }}"
+          args: ["--skill", "strat-security-review", "--issue", "{{ issue }}", "--model", "{{ model }}", "--runner", "{{ runner }}"]
 
       - name: log-completion
         type: shell_exec
         params:
           command: |
-            echo '{"issue":"{{ issue }}","status":"complete","ts":"{{ _now }}"}' \
+            echo "{\"issue\":\"{{ issue }}\",\"status\":\"complete\",\"ts\":\"$(date -u +%FT%TZ)\"}" \
               >> /app/logs/pipeline-completions.jsonl

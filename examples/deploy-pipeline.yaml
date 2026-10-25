@@ -198,7 +198,8 @@ workflows:
         type: set_fact
         when: "not retries_exhausted"
         vars:
-          health_status: "healthy"
+          # A set_fact string without {{ }} is an expression; this one is the text healthy.
+          health_status: "{{ 'healthy' }}"
 
       - name: increment_retry
         type: set_fact

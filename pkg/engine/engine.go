@@ -23,6 +23,7 @@ import (
 	"github.com/jctanner/markov/pkg/callback"
 	"github.com/jctanner/markov/pkg/executor"
 	"github.com/jctanner/markov/pkg/jsonvalue"
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"github.com/jctanner/markov/pkg/parser"
 	"github.com/jctanner/markov/pkg/secret"
 	"github.com/jctanner/markov/pkg/source"
@@ -52,6 +53,9 @@ type Engine struct {
 	SourceIntegrityMode SourceIntegrityMode
 	// AllowReload lets reload_workflow steps replace the workflow definition (--allow-reload).
 	AllowReload bool
+	// MaxOutput is the output limit of a step that sets none (nor its step type or file):
+	// --max-output. Unset means outputlimit.Default.
+	MaxOutput outputlimit.Size
 	// EventLogs are the absolute paths of the run's jsonl callback files, exposed to the workflow
 	// as markov_event_logs.
 	EventLogs []string
@@ -198,6 +202,9 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 	e.setDigest(sourceDigest)
 
 	runCtx := e.buildContext(vars, wf.Vars)
+	if missing := missingParams(wf, runCtx); len(missing) > 0 {
+		return "", fmt.Errorf("workflow %q needs %s (declared with no default); set it with --var", workflowName, strings.Join(missing, ", "))
+	}
 
 	runID := e.RunID
 	if runID == "" {
@@ -688,14 +695,14 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 				return err
 			}
 			e.fireEvent(func(cb callback.Callback) error {
-				return cb.OnStepFailed(callback.StepFailedEvent{
+				return cb.OnStepFailed(withLimitFields(callback.StepFailedEvent{
 					EventHeader:  callback.EventHeader{Timestamp: feEnd, RunID: runID, EventType: "step_failed"},
 					WorkflowName: workflowName,
 					StepName:     step.Name,
 					StepType:     step.Type,
 					Error:        err.Error(),
 					Duration:     feEnd.Sub(feStart).Seconds(),
-				})
+				}, err))
 			})
 			return err
 		}
@@ -729,14 +736,14 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 				return err
 			}
 			e.fireEvent(func(cb callback.Callback) error {
-				return cb.OnStepFailed(callback.StepFailedEvent{
+				return cb.OnStepFailed(withLimitFields(callback.StepFailedEvent{
 					EventHeader:  callback.EventHeader{Timestamp: swEnd, RunID: runID, EventType: "step_failed"},
 					WorkflowName: workflowName,
 					StepName:     step.Name,
 					StepType:     step.Type,
 					Error:        err.Error(),
 					Duration:     swEnd.Sub(swStart).Seconds(),
-				})
+				}, err))
 			})
 			return err
 		}
@@ -775,6 +782,9 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		facts, err := e.evalFacts(step.Vars, runCtx)
 		if err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("evaluating facts: %w", err))
+		}
+		if err := e.checkOutput(ctx, &step, facts); err != nil {
+			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)
 		}
 		e.noteStepOutput(&step, facts)
 		for k, v := range facts {
@@ -925,6 +935,9 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		if err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("loading artifacts: %w", err))
 		}
+		if err := e.checkOutput(ctx, &step, artifacts); err != nil {
+			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)
+		}
 		runCtx[step.Name] = map[string]any{"artifacts": artifacts}
 		e.noteStepOutput(&step, runCtx[step.Name].(map[string]any))
 		e.verbose("[run:%s]   loaded %d artifact(s)", runID, len(artifacts))
@@ -1067,13 +1080,23 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		execCtx = withStepInfo(execCtx, stepInfo{runID: runID, workflow: workflowName, step: step.Name, stepType: step.Type})
 	}
 
+	limit := e.outputLimit(ctx, &step)
+	execCtx = outputlimit.WithLimit(execCtx, limit)
 	result, err := exec.Execute(execCtx, renderedParams)
 	var output map[string]any
 	if result != nil {
 		output = result.Output
 	}
+	if err == nil {
+		err = outputlimit.Check(output, limit)
+	}
+	// Over its limit, the step's output is dropped: keeping it is what the limit prevents.
+	_, overLimit := outputlimit.As(err)
+	if overLimit {
+		output = nil
+	}
 	e.noteStepOutput(&step, output)
-	if step.FailedWhen != "" {
+	if step.FailedWhen != "" && !overLimit {
 		err = e.evalFailedWhen(step, output, err, runCtx)
 	}
 	if err != nil {
@@ -1098,6 +1121,9 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 			for k, v := range output {
 				stepData[k] = v
 			}
+		}
+		if err := e.checkOutput(ctx, &step, stepData); err != nil {
+			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)
 		}
 		runCtx[step.Name] = stepData
 		e.noteStepOutput(&step, stepData)
@@ -1145,27 +1171,9 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 		return err
 	}
 
-	subVars := make(map[string]any)
-	for k, v := range runCtx {
-		subVars[k] = v
-	}
-	for k, v := range wf.Vars {
-		if v != nil {
-			subVars[k] = v
-		}
-	}
-	if step.Vars != nil {
-		rendered, err := e.tmpl.RenderMap(step.Vars, runCtx)
-		if err != nil {
-			return fmt.Errorf("rendering sub-workflow vars: %w", err)
-		}
-		for k, v := range rendered {
-			if s, ok := v.(string); ok {
-				subVars[k] = coerceString(s)
-			} else {
-				subVars[k] = v
-			}
-		}
+	subVars, err := e.childContext(ctx, step, wf, runCtx)
+	if err != nil {
+		return err
 	}
 
 	e.noteVars(e.fileFor(ctx), subVars)
@@ -1236,7 +1244,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 		}
 		log.Printf("[run:%s] sub-workflow %q failed, ignored (ignore_errors): %v", runID, wf.Name, err)
 		if step.Register != "" {
-			runCtx[step.Register] = ignoredFailure(subVars, err)
+			runCtx[step.Register] = ignoredFailure(e.childResult(ctx, subVars), err)
 		}
 		return nil
 	}
@@ -1255,7 +1263,11 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 	})
 
 	if step.Register != "" {
-		runCtx[step.Register] = subVars
+		registered := e.childResult(ctx, subVars)
+		if err := e.checkOutput(ctx, &step, registered); err != nil {
+			return err
+		}
+		runCtx[step.Register] = registered
 	}
 
 	log.Printf("[run:%s] sub-workflow %q completed", runID, wf.Name)
@@ -1363,27 +1375,10 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					return
 				}
 
-				subVars := make(map[string]any)
-				for k, v := range runCtx {
-					subVars[k] = v
-				}
-				for k, v := range wf.Vars {
-					subVars[k] = v
-				}
-				subVars[step.As] = itemVal
-				if step.Vars != nil {
-					rendered, err := e.tmpl.RenderMap(step.Vars, itemCtx)
-					if err != nil {
-						errOnce.Do(func() { failed.Store(true); firstErr = fmt.Errorf("rendering sub-workflow vars: %w", err) })
-						return
-					}
-					for k, v := range rendered {
-						if s, ok := v.(string); ok {
-							subVars[k] = coerceString(s)
-						} else {
-							subVars[k] = v
-						}
-					}
+				subVars, err := e.childContext(ctx, step, wf, itemCtx)
+				if err != nil {
+					errOnce.Do(func() { failed.Store(true); firstErr = err })
+					return
 				}
 
 				forEachKey := fmt.Sprintf("%d", idx)
@@ -1476,7 +1471,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 				e.store.UpdateRun(ctx, subRun)
 
 				mu.Lock()
-				slots[idx] = subVars
+				slots[idx] = e.childResult(ctx, subVars)
 				mu.Unlock()
 			} else {
 				// The step keeps its register: it registers its output in this item's own
@@ -1500,7 +1495,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 				}
 
 				mu.Lock()
-				slots[idx] = itemCtx
+				slots[idx] = iterationResult(step, runCtx, itemCtx)
 				mu.Unlock()
 			}
 		}(i, item)
@@ -1513,6 +1508,11 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 		for _, r := range slots {
 			if r != nil {
 				results = append(results, r)
+			}
+		}
+		if firstErr == nil {
+			if err := e.checkOutput(ctx, &step, results); err != nil {
+				return err
 			}
 		}
 		runCtx[step.Register] = results
@@ -1675,6 +1675,45 @@ func (e *Engine) evalFailedWhen(step parser.Step, output map[string]any, execErr
 
 // ignoredFailure marks a step's output as failed for a step with ignore_errors, keeping
 // whatever output the step produced.
+// iterationResult is what a typed for_each step's register keeps of one iteration: its item,
+// the step's output, and anything else the iteration set (set_fact facts, gate facts, failed and
+// error under ignore_errors). Not the parent's context, which every iteration starts with: a
+// register holding registers would otherwise grow with every loop that collects it.
+func iterationResult(step parser.Step, parent, itemCtx map[string]any) map[string]any {
+	out := map[string]any{step.As: itemCtx[step.As]}
+	if step.Register != "" {
+		if v, ok := itemCtx[step.Register]; ok {
+			out[step.Register] = v
+		}
+	}
+	for k, v := range itemCtx {
+		if p, ok := parent[k]; !ok || !sameValue(p, v) {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+// sameValue reports whether two context values are the same value: equal scalars, or the same
+// map or slice (not an equal copy). It is cheap, so a large value is not walked to compare it.
+func sameValue(a, b any) bool {
+	va, vb := reflect.ValueOf(a), reflect.ValueOf(b)
+	if !va.IsValid() || !vb.IsValid() {
+		return va.IsValid() == vb.IsValid()
+	}
+	if va.Type() != vb.Type() {
+		return false
+	}
+	switch va.Kind() {
+	case reflect.Map, reflect.Slice, reflect.Pointer, reflect.Func, reflect.Chan:
+		return va.Pointer() == vb.Pointer() && (va.Kind() != reflect.Slice || va.Len() == vb.Len())
+	}
+	if va.Type().Comparable() {
+		return a == b
+	}
+	return false
+}
+
 func ignoredFailure(output map[string]any, err error) map[string]any {
 	marked := make(map[string]any, len(output)+2)
 	for k, v := range output {
@@ -1786,7 +1825,7 @@ func (e *Engine) failStepWithOutput(ctx context.Context, runID, workflowName, st
 		CompletedAt:  &now,
 	})
 	e.fireEvent(func(cb callback.Callback) error {
-		return cb.OnStepFailed(callback.StepFailedEvent{
+		return cb.OnStepFailed(withLimitFields(callback.StepFailedEvent{
 			EventHeader:  callback.EventHeader{Timestamp: now, RunID: runID, EventType: "step_failed"},
 			WorkflowName: workflowName,
 			StepName:     stepName,
@@ -1794,7 +1833,7 @@ func (e *Engine) failStepWithOutput(ctx context.Context, runID, workflowName, st
 			Error:        err.Error(),
 			Output:       output,
 			Duration:     now.Sub(startedAt).Seconds(),
-		})
+		}, err))
 	})
 	return err
 }

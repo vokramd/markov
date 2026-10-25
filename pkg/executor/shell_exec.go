@@ -1,10 +1,11 @@
 package executor
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
+
+	"github.com/jctanner/markov/pkg/outputlimit"
 )
 
 type ShellExec struct{}
@@ -21,19 +22,18 @@ func (e *ShellExec) Execute(ctx context.Context, params map[string]any) (*Result
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	stdout, stderr, err := runCapped(ctx, cmd)
+	if _, over := outputlimit.As(err); over {
+		return nil, limitErr("shell_exec", err)
+	}
 	output := map[string]any{
-		"stdout":    stdout.String(),
-		"stderr":    stderr.String(),
+		"stdout":    stdout,
+		"stderr":    stderr,
 		"exit_code": cmd.ProcessState.ExitCode(),
 	}
 
 	if err != nil {
-		return &Result{Output: output}, fmt.Errorf("shell_exec: %w\nstderr: %s", err, stderr.String())
+		return &Result{Output: output}, fmt.Errorf("shell_exec: %w\nstderr: %s", err, stderr)
 	}
 
 	return &Result{Output: output}, nil

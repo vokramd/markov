@@ -22,6 +22,7 @@ import (
 
 	"github.com/jctanner/markov/docs"
 	"github.com/jctanner/markov/pkg/callback"
+	"github.com/jctanner/markov/pkg/outputlimit"
 	"github.com/jctanner/markov/pkg/schema"
 )
 
@@ -30,7 +31,8 @@ type Config struct {
 	Source        string // the project directory
 	Workflow      string // the workflow to codify
 	CodifyDir     string // history; default <Source>.codify
-	Model         string // retro agent and judge
+	Model         string // the judge, and the retro agent unless RetroModel is set
+	RetroModel    string // the retro agent (--retro-model); "" means Model
 	MaxIterations int
 	BudgetUSD     float64 // stop once the run's model spend reaches it (0: no limit)
 	Keep          []string
@@ -52,8 +54,11 @@ type Config struct {
 	Markov        string // the markov binary for child runs
 	ClaudeBin     string // the claude CLI (tests)
 	RunTimeout    time.Duration
-	Passthrough   []string
-	Out           io.Writer
+	// RunMemory is the memory limit of each run of the workflow, in bytes (--run-memory; 0:
+	// none). Over it the run is killed alone and the iteration says it ran out of memory.
+	RunMemory   int64
+	Passthrough []string
+	Out         io.Writer
 	// Callbacks receive codify's events: its phases as steps of the virtual "codify" workflow
 	// (the retro agent's and judge's claude streams as step_progress), and every event of the
 	// target workflow's runs.
@@ -231,7 +236,7 @@ func Run(ctx context.Context, c Config) (rows []Row, err error) {
 	}
 	defer proxy.Close()
 	start := time.Now()
-	c.em.runStarted(c.Workflow, map[string]any{"codify": c.Workflow, "codify_dir": c.CodifyDir, "model": c.Model, "max_iterations": c.MaxIterations, "budget_usd": c.BudgetUSD})
+	c.em.runStarted(c.Workflow, map[string]any{"codify": c.Workflow, "codify_dir": c.CodifyDir, "model": c.Model, "retro_model": c.modelFor("retro"), "max_iterations": c.MaxIterations, "budget_usd": c.BudgetUSD})
 	defer func() { c.em.runFinished(c.Workflow, start, err) }()
 	if len(agents) == 0 {
 		c.printf("%s has no agent steps (claude, llm_invoke) in reach: nothing to codify\n", c.Workflow)
@@ -360,23 +365,30 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 	proxy.SetMode(Record)
 	c.progress(it, "running %s (live, recording its requests)…", c.Workflow)
 	ph := c.em.begin("live", "", map[string]any{"workflow": c.Workflow, "iteration": row.Iteration})
-	live := runWorkflow(ctx, c.Markov, c.Source, c.Workflow, filepath.Join(it, "live"), proxy.Env(), c.RunTimeout, func(raw []byte) { c.em.forward(raw, "live") })
+	live := runWorkflow(ctx, c.Markov, c.Source, c.Workflow, filepath.Join(it, "live"), proxy.Env(), c.RunTimeout, c.RunMemory, func(raw []byte) { c.em.forward(raw, "live") })
 	row.Task = live.Metrics
 	ph.end(map[string]any{"agent_steps": live.Metrics.AgentSteps, "native_steps": live.Metrics.NativeSteps, "tokens": live.Metrics.Tokens, "cost_usd": live.Metrics.CostUSD, "outputs": fileList(live.Outputs), "requests": len(rec.Exchanges())}, errText(live.Err))
 	c.progress(it, "live run done in %.0fs: agent %d/%d steps, %d tokens, $%.4f; wrote %s; %d requests recorded",
 		live.Metrics.Seconds, live.Metrics.AgentSteps, live.Metrics.AgentSteps+live.Metrics.NativeSteps, live.Metrics.Tokens, live.Metrics.CostUSD,
 		fileList(live.Outputs), len(rec.Exchanges()))
 	spent := live.Metrics.CostUSD
-	if live.Err != nil {
+	// A current version that ran out of room (a step over its max_output, or the run out of
+	// memory) is the clearest sign of what to codify next: the loop goes on, and the retro is told.
+	liveFailure := liveLimitFailure(live, LoadEvents(filepath.Join(live.Dir, "events.jsonl")))
+	if liveFailure != "" {
+		c.progress(it, "the current version ran out of room: %s; the retro is asked to fix that first", liveFailure)
+	}
+	if live.Err != nil && liveFailure == "" {
 		row.Validation = Validation{Status: "live_failed", Reasons: []string{"the current version failed: " + firstLine(live.Err.Error()) + "\n" + live.Log}}
 		return row, spent, "the current version of " + c.Workflow + " fails; fix it first (see " + filepath.Join(it, "live", "output.log") + ")", nil
 	}
-	if len(live.Outputs) == 0 {
+	// A current version that ran out of room has no complete outputs or repeat record to check.
+	if liveFailure == "" && len(live.Outputs) == 0 {
 		// Candidates are judged by their outputs; with none, any change would "match".
 		row.Validation = Validation{Status: "live_failed", Reasons: []string{"the current version wrote no files in its working directory"}}
 		return row, spent, c.Workflow + " wrote no files in the directory it runs in, so there is nothing to keep equal; make it write its result there (relative paths; claude steps need tools such as Write, and permission_mode acceptEdits)", nil
 	}
-	if c.RepeatChanges != "" {
+	if c.RepeatChanges != "" && liveFailure == "" {
 		path, key := c.repeatSpec()
 		if _, err := repeatCount(live.Outputs, path, key); err != nil {
 			row.Validation = Validation{Status: "live_failed", Reasons: []string{"--repeat-changes: " + err.Error()}}
@@ -405,14 +417,15 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 		Target: c.Workflow, Evidence: evidence, Docs: docsDir, Markov: c.Markov, RetroJSON: retroJSON,
 		EditableFiles: p.EditableFiles(), HelperPrefix: p.HelperPrefix(), ScriptsDir: p.ScriptsDir(),
 		AgentSteps: agents, Keep: c.Keep, Fixed: p.Fixed, Judged: true, Loose: c.Loose(),
+		LiveFailure: liveFailure,
 	}
 	in.RepeatChanges, _ = c.repeatSpec()
-	model := c.Model
+	model := c.modelFor("retro")
 	if model == "" {
 		model = "the default model"
 	}
 	c.progress(it, "retro agent (%s) proposing one change to %s…", model, c.Workflow)
-	ph = c.em.begin("retro", "claude", map[string]any{"model": c.Model, "workflow": c.Workflow, "iteration": row.Iteration})
+	ph = c.em.begin("retro", "claude", map[string]any{"model": c.modelFor("retro"), "workflow": c.Workflow, "iteration": row.Iteration})
 	retro := c.retro(ctx, in, candidate)
 	ph.end(map[string]any{"result": retro.Report, "total_cost_usd": retro.CostUSD, "tokens": retro.Tokens}, retro.Failed)
 	spent += retro.CostUSD
@@ -431,7 +444,7 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 	}
 
 	// 4. Deterministic checks, then the candidate against the recording.
-	v, cand, judgeCost := c.validate(ctx, p, candidate, retro, live, proxy, it)
+	v, cand, judgeCost := c.validate(ctx, p, candidate, retro, live, liveFailure, proxy, it)
 	// Loose mode is not done while one agent step still does several judgment jobs: the retro
 	// agent's own job list says so. Count the pass as failed so the run goes on.
 	if c.Loose() && v.Status == "no_change" {
@@ -463,7 +476,10 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 	return row, spent, "", nil
 }
 
-func (c *Config) validate(ctx context.Context, p *Project, candidate string, retro Retro, live *RunResult, proxy *Proxy, it string) (Validation, *RunResult, float64) {
+// liveFailure, when set, is why the current version did not complete (it ran out of room): a
+// candidate is then held to completing and doing the job, since there is nothing whole to
+// compare it with.
+func (c *Config) validate(ctx context.Context, p *Project, candidate string, retro Retro, live *RunResult, liveFailure string, proxy *Proxy, it string) (Validation, *RunResult, float64) {
 	fail := func(reasons ...string) Validation { return Validation{Status: "failed", Reasons: reasons} }
 	if retro.Failed != "" && retro.Report == nil {
 		return fail("the retro agent failed: " + retro.Failed), nil, 0
@@ -522,7 +538,7 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 	proxy.SetMode(Replay)
 	c.progress(it, "running the candidate against the recording (changed: %s)…", strings.Join(changed, ", "))
 	ph := c.em.begin("candidate", "", map[string]any{"workflow": c.Workflow, "changed": changed})
-	cand := runWorkflow(ctx, c.Markov, candidate, c.Workflow, filepath.Join(it, "candidate"), proxy.Env(), c.RunTimeout, func(raw []byte) { c.em.forward(raw, "candidate") })
+	cand := runWorkflow(ctx, c.Markov, candidate, c.Workflow, filepath.Join(it, "candidate"), proxy.Env(), c.RunTimeout, c.RunMemory, func(raw []byte) { c.em.forward(raw, "candidate") })
 	ph.end(map[string]any{"agent_steps": cand.Metrics.AgentSteps, "native_steps": cand.Metrics.NativeSteps, "tokens": cand.Metrics.Tokens, "cost_usd": cand.Metrics.CostUSD, "outputs": fileList(cand.Outputs), "misses": proxy.Misses()}, errText(cand.Err))
 	if misses := proxy.Misses(); len(misses) > 0 {
 		v.Reasons = append(v.Reasons, "requests not in the recording: "+strings.Join(misses, ", "))
@@ -530,8 +546,13 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 	if refused := proxy.Refused(); len(refused) > 0 {
 		v.Reasons = append(v.Reasons, "side effects refused in replay: "+strings.Join(refused, ", "))
 	}
+	candSizes, candFails := outputSizes(LoadEvents(filepath.Join(cand.Dir, "events.jsonl")))
+	_ = os.WriteFile(filepath.Join(it, "candidate_output_sizes.md"), []byte(outputSizesDoc(candSizes, candFails)), 0o644)
 	if cand.Err != nil {
 		v.Status = "failed"
+		for _, f := range candFails {
+			v.Reasons = append(v.Reasons, fmt.Sprintf("step %s produced %s, over its max_output %s (largest: %s); see candidate_output_sizes.md", f.Step, outputlimit.Format(f.Bytes), outputlimit.Format(f.Limit), largestText(f.Largest)))
+		}
 		v.Reasons = append(v.Reasons, "the candidate failed: "+firstLine(cand.Err.Error())+"\n"+errorLines(cand.Log))
 		return v, cand, 0
 	}
@@ -543,7 +564,19 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 			return v, cand, 0
 		}
 	}
-	repeat, reason := c.repeatCheck(live.Outputs, cand.Outputs)
+	var repeat *Repeat
+	var reason string
+	if liveFailure == "" {
+		repeat, reason = c.repeatCheck(live.Outputs, cand.Outputs, declaredKinds(retro.Report))
+	} else if c.RepeatChanges != "" {
+		// Nothing to compare with: the candidate must at least record its repeat run.
+		path, key := c.repeatSpec()
+		if n, err := repeatCount(cand.Outputs, path, key); err != nil {
+			reason = "the candidate's repeat-run record: " + err.Error()
+		} else {
+			repeat = &Repeat{File: path, Live: -1, Candidate: n}
+		}
+	}
 	v.Repeat = repeat
 	if reason != "" {
 		v.Status = "failed"
@@ -551,11 +584,11 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 		return v, cand, 0
 	}
 	same, why := SameOutputs(live.Outputs, cand.Outputs)
-	if same {
+	if same && liveFailure == "" {
 		v.Status = "passed"
 		return v, cand, 0
 	}
-	if len(live.Outputs) == 0 || len(cand.Outputs) == 0 {
+	if len(cand.Outputs) == 0 || (len(live.Outputs) == 0 && liveFailure == "") {
 		v.Status, v.Reasons = "failed", append(v.Reasons, why)
 		return v, cand, 0
 	}
@@ -567,7 +600,7 @@ func (c *Config) validate(ctx context.Context, p *Project, candidate string, ret
 	if cp, err := LoadProject(candidate, c.Workflow, c.Fixed...); err == nil {
 		candidatePrompts = agentPrompts(cp.File, cp.Reach)
 	}
-	verdict := c.judge(ctx, c.Workflow, agentPrompts(p.File, p.Reach), candidatePrompts, filepath.Join(live.Dir, "work"), filepath.Join(cand.Dir, "work"), filepath.Join(it, "judge", "verdict.json"), repeat)
+	verdict := c.judge(ctx, c.Workflow, agentPrompts(p.File, p.Reach), candidatePrompts, filepath.Join(live.Dir, "work"), filepath.Join(cand.Dir, "work"), filepath.Join(it, "judge", "verdict.json"), repeat, liveFailure)
 	v.JudgeReason = verdict.Reason
 	ph.end(map[string]any{"equivalent": verdict.Equivalent, "reason": verdict.Reason, "total_cost_usd": verdict.CostUSD, "tokens": verdict.Tokens}, verdict.Failed)
 	switch {
@@ -602,7 +635,7 @@ func missingKept(keep, agents []string) []string {
 func errorLines(out string) string {
 	var keep []string
 	for _, l := range strings.Split(out, "\n") {
-		if strings.HasPrefix(l, "Error:") || strings.Contains(l, " failed") || strings.Contains(l, "failed:") {
+		if strings.HasPrefix(l, "Error:") || strings.HasPrefix(l, "error: ") || strings.Contains(l, " failed") || strings.Contains(l, "failed:") {
 			keep = append(keep, l)
 		}
 	}
@@ -630,9 +663,7 @@ func (c *Config) collectEvidence(live *RunResult, rec *Recording, dir, it string
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	if data, err := os.ReadFile(filepath.Join(live.Dir, "events.jsonl")); err == nil {
-		_ = os.WriteFile(filepath.Join(dir, "events.jsonl"), data, 0o644)
-	}
+	_ = copyEventLog(filepath.Join(live.Dir, "events.jsonl"), filepath.Join(dir, "events.jsonl"))
 	Transcripts(live.Metrics.Sessions, filepath.Join(dir, "transcripts"))
 	for rel, data := range live.Outputs {
 		if err := writeFile(filepath.Join(dir, "outputs", filepath.FromSlash(rel)), data, "", ""); err != nil {
@@ -640,7 +671,9 @@ func (c *Config) collectEvidence(live *RunResult, rec *Recording, dir, it string
 		}
 	}
 	writeJSON(filepath.Join(dir, "metrics.json"), live.Metrics)
-	_ = os.WriteFile(filepath.Join(dir, "agent_calls.md"), []byte(agentCallsDoc(agentCalls(LoadEvents(filepath.Join(live.Dir, "events.jsonl"))))), 0o644)
+	events := LoadEvents(filepath.Join(live.Dir, "events.jsonl"))
+	_ = os.WriteFile(filepath.Join(dir, "agent_calls.md"), []byte(agentCallsDoc(agentCalls(events))), 0o644)
+	_ = os.WriteFile(filepath.Join(dir, "output_sizes.md"), []byte(outputSizesDoc(outputSizes(events))), 0o644)
 	_ = os.WriteFile(filepath.Join(dir, "requests.md"), []byte(requestsDoc(rec)), 0o644)
 	// Every earlier pass: what it tried, in which mode, and why it was rejected.
 	if rows, err := readRows(filepath.Join(c.CodifyDir, "metrics.jsonl")); err == nil && len(rows) > 0 {
@@ -651,7 +684,7 @@ func (c *Config) collectEvidence(live *RunResult, rec *Recording, dir, it string
 		var k int
 		fmt.Sscanf(n, "iter-%d", &k)
 		prev := filepath.Join(filepath.Dir(it), fmt.Sprintf("iter-%04d", k-1))
-		for src, dst := range map[string]string{"retro.json": "previous_retro.json", "validation.json": "previous_validation.json"} {
+		for src, dst := range map[string]string{"retro.json": "previous_retro.json", "validation.json": "previous_validation.json", "candidate_output_sizes.md": "previous_candidate_output_sizes.md"} {
 			if data, err := os.ReadFile(filepath.Join(prev, src)); err == nil {
 				_ = os.WriteFile(filepath.Join(dir, dst), data, 0o644)
 			}
@@ -741,7 +774,19 @@ func historyDoc(rows []Row) string {
 		}
 		b.WriteString("\n")
 		if rp := r.Validation.Repeat; rp != nil {
-			fmt.Fprintf(&b, "- repeat run changed (%s): current %v, candidate %v\n", rp.File, rp.Live, rp.Candidate)
+			fmt.Fprintf(&b, "- repeat run changed (%s): current %v, candidate %v", rp.File, rp.Live, rp.Candidate)
+			var kinds []string
+			for _, k := range rp.Kinds {
+				mark := ""
+				if k.Touched {
+					mark = " (this pass's)"
+				}
+				kinds = append(kinds, fmt.Sprintf("%s %v/%v%s", k.Kind, k.Live, k.Candidate, mark))
+			}
+			if len(kinds) > 0 {
+				fmt.Fprintf(&b, "; by kind, current/candidate: %s", strings.Join(kinds, ", "))
+			}
+			b.WriteString("\n")
 		}
 		for _, reason := range r.Validation.Reasons {
 			if len(reason) > 700 {

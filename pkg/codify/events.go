@@ -1,9 +1,7 @@
 package codify
 
 import (
-	"bufio"
 	"encoding/json"
-	"io"
 	"log"
 	"os"
 	"sync"
@@ -144,27 +142,24 @@ func (e *emitter) forward(raw []byte, parentStep string) {
 // follow passes on the complete lines appended to path until stop closes, then the rest.
 func follow(path string, stop <-chan struct{}, fn func([]byte)) {
 	var f *os.File
-	var r *bufio.Reader
-	var partial []byte
+	// Lines are cut as bytes arrive; one too long to keep is handed on as a summary.
+	lines := newLineSplitter(maxEventLine, fn)
+	buf := make([]byte, 1<<20)
 	drain := func() {
 		if f == nil {
 			var err error
 			if f, err = os.Open(path); err != nil {
 				return
 			}
-			r = bufio.NewReaderSize(f, 1<<20)
 		}
 		for {
-			line, err := r.ReadBytes('\n')
-			if err == io.EOF {
-				partial = append(partial, line...)
-				return
+			n, err := f.Read(buf)
+			if n > 0 {
+				lines.Write(buf[:n])
 			}
 			if err != nil {
 				return
 			}
-			fn(append(partial, line[:len(line)-1]...))
-			partial = nil
 		}
 	}
 	tick := time.NewTicker(100 * time.Millisecond)

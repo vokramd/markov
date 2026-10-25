@@ -62,7 +62,7 @@ A durable gate `pause` is intentionally different from failure: it does not run 
 
 ## Sub-Workflows
 
-A step can invoke another workflow by name using the `workflow` field instead of `type`. Sub-workflows get a copy of the parent context plus any `vars` declared on the step. Changes inside a sub-workflow don't propagate back to the parent unless captured with `register`.
+A step can invoke another workflow by name using the `workflow` field instead of `type`. A sub-workflow sees the globals (the file-level vars), its own `vars:` (its parameters), and what the calling step passes with `pass:` or `vars:`; not the caller's registers or facts. Changes inside a sub-workflow don't propagate back to the parent unless captured with `register`.
 
 ## Recursive Workflows
 

@@ -2,7 +2,9 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -640,5 +642,74 @@ func TestSubWorkflowForEachRegisterKeepsInputOrder(t *testing.T) {
 	got := registeredValues(t, capture.params["got"], "out", "value")
 	if fmt.Sprint(got) != "[1 2 3 4]" {
 		t.Fatalf("registered outputs = %v, want [1 2 3 4]", got)
+	}
+}
+
+// A typed for_each register keeps each iteration's item and output, not the context every
+// iteration starts with: loops that each collect over an earlier loop's register stay the size of
+// their data (they used to nest every earlier register in every element).
+func TestDirectForEachRegisterKeepsOnlyTheIteration(t *testing.T) {
+	wfFile := &parser.WorkflowFile{
+		Entrypoint: "main",
+		Vars:       map[string]any{"items": []any{1, 2, 3, 4}, "big": strings.Repeat("x", 10000)},
+		Workflows: []parser.Workflow{{
+			Name: "main",
+			Steps: []parser.Step{
+				{Name: "first", ForEach: "items", As: "item", Type: "slow", Params: map[string]any{"command": "{{ item }}"}, Register: "a"},
+				{Name: "second", ForEach: "items", As: "item", Type: "slow", Params: map[string]any{"command": "{{ item }}"}, Register: "b"},
+				{Name: "third", ForEach: "items", As: "item", Type: "slow", Params: map[string]any{"command": "{{ item }}"}, Register: "c"},
+				{Name: "capture", Type: "capture", Params: map[string]any{"got": "{{ c }}"}},
+			},
+		}},
+	}
+	capture := &captureExec{}
+	eng, _ := newTestEngine(t, wfFile, map[string]executor.Executor{"slow": slowEcho{}, "capture": capture})
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	list, ok := capture.params["got"].([]map[string]any)
+	if !ok || len(list) != 4 {
+		t.Fatalf("registered = %#v, want 4 elements", capture.params["got"])
+	}
+	for i, el := range list {
+		if len(el) != 2 || el["item"] != i+1 {
+			t.Fatalf("element %d = %#v, want only item and c", i, el)
+		}
+		if out, _ := el["c"].(map[string]any); out["value"] != i+1 {
+			t.Fatalf("element %d output = %#v", i, el["c"])
+		}
+	}
+	data, _ := json.Marshal(list)
+	if len(data) > 500 {
+		t.Fatalf("register is %d bytes as JSON, want about the size of its data: %s", len(data), data)
+	}
+}
+
+// What an iteration sets besides the register (set_fact facts here) is kept with it.
+func TestDirectForEachRegisterKeepsWhatTheIterationSet(t *testing.T) {
+	wfFile := &parser.WorkflowFile{
+		Entrypoint: "main",
+		Vars:       map[string]any{"items": []any{"a", "b"}, "shared": "parent"},
+		Workflows: []parser.Workflow{{
+			Name: "main",
+			Steps: []parser.Step{
+				{Name: "facts", ForEach: "items", As: "item", Type: "set_fact", Vars: map[string]any{"seen": "{{ item }}!"}, Register: "out"},
+				{Name: "capture", Type: "capture", Params: map[string]any{"got": "{{ out }}"}},
+			},
+		}},
+	}
+	capture := &captureExec{}
+	eng, _ := newTestEngine(t, wfFile, map[string]executor.Executor{"capture": capture})
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := registeredValues(t, capture.params["got"], "seen")
+	if fmt.Sprint(got) != "[a! b!]" {
+		t.Fatalf("facts = %v, want [a! b!]", got)
+	}
+	for _, el := range capture.params["got"].([]map[string]any) {
+		if _, ok := el["shared"]; ok {
+			t.Fatalf("element %#v holds the parent's var", el)
+		}
 	}
 }
