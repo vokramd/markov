@@ -396,10 +396,12 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 	}
 	e.noteVars(file, runCtx)
 	for _, s := range steps {
-		if def := findStep(wf, s.StepName); def != nil && def.Secret.Set() && s.Status == state.StepCompleted && s.OutputJSON != "" {
-			var output map[string]any
-			decodeState(s.OutputJSON, &output)
-			e.noteStepOutput(def, output)
+		if def := findStep(wf, s.StepName); def != nil && def.Secret.Set() && s.Status == state.StepCompleted {
+			for _, stored := range []string{s.OutputJSON, s.ArtifactsJSON} {
+				var output map[string]any
+				decodeState(stored, &output)
+				e.noteStepOutput(def, output)
+			}
 		}
 	}
 	// The logs of this process, not the ones the run was started with.
@@ -924,6 +926,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("loading artifacts: %w", err))
 		}
 		runCtx[step.Name] = map[string]any{"artifacts": artifacts}
+		e.noteStepOutput(&step, runCtx[step.Name].(map[string]any))
 		e.verbose("[run:%s]   loaded %d artifact(s)", runID, len(artifacts))
 		completed := time.Now()
 		e.store.SaveStep(ctx, &state.StepResult{
@@ -1097,6 +1100,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 			}
 		}
 		runCtx[step.Name] = stepData
+		e.noteStepOutput(&step, stepData)
 		e.verbose("[run:%s]   loaded %d artifact(s) for %q", runID, len(artifacts), step.Name)
 	}
 

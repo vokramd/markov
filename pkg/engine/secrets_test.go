@@ -151,6 +151,42 @@ func TestSecretsStayMaskedOnResume(t *testing.T) {
 	}
 }
 
+func TestSecretLoadedArtifactIsMasked(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "token")
+	if err := os.WriteFile(path, []byte(mintedToken+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	file, err := parser.Parse([]byte(`
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: saved
+        type: load_artifact
+        secret: true
+        artifacts:
+          token: {path: "` + path + `", source: local}
+      - name: use
+        type: shell_exec
+        params:
+          url: "https://github.local/user?t={{ saved.artifacts.token | trim }}"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng, cb := newTestEngine(t, file, map[string]executor.Executor{
+		"load_artifact": &mockExec{},
+		"shell_exec":    echoExec{},
+	})
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatal(err)
+	}
+	events := eventsJSON(t, cb)
+	if strings.Contains(events, mintedToken) || !strings.Contains(events, "t=<secret:saved>") {
+		t.Errorf("loaded token not masked: %s", events)
+	}
+}
+
 func eventsJSON(t *testing.T, cb *mockCallback) string {
 	t.Helper()
 	cb.mu.Lock()

@@ -12,7 +12,7 @@
 - [Agentic Codification](plans/003-agentic-codification.md) — phases 1–5 done (notes/codify-phase1-run.md, ADR-0006, markov-ide plan 002); phase 6 (`markov codify`, any workflow) done; retro agent decomposes a single-prompt workflow into native steps, with `reload_workflow` hot-reload.
 - [OpenShell sandboxes](plans/004-openshell-sandboxes.md) — phases 1–3 done (CLI and SDK transports, IDE); native steps to build images and create, upload to, exec in, download from and delete OpenShell sandboxes, over the openshell CLI or the Go SDK.
 - [Codifying agents that act on live services](plans/005-codifying-agents-with-side-effects.md) — phases 1–5 done (trial: notes/codify-github-agent-trial.md), agent noise next; reset/snapshot cycles, fixed workflows, live hosts, and splitting broad prompts into focused agent steps.
-- [Codified workflows that page, fan out and are safe to run again](plans/006-idempotent-codified-workflows.md) — phase 1 done (http_request paginate); emulator links, 150-issue fixture, two-run idempotency check, sub-workflow and state-before-action retro rules next.
+- [Codified workflows that page, fan out and are safe to run again](plans/006-idempotent-codified-workflows.md) — phases 1–2 done (http_request paginate, emulator links); 150-issue fixture, two-run idempotency check, sub-workflow and state-before-action retro rules next.
 - [Secrets masked in events and logs](plans/007-secret-masking.md) — phase 1 done: declared and secret-named vars and `secret:` step outputs masked by value in every event and log line; the state store keeps real values for resume. Use in github-workflow-example and the store question next.
 
 ## Active Tasks
@@ -58,6 +58,7 @@
 ## Open Bugs
 
 - [Registered sub-workflow and for_each results carry the caller's whole context](bugs/open/register-copies-whole-context.md)
+- [A load_artifact step's data is lost on resume](bugs/open/load-artifact-step-lost-on-resume.md)
 
 ## Fixed Bugs
 

@@ -140,12 +140,11 @@ func (m *Masker) String(s string) string {
 	return r.Replace(s)
 }
 
-// Value is a masked copy of v: strings, and the strings and keys inside maps and lists. Other
-// values are returned as they are; v itself is never changed.
+// Value is a masked copy of v: strings, and the strings and keys inside maps and lists. Maps and
+// lists ([]any, map[string]any) are always copied, even with nothing to mask, so the copy can be
+// kept while v changes. Typed values (a []string, a struct) come back as their JSON shape when
+// there is something to mask, and as they are when there is not.
 func (m *Masker) Value(v any) any {
-	if m.Empty() {
-		return v
-	}
 	return m.value(v)
 }
 
@@ -168,6 +167,9 @@ func (m *Masker) value(v any) any {
 	case nil, bool, int, int64, float64:
 		return v
 	default:
+		if m.Empty() {
+			return v // typed values keep their type when there is nothing to mask
+		}
 		return m.reflected(v)
 	}
 }

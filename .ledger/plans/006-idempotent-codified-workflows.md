@@ -11,7 +11,7 @@ one-page repository:
 - **One flat workflow.** Item work (triage, code, review, revise, ping) sits as parallel steps
   in one workflow instead of reusable per-item sub-workflows.
 
-**Status:** phase 1 done (2026-10-24).
+**Status:** phases 1–2 done (2026-10-24).
 
 ## Approach
 
@@ -48,9 +48,12 @@ the judge reads changes, not 150 issues.
    `pages` and `truncated` when paginating. Tests: each paging style against a local server,
    max_pages, malformed settings; a real run against a GitHub-style server (150 issues, 2 pages,
    `state=all` kept).
-2. **Emulator:** next/prev/last links keep the request's query (`state=all`, filters); today
-   `issues.py`, `comments.py`, `pulls.py` and others drop it, so page 2 of `state=all` is page 2
-   of open issues. Deployed on testbox.
+2. **Emulator** (done 2026-10-24, in breadboard's github-emulator checkout: 7b889bc and the
+   internal-host fix after it): next/prev/first/last links keep the request's query and use the
+   public base URL (they had dropped the query, and named the in-cluster host on breadboard).
+   The same round added the org membership API and owners for admin-created orgs, which
+   github-workflow-example's `bootstrap-github` relies on. Checked live: `paginate: true` on
+   `per_page=1&since=...` followed one link and collected both comments of issue #1.
 3. **Fixture and cycle** (github-workflow-example): generated 150-issue fixture with done work;
    reseed posts bot replies as markov-bot; the cycle runs the agent twice; snapshot writes
    `changes.json` and the second run's changes.

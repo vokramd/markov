@@ -106,11 +106,9 @@ func (c maskedCallback) OnWorkflowReloaded(ev callback.WorkflowReloadedEvent) er
 func (c maskedCallback) Close() error { return c.cb.Close() }
 
 // maskEvent is a copy of an event struct with its strings, string lists and maps masked. The
-// maps are new; the run's context they came from is not changed.
+// maps are always new, so a callback that keeps or queues the event never sees the run's
+// context change under it.
 func maskEvent[T any](m *secret.Masker, ev T) T {
-	if m.Empty() {
-		return ev
-	}
 	maskFields(m, reflect.ValueOf(&ev).Elem())
 	return ev
 }
