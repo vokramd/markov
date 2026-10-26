@@ -94,7 +94,7 @@ All events share a common header:
 | `run_completed` | Run succeeds | `workflow_name`, `duration_seconds` |
 | `run_failed` | Run fails | `workflow_name`, `error`, `duration_seconds` |
 | `run_paused` | A gate intentionally pauses the run | `workflow_name`, `step_name`, `fired_rules`, `facts`, `duration_seconds` |
-| `workflow_reloaded` | A [`reload_workflow`](step-types.md#reload_workflow) step replaced the definition | `workflow_name`, `step_name`, `source`, `old_digest`, `new_digest`, `reload` (count in this process), `changes` |
+| `workflow_reloaded` | A [`reload_workflow`](step-types.md#reload_workflow) step, or a [requested reload](debugging.md#reloading-on-request) at a sub-workflow call, replaced the definition | `workflow_name`, `step_name`, `source`, `old_digest`, `new_digest`, `reload` (count in this process), `changes` |
 | `run_resumed` | Run is resumed | `workflow_name`, `completed_steps`, `remaining_steps`, `source_integrity_mode`, `expected_source_digest`, `observed_source_digest`, `source_drifted`, `changed_steps` (completed steps whose definition changed: `run_id`, `workflow`, `step`), `rewound` |
 
 ### Step lifecycle events
@@ -121,6 +121,9 @@ All events share a common header:
 |------|---------|--------|
 | `breakpoints_set` | A `set_breakpoints` command was applied, or the workflow was reloaded (`reason: workflow_reloaded`) | `resolved` (normalized breakpoints), `unresolved` (each with `error`), optional `reason` |
 | `reload_pending` | A `reload_workflow` step waits for `reload` or `reject_reload` | `source`, `current_digest`, `candidate_digest` and `changes` (or `error` when the candidate does not load) |
+| `reload_queued` | A `request_reload` was loaded and waits for the next sub-workflow call | `source`, `candidate_digest`, `entry`, `changes` |
+| `reload_unchanged` | A `request_reload` matched the running definition; nothing is queued | `source`, `candidate_digest`, `entry` |
+| `reload_failed` | A `request_reload` was refused | `source`, `error` |
 | `paused` | A step is held at a breakpoint or in step mode | `reason`, `phase`, `section`, `iteration`, `step_type`, `variables`, optional `output` (after phase), and `hits` or `condition`/`error` |
 | `resumed` | The pause was released | `command` |
 | `logpoint` | A logpoint rendered its message | `message`, `phase`, `section`, `iteration` |

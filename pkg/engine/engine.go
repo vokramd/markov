@@ -63,10 +63,15 @@ type Engine struct {
 	Loader       func(path string) (*parser.WorkflowFile, error)
 	digestMu     sync.Mutex
 	sourceDigest string
-	// rootRunID is the top-level run, which reloads are recorded against.
+	// rootRunID is the top-level run, which reloads are recorded against; entry is its workflow.
 	rootRunID string
+	entry     string
 	reloadMu  sync.Mutex
 	reloads   int
+	// requested is a reload a control-channel client asked for (request_reload), applied at the
+	// next sub-workflow call.
+	requestMu sync.Mutex
+	requested *requestedReload
 	callbacks []callback.Callback
 	debugger  *Debugger
 	// secrets masks secret values in events (and the CLI's log); see secrets.go.
@@ -211,6 +216,7 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 		runID = uuid.New().String()[:8]
 	}
 	e.rootRunID = runID
+	e.entry = workflowName
 	if e.debugger != nil {
 		e.debugger.noteRun(runID)
 	}
@@ -342,6 +348,7 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 	}
 	e.setDigest(run.SourceDigest)
 	e.rootRunID = runID
+	e.entry = run.Entrypoint
 
 	wf := file.GetWorkflow(run.Entrypoint)
 	if wf == nil {
@@ -1197,7 +1204,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 }
 
 func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowName string, step parser.Step, runCtx map[string]any) error {
-	wf, wfFile, err := e.resolveSubWorkflow(step, runCtx)
+	wf, wfFile, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, runCtx)
 	if err != nil {
 		return err
 	}
@@ -1400,7 +1407,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 			itemCtx[step.As] = itemVal
 
 			if step.Workflow != "" {
-				wf, wfFile, err := e.resolveSubWorkflow(step, itemCtx)
+				wf, wfFile, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, itemCtx)
 				if err != nil {
 					errOnce.Do(func() { failed.Store(true); firstErr = err })
 					return
@@ -1605,8 +1612,10 @@ func (e *Engine) eventLogs() []any {
 }
 
 // resolveSubWorkflow looks the called workflow up in the current definition, which is where a
-// reload takes effect; the caller runs the sub-workflow pinned to the returned file.
-func (e *Engine) resolveSubWorkflow(step parser.Step, ctx map[string]any) (*parser.Workflow, *parser.WorkflowFile, error) {
+// reload takes effect (a requested one is applied first); the caller runs the sub-workflow pinned
+// to the returned file. at is the calling step.
+func (e *Engine) resolveSubWorkflow(runCtx context.Context, at stepInfo, step parser.Step, ctx map[string]any) (*parser.Workflow, *parser.WorkflowFile, error) {
+	e.applyRequestedReload(runCtx, at)
 	file := e.current()
 	name := step.Workflow
 	if parser.IsTemplated(name) {

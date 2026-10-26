@@ -64,6 +64,7 @@ One JSON object per line on standard input.
 | `terminate` | | Stop the run. The step is recorded as failed and the run can be continued with `markov resume`. |
 | `reload` | optional `source` | Answer a pending reload: load the step's source, or `source` instead (the IDE sends a fresh snapshot of the project). |
 | `reject_reload` | | Answer a pending reload: keep the current definition. The step completes with `reloaded: false, rejected: true`. |
+| `request_reload` | optional `source` | Replace the definition at the next sub-workflow call, without a `reload_workflow` step: load `source` (the run's own when omitted) now and queue it. Allowed at any time; needs `--allow-reload`. Answered with `reload_queued`, `reload_unchanged` or `reload_failed` (see below). |
 
 Only one pause is active at a time. With concurrent `for_each` iterations, the others wait their turn; a `continue` drops step-mode pauses queued behind it. Use `concurrency: 1` on the step for a deterministic order.
 
@@ -72,6 +73,16 @@ If standard input closes while the run is paused, the run is aborted (failed, re
 ## Reloading the workflow
 
 When a [`reload_workflow`](step-types.md#reload_workflow) step runs with a control channel attached, it holds like a pause and emits `reload_pending` with the candidate's `source`, `current_digest`, `candidate_digest` and `changes` (workflows and steps added, removed and changed), or an `error` if the candidate does not load. Only `reload`, `reject_reload` and `terminate` are accepted until it is answered; other resume commands get an `error` event. `evaluate` is not available (there is no paused context).
+
+### Reloading on request
+
+`request_reload` lets a client (the IDE's Reload Running Workflow) change a running workflow that has no `reload_workflow` step. The candidate is loaded and checked straight away; it must contain the workflow the run started with. The answer is a debug event:
+
+- `reload_queued`: `source`, `candidate_digest`, `entry` (the run's workflow) and `changes`, as in `reload_pending`. The definition is swapped just before the next sub-workflow call looks its workflow up (a `workflow:` step, or a `for_each` iteration of one), with the same rules as a [`reload_workflow`](step-types.md#reload_workflow) step: steps already running keep their definition, sub-workflows called from then on use the new one, so the workflow the run started with keeps its own steps unless it calls itself. The swap is reported as `workflow_reloaded` with the calling step as `step_name`, recorded, and makes the run unresumable.
+- `reload_unchanged`: the candidate is what is running. Any earlier queued request is dropped (an edit undone).
+- `reload_failed`: `error`: the candidate does not load, lacks the run's workflow, or the run was started without `--allow-reload`. Nothing changes.
+
+A later request replaces a queued one, and a `reload_workflow` step's own reload drops it.
 
 After a reload the breakpoints are resolved again against the new definition. Those whose step still exists keep their hit counts; the others are dropped. Both lists are reported in a `breakpoints_set` event with `reason: workflow_reloaded`.
 

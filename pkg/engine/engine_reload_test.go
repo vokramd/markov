@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jctanner/markov/pkg/callback"
 	"github.com/jctanner/markov/pkg/executor"
@@ -446,5 +447,167 @@ workflows:
 	// loop reaches the reload through a templated call's workflow_names.
 	if _, err := eng.Run(context.Background(), "loop", map[string]any{"which": "middle"}); err == nil || !strings.Contains(err.Error(), "--allow-reload") {
 		t.Fatalf("running loop error = %v, want a refusal", err)
+	}
+}
+
+// heldWF is a workflow whose main calls `work`, holds at `hold` (see holdExec), calls `work` again
+// and runs `tail`; it has no reload step, so only a request_reload can change it.
+func heldWF(tag string) string {
+	return fmt.Sprintf(`entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: first
+        workflow: work
+      - name: hold
+        type: shell_exec
+        params:
+          command: %[1]s-hold
+      - name: second
+        workflow: work
+      - name: tail
+        type: shell_exec
+        params:
+          command: %[1]s-tail
+  - name: work
+    steps:
+      - name: do
+        type: shell_exec
+        params:
+          command: %[1]s-work
+`, tag)
+}
+
+// holdExec records commands like countExec and blocks a "-hold" command until released.
+type holdExec struct {
+	countExec
+	held    chan struct{}
+	release chan struct{}
+}
+
+func (h *holdExec) Execute(ctx context.Context, params map[string]any) (*executor.Result, error) {
+	res, err := h.countExec.Execute(ctx, params)
+	if strings.HasSuffix(fmt.Sprint(params["command"]), "-hold") {
+		h.held <- struct{}{}
+		<-h.release
+	}
+	return res, err
+}
+
+// startHeld runs source with a control channel, as the IDE runs every workflow, and waits until
+// main is held between its two calls to work.
+func startHeld(t *testing.T, source string, allowReload bool) (*debugRun, *holdExec) {
+	t.Helper()
+	file, err := parser.ParseFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := &holdExec{held: make(chan struct{}, 1), release: make(chan struct{})}
+	eng, base := newTestEngine(t, file, map[string]executor.Executor{"shell_exec": exec})
+	eng.SourcePath = source
+	eng.AllowReload = allowReload
+	cb := &watchCB{mockCallback: base, debug: make(chan callback.DebugEvent, 100)}
+	eng.SetCallbacks([]callback.Callback{cb})
+	d := NewDebugger(file)
+	eng.SetDebugger(d)
+	r := &debugRun{t: t, eng: eng, d: d, cb: cb, done: make(chan error, 1)}
+	go func() {
+		id, err := eng.Run(context.Background(), "", nil)
+		r.id = id
+		r.done <- err
+	}()
+	select {
+	case <-exec.held:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the run never reached hold")
+	}
+	return r, exec
+}
+
+func TestRequestedReloadAppliesAtTheNextSubWorkflowCall(t *testing.T) {
+	v1 := writeWF(t, "v1", heldWF("v1"))
+	v2 := writeWF(t, "v2", heldWF("v2")+extraStep)
+	r, exec := startHeld(t, v1, true)
+
+	r.send(fmt.Sprintf(`{"cmd":"request_reload","source":%q}`, v2))
+	queued := r.next("reload_queued")
+	changed := fmt.Sprint(queued.Data["changes"])
+	if queued.Data["source"] != v2 || queued.Data["entry"] != "main" || !strings.Contains(changed, "extra") {
+		t.Fatalf("reload_queued = %#v", queued.Data)
+	}
+	if len(reloadedEvents(r.cb.mockCallback)) != 0 {
+		t.Fatal("a request must wait for the next sub-workflow call")
+	}
+	close(exec.release)
+	if err := r.finish(); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	// main keeps its own (v1) steps; the call after the request runs v2's work.
+	if got := fmt.Sprint(exec.Commands()); got != "[v1-work v1-hold v2-work v2-extra v1-tail]" {
+		t.Fatalf("commands = %s", got)
+	}
+	events := reloadedEvents(r.cb.mockCallback)
+	if len(events) != 1 || events[0].StepName != "second" || events[0].Source != v2 || events[0].Reload != 1 {
+		t.Fatalf("workflow_reloaded = %#v, want one, at the call step", events)
+	}
+	if reloads, err := r.eng.store.GetReloads(context.Background(), r.id); err != nil || len(reloads) != 1 {
+		t.Fatalf("recorded reloads = %#v, %v (a requested reload also makes the run unresumable)", reloads, err)
+	}
+}
+
+func TestRequestedReloadThatChangesNothingIsDropped(t *testing.T) {
+	v1 := writeWF(t, "v1", heldWF("v1"))
+	again := writeWF(t, "again", heldWF("v1"))
+	v2 := writeWF(t, "v2", heldWF("v2"))
+	r, exec := startHeld(t, v1, true)
+
+	r.send(fmt.Sprintf(`{"cmd":"request_reload","source":%q}`, again))
+	r.next("reload_unchanged")
+	// A change, then undone: the second request drops the first.
+	r.send(fmt.Sprintf(`{"cmd":"request_reload","source":%q}`, v2))
+	r.next("reload_queued")
+	r.send(fmt.Sprintf(`{"cmd":"request_reload","source":%q}`, again))
+	r.next("reload_unchanged")
+	close(exec.release)
+	if err := r.finish(); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := fmt.Sprint(exec.Commands()); got != "[v1-work v1-hold v1-work v1-tail]" {
+		t.Fatalf("commands = %s, want v1 throughout", got)
+	}
+	if n := len(reloadedEvents(r.cb.mockCallback)); n != 0 {
+		t.Fatalf("%d workflow_reloaded events, want none", n)
+	}
+}
+
+func TestRequestedReloadIsRefusedWhenItCannotApply(t *testing.T) {
+	v1 := writeWF(t, "v1", heldWF("v1"))
+	broken := writeWF(t, "broken", "entrypoint: main\nworkflows: [\n")
+	noEntry := writeWF(t, "noentry", strings.NewReplacer("entrypoint: main", "entrypoint: other", "name: main", "name: other").Replace(heldWF("v2")))
+	r, exec := startHeld(t, v1, true)
+
+	for _, c := range []struct{ source, want string }{{broken, "parsing"}, {noEntry, `no workflow "main"`}} {
+		r.send(fmt.Sprintf(`{"cmd":"request_reload","source":%q}`, c.source))
+		if e := r.next("reload_failed"); !strings.Contains(fmt.Sprint(e.Data["error"]), c.want) {
+			t.Fatalf("reload_failed = %#v, want %q", e.Data, c.want)
+		}
+	}
+	close(exec.release)
+	if err := r.finish(); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := fmt.Sprint(exec.Commands()); got != "[v1-work v1-hold v1-work v1-tail]" {
+		t.Fatalf("commands = %s, want v1 throughout", got)
+	}
+
+	// A run started without --allow-reload refuses before loading anything.
+	r, exec = startHeld(t, v1, false)
+	r.send(`{"cmd":"request_reload"}`)
+	if e := r.next("reload_failed"); !strings.Contains(fmt.Sprint(e.Data["error"]), "--allow-reload") {
+		t.Fatalf("reload_failed = %#v", e.Data)
+	}
+	close(exec.release)
+	if err := r.finish(); err != nil {
+		t.Fatalf("Run: %v", err)
 	}
 }

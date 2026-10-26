@@ -200,9 +200,26 @@ func (r *reloadExecutor) Execute(ctx context.Context, params map[string]any) (*e
 		}
 	}
 
+	n, changes := e.swapDefinition(ctx, info, src, file, digest)
+	out["reloaded"] = true
+	out["new_digest"] = digest
+	out["reload"] = n
+	out["changes"] = changes
+	return &executor.Result{Output: out}, nil
+}
+
+// swapDefinition makes file (loaded from src) the current definition, records the reload against
+// the run and reports it. info is the step where it took effect. The caller holds reloadMu.
+func (e *Engine) swapDefinition(ctx context.Context, info stepInfo, src string, file *parser.WorkflowFile, digest string) (int, map[string]any) {
+	old := e.current()
+	oldDigest := e.digest()
 	changes := diffFiles(old, file)
 	e.file.Store(file)
 	e.setDigest(digest)
+	// A request queued before this (a reload_workflow step's) swap is older than it.
+	e.requestMu.Lock()
+	e.requested = nil
+	e.requestMu.Unlock()
 	e.reloads++
 	n := e.reloads
 	now := time.Now()
@@ -229,12 +246,73 @@ func (r *reloadExecutor) Execute(ctx context.Context, params map[string]any) (*e
 	if e.debugger != nil {
 		e.debugger.rebind(file)
 	}
+	return n, changes
+}
 
-	out["reloaded"] = true
-	out["new_digest"] = digest
-	out["reload"] = n
-	out["changes"] = changes
-	return &executor.Result{Output: out}, nil
+// requestedReload is a definition a control-channel client asked for while the run was going
+// (request_reload): loaded and checked when asked for, and swapped in at the next sub-workflow
+// call, as a reload_workflow step's would be.
+type requestedReload struct {
+	source string
+	file   *parser.WorkflowFile
+	digest string
+}
+
+// requestReload loads source (the run's own when empty), checks it and queues it in place of any
+// earlier request. It returns the debug event that answers the request: reload_queued with the
+// changes, reload_unchanged when it matches the current definition, or reload_failed.
+func (e *Engine) requestReload(source string) (string, map[string]any) {
+	if source == "" {
+		source = e.SourcePath
+	}
+	data := map[string]any{"source": source}
+	fail := func(msg string) (string, map[string]any) {
+		data["error"] = msg
+		return "reload_failed", data
+	}
+	if !e.AllowReload {
+		return fail("the run was started without --allow-reload, so its definition cannot be replaced")
+	}
+	if source == "" {
+		return fail("no source given and the run has no source path")
+	}
+	file, digest, err := e.loadSource(source)
+	if err != nil {
+		return fail(err.Error())
+	}
+	if e.entry != "" && file.GetWorkflow(e.entry) == nil {
+		return fail(fmt.Sprintf("the new definition has no workflow %q, which the run started with", e.entry))
+	}
+	data["candidate_digest"] = digest
+	data["entry"] = e.entry
+	e.requestMu.Lock()
+	defer e.requestMu.Unlock()
+	if digest == e.digest() {
+		// Back to what is running (an edit undone): drop any earlier request too.
+		e.requested = nil
+		return "reload_unchanged", data
+	}
+	e.requested = &requestedReload{source: source, file: file, digest: digest}
+	data["changes"] = diffFiles(e.current(), file)
+	return "reload_queued", data
+}
+
+// applyRequestedReload swaps in a requested definition, if there is one, before the sub-workflow
+// call at `at` looks its workflow up.
+func (e *Engine) applyRequestedReload(ctx context.Context, at stepInfo) {
+	e.requestMu.Lock()
+	req := e.requested
+	e.requested = nil
+	e.requestMu.Unlock()
+	if req == nil {
+		return
+	}
+	e.reloadMu.Lock()
+	defer e.reloadMu.Unlock()
+	if req.digest == e.digest() {
+		return
+	}
+	e.swapDefinition(ctx, at, req.source, req.file, req.digest)
 }
 
 func stringList(v any) ([]string, error) {

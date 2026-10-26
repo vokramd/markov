@@ -108,3 +108,12 @@ Plan 004 phase 2 done: the `sdk` transport (Go SDK pinned to the v0.1.5 commit; 
 1.25.13). TestE2E runs identical checks on both transports. Found that OpenShell 0.1.5's exec
 timeout and a killed one-shot exec both leave the command running; both transports now stop
 commands by ending a streaming exec. Phase 3 (IDE) is next.
+
+## 2026-10-26 — Reloads on request
+
+The debugger's `request_reload` command (docs/reference/debugging.md#reloading-on-request) lets a
+client reload a running workflow that has no `reload_workflow` step: the candidate is loaded and
+checked at once (it must keep the run's workflow) and answered with `reload_queued`,
+`reload_unchanged` or `reload_failed`; it is swapped in just before the next sub-workflow call,
+through the same swap, record and `workflow_reloaded` event as the step (`swapDefinition`). The
+IDE's Run → Reload Running Workflow uses it.

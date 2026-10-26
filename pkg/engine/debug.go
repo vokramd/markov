@@ -67,7 +67,8 @@ type DebugCommand struct {
 	Iteration   string       `json:"iteration,omitempty"`
 	ID          string       `json:"id,omitempty"`
 	Expression  string       `json:"expression,omitempty"`
-	// Source is the workflow source a `reload` command loads instead of the step's own.
+	// Source is the workflow source a `reload` command loads instead of the step's own, or the one
+	// a `request_reload` queues (the run's own when empty).
 	Source string `json:"source,omitempty"`
 }
 
@@ -650,6 +651,16 @@ func (d *Debugger) Handle(line string) {
 			}
 		}
 		d.dispatch(cmd)
+	case "request_reload":
+		d.mu.Lock()
+		e := d.engine
+		d.mu.Unlock()
+		if e == nil {
+			d.emit("", "", "", "error", map[string]any{"error": "no run to reload", "command": cmd.Cmd})
+			return
+		}
+		kind, data := e.requestReload(cmd.Source)
+		d.emit("", "", "", kind, data)
 	case "evaluate":
 		d.evaluate(cmd)
 	default:

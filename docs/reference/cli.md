@@ -49,7 +49,7 @@ markov run <file.yaml|directory> [flags]
 | `--breakpoints-file path` | string | -- | JSON file with an array of breakpoint objects. |
 | `--break workflow.step` | string (repeatable) | -- | Breakpoint shorthand, resolved against the real workflow and step names. |
 | `--step` | bool | `false` | Pause before every step. |
-| `--allow-reload` | bool | `false` | Let [`reload_workflow`](step-types.md#reload_workflow) steps replace the workflow definition while it runs. A run that can reach such a step (through sub-workflow calls) does not start without it. A run that reloads cannot be resumed. |
+| `--allow-reload` | bool | `false` | Let [`reload_workflow`](step-types.md#reload_workflow) steps replace the workflow definition while it runs, and the debugger's [`request_reload`](debugging.md#reloading-on-request) command too. A run that can reach such a step (through sub-workflow calls) does not start without it. A run that reloads cannot be resumed. |
 
 **Examples:**
 
