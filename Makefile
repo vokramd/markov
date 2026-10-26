@@ -7,12 +7,17 @@ IMAGE   ?= ghcr.io/jctanner/markov
 TAG     ?= latest
 GOFLAGS ?=
 
-.PHONY: all build clean test lint fmt vet docker-build
+.PHONY: all build build-static clean test lint fmt vet docker-build
 
 all: build
 
 build:
 	go build $(GOFLAGS) -o $(BINDIR)/$(BINARY) $(CMDDIR)
+
+# A statically linked build, for containers and sandboxes whose C library differs from the host's
+# (an agent in an OpenShell sandbox running `markov validate`).
+build-static:
+	CGO_ENABLED=0 go build $(GOFLAGS) -o $(BINDIR)/static/$(BINARY) $(CMDDIR)
 
 clean:
 	rm -rf $(BINDIR)

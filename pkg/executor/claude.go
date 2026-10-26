@@ -185,11 +185,14 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 	output["prompt_chars"] = utf8.RuneCountInString(prompt)
 	res := &Result{Output: output}
 
-	// Why it failed, beyond the limit or exit status: the API never answering, and in a sandbox,
-	// the connections its policy denied or that failed.
+	// Why it failed, beyond the limit or exit status: the API never answering, a tool call still
+	// running, and in a sandbox, the connections its policy denied or that failed.
 	var why []string
 	if u := s.unreachable(); u != "" {
 		why = append(why, u)
+	}
+	if r := s.stillRunning(); r != "" {
+		why = append(why, r)
 	}
 	failed := breach != "" || ctx.Err() != nil || s.result == nil || s.resultIsError() || waitErr != nil
 	if sandbox != "" && failed {
@@ -488,9 +491,13 @@ type claudeStream struct {
 	truncated  bool
 	result     map[string]any
 	breach     string
-	// retries counts the CLI's api_retry events; lastRetry is the most recent one.
-	retries   int
-	lastRetry map[string]any
+	// retries counts the CLI's api_retry events; lastRetry is the most recent one, and
+	// answeredSinceRetry is whether an assistant message arrived after it.
+	retries            int
+	lastRetry          map[string]any
+	answeredSinceRetry bool
+	// openTools are the tool calls without a result yet, in the order they were made.
+	openTools []map[string]any
 }
 
 func (s *claudeStream) consume(r io.Reader) {
@@ -527,6 +534,7 @@ func (s *claudeStream) handle(ev map[string]any) {
 				"attempt": ev["attempt"], "max_retries": ev["max_retries"], "retry_delay_ms": ev["retry_delay_ms"],
 				"error": ev["error"], "error_status": ev["error_status"],
 			}
+			s.answeredSinceRetry = false
 			s.emit("api_retry", s.lastRetry, true)
 		}
 	case "assistant":
@@ -553,6 +561,7 @@ func (s *claudeStream) handleAssistant(ev map[string]any) {
 	if msg == nil {
 		return
 	}
+	s.answeredSinceRetry = true
 	id, _ := msg["id"].(string)
 	if id != "" {
 		// Sub-agent messages (parent_tool_use_id set) spend tokens but are not
@@ -576,6 +585,7 @@ func (s *claudeStream) handleAssistant(ev map[string]any) {
 		case "text":
 			s.emit("text", map[string]any{"text": block["text"]}, true)
 		case "tool_use":
+			s.openTools = append(s.openTools, map[string]any{"id": block["id"], "name": block["name"], "input": block["input"]})
 			s.emit("tool_use", map[string]any{"id": block["id"], "name": block["name"], "input": block["input"]}, true)
 		}
 	}
@@ -597,6 +607,12 @@ func (s *claudeStream) handleUser(ev map[string]any) {
 		block, _ := b.(map[string]any)
 		if block["type"] != "tool_result" {
 			continue
+		}
+		for i, t := range s.openTools {
+			if t["id"] == block["tool_use_id"] {
+				s.openTools = append(s.openTools[:i], s.openTools[i+1:]...)
+				break
+			}
 		}
 		s.emit("tool_result", map[string]any{
 			"tool_use_id": block["tool_use_id"],
@@ -696,9 +712,10 @@ func (s *claudeStream) output(exitCode int, stderr, breach string) map[string]an
 	return out
 }
 
-// unreachable explains a run that ended while the CLI was still retrying the API, or "".
+// unreachable explains a run that ended while the CLI was still retrying the API, or "". A retry
+// the API later answered does not count: the run went on after it.
 func (s *claudeStream) unreachable() string {
-	if s.retries == 0 || s.result != nil {
+	if s.retries == 0 || s.result != nil || s.answeredSinceRetry {
 		return ""
 	}
 	status := ""
@@ -706,6 +723,33 @@ func (s *claudeStream) unreachable() string {
 		status = fmt.Sprintf(", status %v", st)
 	}
 	return fmt.Sprintf("the API never answered: %d retries, last error %v%s", s.retries, s.lastRetry["error"], status)
+}
+
+// stillRunning names the tool calls a run that ended without a result was waiting on, or "":
+// a limit hit while a command ran is the command's doing, not the model's or the API's.
+func (s *claudeStream) stillRunning() string {
+	if s.result != nil || len(s.openTools) == 0 {
+		return ""
+	}
+	var calls []string
+	for _, t := range s.openTools {
+		call := fmt.Sprint(t["name"])
+		if in, ok := t["input"].(map[string]any); ok {
+			for _, k := range []string{"command", "url", "file_path", "pattern", "description"} {
+				if v, ok := in[k].(string); ok && v != "" {
+					if r := []rune(strings.Join(strings.Fields(v), " ")); len(r) > 120 {
+						v = string(r[:120]) + "…"
+					} else {
+						v = string(r)
+					}
+					call += " `" + v + "`"
+					break
+				}
+			}
+		}
+		calls = append(calls, call)
+	}
+	return "still waiting on a tool call: " + strings.Join(calls, ", ")
 }
 
 func claudeToolResultText(v any) string {

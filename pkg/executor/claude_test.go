@@ -246,6 +246,30 @@ func TestClaudeEnforcesMaxDuration(t *testing.T) {
 	}
 }
 
+func TestClaudeBlamesAHitLimitOnTheToolCallStillRunning(t *testing.T) {
+	// The API was slow once (a retry) and then answered; the run then hung in a Bash call.
+	bashCall := map[string]any{"type": "tool_use", "id": "tu-2", "name": "Bash", "input": map[string]any{"command": "timeout 180 npm install --cache /tmp/npmcache js-yaml@4", "description": "Install js-yaml"}}
+	bin, _ := fakeClaude(t, fakeClaudeOpts{events: []map[string]any{
+		initEvent(),
+		retryEvent(1),
+		assistantEvent("m1", []any{map[string]any{"type": "tool_use", "id": "tu-1", "name": "Read", "input": map[string]any{"file_path": "/w/a"}}}, usage(1, 1, 0, 0)),
+		{"type": "user", "message": map[string]any{"content": []any{map[string]any{"type": "tool_result", "tool_use_id": "tu-1", "content": "ok"}}}},
+		assistantEvent("m2", []any{bashCall}, usage(1, 1, 0, 0)),
+	}, hang: true})
+	_, err := NewClaude().Execute(context.Background(), map[string]any{
+		"binary": bin, "prompt": "p", "limits": map[string]any{"max_duration": 1},
+	})
+	if err == nil {
+		t.Fatal("the run succeeded")
+	}
+	if !strings.Contains(err.Error(), "still waiting on a tool call: Bash `timeout 180 npm install --cache /tmp/npmcache js-yaml@4`") {
+		t.Errorf("error does not name the running call:\n%v", err)
+	}
+	if strings.Contains(err.Error(), "never answered") || strings.Contains(err.Error(), "Read") {
+		t.Errorf("error blames the API or a finished call:\n%v", err)
+	}
+}
+
 func TestClaudeErrorResultFailsStep(t *testing.T) {
 	bin, _ := fakeClaude(t, fakeClaudeOpts{events: []map[string]any{initEvent(), resultEvent("boom", true, 1)}, exit: 1})
 	res, err := NewClaude().Execute(context.Background(), map[string]any{"binary": bin, "prompt": "p"})
