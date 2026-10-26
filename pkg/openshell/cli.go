@@ -121,6 +121,13 @@ func (c *CLI) Create(ctx context.Context, req CreateRequest) (*Sandbox, error) {
 	}
 	out, err := c.run(ctx, args...)
 	if err != nil {
+		// A sandbox that failed to provision (a health check, an invalid policy) stays behind in
+		// the Error phase under the requested name, and the step registers no name for an always
+		// handler to delete, so delete it here, as the SDK transport does. A sandbox that was never
+		// created makes the delete fail with "not found", which is ignored.
+		delCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		_ = c.Delete(delCtx, []string{req.Name})
 		return nil, err
 	}
 	var sb struct {

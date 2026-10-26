@@ -297,7 +297,7 @@ func (e *Engine) Run(ctx context.Context, workflowName string, vars map[string]a
 			})
 		})
 	}
-	e.store.UpdateRun(ctx, run)
+	e.store.UpdateRun(context.WithoutCancel(ctx), run)
 
 	return runID, err
 }
@@ -483,7 +483,7 @@ func (e *Engine) ResumeWithVars(ctx context.Context, runID string, vars map[stri
 			})
 		})
 	}
-	e.store.UpdateRun(ctx, run)
+	e.store.UpdateRun(context.WithoutCancel(ctx), run)
 
 	return err
 }
@@ -552,13 +552,44 @@ func (e *Engine) executeWorkflow(ctx context.Context, runID string, wf *parser.W
 		return mainErr
 	}
 
+	// Cleanup must still run when the run was cancelled (Ctrl-C, a stop from the IDE): rescue
+	// and always steps get a context that the run's cancellation does not end at once.
+	termCtx, stop := terminalContext(ctx, terminalStepGrace)
+	defer stop()
 	var errs []error
 	if mainErr != nil {
 		errs = append(errs, mainErr)
-		errs = append(errs, e.executeTerminalSteps(ctx, runID, wf, "rescue", wf.Rescue, runCtx)...)
+		errs = append(errs, e.executeTerminalSteps(termCtx, runID, wf, "rescue", wf.Rescue, runCtx)...)
 	}
-	errs = append(errs, e.executeTerminalSteps(ctx, runID, wf, "always", wf.Always, runCtx)...)
+	errs = append(errs, e.executeTerminalSteps(termCtx, runID, wf, "always", wf.Always, runCtx)...)
 	return errors.Join(errs...)
+}
+
+// terminalStepGrace is how long a workflow's rescue and always steps may keep running after the
+// run is cancelled.
+const terminalStepGrace = 2 * time.Minute
+
+// terminalContext returns a context for rescue and always steps. It keeps ctx's values but not
+// its cancellation: once ctx is done, whether before the handlers start or while they run, the
+// handlers get grace more before their context is cancelled too. stop releases it.
+func terminalContext(ctx context.Context, grace time.Duration) (context.Context, context.CancelFunc) {
+	termCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	var mu sync.Mutex
+	var timer *time.Timer
+	stopAfter := context.AfterFunc(ctx, func() {
+		mu.Lock()
+		defer mu.Unlock()
+		timer = time.AfterFunc(grace, cancel)
+	})
+	return termCtx, func() {
+		stopAfter()
+		mu.Lock()
+		if timer != nil {
+			timer.Stop()
+		}
+		mu.Unlock()
+		cancel()
+	}
 }
 
 func (e *Engine) executeSteps(ctx context.Context, runID string, wf *parser.Workflow, runCtx map[string]any) error {
@@ -1213,7 +1244,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 	if paused, ok := pauseError(err); ok {
 		subRun.Status = state.RunPaused
 		subRun.CompletedAt = nil
-		e.store.UpdateRun(ctx, subRun)
+		e.store.UpdateRun(context.WithoutCancel(ctx), subRun)
 		e.fireEvent(func(cb callback.Callback) error {
 			return cb.OnRunPaused(callback.RunPausedEvent{
 				EventHeader:  callback.EventHeader{Timestamp: subNow, RunID: subRunID, EventType: "run_paused"},
@@ -1228,7 +1259,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 	} else if err != nil {
 		subRun.CompletedAt = &subNow
 		subRun.Status = state.RunFailed
-		e.store.UpdateRun(ctx, subRun)
+		e.store.UpdateRun(context.WithoutCancel(ctx), subRun)
 		e.fireEvent(func(cb callback.Callback) error {
 			return cb.OnSubRunFailed(callback.SubRunFailedEvent{
 				EventHeader:  callback.EventHeader{Timestamp: subNow, RunID: subRunID, EventType: "sub_run_failed"},
@@ -1250,7 +1281,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 	}
 	subRun.CompletedAt = &subNow
 	subRun.Status = state.RunCompleted
-	e.store.UpdateRun(ctx, subRun)
+	e.store.UpdateRun(context.WithoutCancel(ctx), subRun)
 
 	e.fireEvent(func(cb callback.Callback) error {
 		return cb.OnSubRunCompleted(callback.SubRunCompletedEvent{
@@ -1468,7 +1499,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 						})
 					})
 				}
-				e.store.UpdateRun(ctx, subRun)
+				e.store.UpdateRun(context.WithoutCancel(ctx), subRun)
 
 				mu.Lock()
 				slots[idx] = e.childResult(ctx, subVars)

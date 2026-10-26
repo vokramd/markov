@@ -64,6 +64,7 @@
 
 ## Fixed Bugs
 
+- [A cancelled run's rescue and always steps fail at once](bugs/fixed/cancelled-run-skips-cleanup.md)
 - [set_fact facts see siblings in random order](bugs/fixed/set-fact-sibling-order.md)
 - [JSON integers from http_request render as floats](bugs/fixed/json-integers-render-as-floats.md)
 - [Direct for_each with register drops each iteration's output](bugs/fixed/direct-foreach-register-drops-output.md)

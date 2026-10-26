@@ -61,6 +61,30 @@ func TestCLICreatePassesFlagsAndReadsJSON(t *testing.T) {
 	}
 }
 
+func TestCLICreateDeletesASandboxThatFailedToProvision(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "calls")
+	script := `#!/bin/sh
+echo "$*" >> "` + log + `"
+case "$*" in
+  *"sandbox create"*) echo 'Error: sandbox entered error phase while provisioning: HealthCheckFailed' >&2; exit 1 ;;
+esac
+exit 0
+`
+	bin := filepath.Join(dir, "openshell")
+	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := NewCLI(Config{Binary: bin}).Create(context.Background(), CreateRequest{Name: "sb1"})
+	if err == nil {
+		t.Fatal("Create succeeded")
+	}
+	got := calls(t, log)
+	if len(got) != 2 || got[1] != "sandbox delete sb1" {
+		t.Errorf("calls = %q, want the create followed by \"sandbox delete sb1\"", got)
+	}
+}
+
 func TestCLIExecReturnsExitCodeAndStreams(t *testing.T) {
 	c, log := fakeCLI(t)
 	var out, errOut bytes.Buffer

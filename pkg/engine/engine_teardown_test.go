@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jctanner/markov/pkg/executor"
 	"github.com/jctanner/markov/pkg/parser"
@@ -119,6 +120,74 @@ func TestWorkflowTeardownRerunsAfterResumedFailure(t *testing.T) {
 	}
 	if got, want := strings.Join(exec.calls, ","), "main,always,main,always"; got != want {
 		t.Fatalf("calls = %q, want %q", got, want)
+	}
+}
+
+// stopExecutor cancels the run from its "main" step, as a Ctrl-C or the IDE's stop does mid-step,
+// and records whether each later step's context was already done when it started.
+type stopExecutor struct {
+	stop  context.CancelFunc
+	calls []string
+}
+
+func (e *stopExecutor) Execute(ctx context.Context, params map[string]any) (*executor.Result, error) {
+	label, _ := params["label"].(string)
+	if label == "main" {
+		e.stop()
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	e.calls = append(e.calls, fmt.Sprintf("%s:%v", label, ctx.Err()))
+	return &executor.Result{Output: map[string]any{"label": label}}, nil
+}
+
+func TestCancelledRunStillRunsRescueAndAlways(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	exec := &stopExecutor{stop: cancel}
+	wfFile := teardownWorkflow(
+		[]parser.Step{{Name: "main", Type: "test", Params: map[string]any{"label": "main"}}},
+		[]parser.Step{{Name: "report", Type: "test", Params: map[string]any{"label": "rescue"}}},
+		[]parser.Step{{Name: "delete-sandbox", Type: "test", Params: map[string]any{"label": "always"}}},
+	)
+	eng, _ := newTestEngine(t, wfFile, map[string]executor.Executor{"test": exec})
+
+	runID, err := eng.Run(ctx, "", nil)
+	if err == nil || !strings.Contains(err.Error(), "context canceled") {
+		t.Fatalf("Run() error = %v, want the cancellation", err)
+	}
+	if got, want := strings.Join(exec.calls, ","), "rescue:<nil>,always:<nil>"; got != want {
+		t.Fatalf("teardown calls = %q, want %q (handlers run on a live context)", got, want)
+	}
+	for _, stateName := range []string{"rescue/report", "always/delete-sandbox"} {
+		step, err := eng.store.GetStep(context.Background(), runID, "main", stateName)
+		if err != nil || step == nil || step.Status != state.StepCompleted {
+			t.Fatalf("step %q = %#v, %v; want completed", stateName, step, err)
+		}
+	}
+	run, err := eng.store.GetRun(context.Background(), runID)
+	if err != nil || run.Status != state.RunFailed {
+		t.Fatalf("run = %#v, %v; want its failure saved despite the cancellation", run, err)
+	}
+}
+
+func TestTerminalContextOutlivesCancellationByTheGrace(t *testing.T) {
+	type key struct{}
+	parent, cancel := context.WithCancel(context.WithValue(context.Background(), key{}, "v"))
+	termCtx, stop := terminalContext(parent, 50*time.Millisecond)
+	defer stop()
+
+	cancel()
+	if err := termCtx.Err(); err != nil {
+		t.Fatalf("terminal context done at once: %v", err)
+	}
+	if termCtx.Value(key{}) != "v" {
+		t.Error("terminal context lost the run's values")
+	}
+	select {
+	case <-termCtx.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("terminal context still live long after the grace")
 	}
 }
 

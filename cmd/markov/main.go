@@ -328,8 +328,9 @@ func runWorkflow(cmd *cobra.Command, args []string) error {
 	}
 
 	// Stop (SIGTERM, Ctrl-C) cancels the run: steps stop their own processes (a claude step's
-	// whole process group) and the run is saved as failed, so it can be resumed.
-	ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	// whole process group), rescue and always steps still run, and the run is saved as failed, so
+	// it can be resumed. A second signal ends the process at once.
+	ctx, stopSignals := cancelOnSignal()
 	defer stopSignals()
 	dbg, err := buildDebugger(wfFile)
 	if err != nil {
@@ -459,8 +460,9 @@ func resumeWorkflow(cmd *cobra.Command, args []string) error {
 	defer store.Close()
 
 	// Stop (SIGTERM, Ctrl-C) cancels the run: steps stop their own processes (a claude step's
-	// whole process group) and the run is saved as failed, so it can be resumed.
-	ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	// whole process group), rescue and always steps still run, and the run is saved as failed, so
+	// it can be resumed. A second signal ends the process at once.
+	ctx, stopSignals := cancelOnSignal()
 	defer stopSignals()
 	run, err := store.GetRun(ctx, args[0])
 	if err != nil {
@@ -878,4 +880,15 @@ func getK8sClient() (kubernetes.Interface, *rest.Config, error) {
 		return nil, nil, err
 	}
 	return client, restConfig, nil
+}
+
+// cancelOnSignal returns a context cancelled by the first SIGINT or SIGTERM. Signals are then
+// handled as usual again, so a second one ends the process without waiting for cleanup.
+func cancelOnSignal() (context.Context, context.CancelFunc) {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
+	return ctx, stop
 }

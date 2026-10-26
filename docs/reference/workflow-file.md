@@ -192,6 +192,8 @@ Markov executes lifecycle sections as follows:
 
 Markov continues through the remaining handlers when a rescue or always step fails, so cleanup steps later in the list still get a chance to run. A failure in `always` after otherwise successful normal steps fails the run; it does not invoke `rescue`.
 
+A cancelled run (Ctrl-C, SIGTERM, a stop from the IDE) fails the step it was in and still runs its `rescue` and `always` steps. They run on a context the cancellation does not end at once: from the moment the run is cancelled, whether before the handlers start or while they run, they have two more minutes, after which their context is cancelled too. The run's final status is saved either way. A second signal, or SIGKILL, ends the process without them.
+
 A durable `pause` is nonterminal, so neither section runs while the workflow waits for `markov resume`. This preserves resources such as approval locks that must remain in place until the run has actually succeeded or failed.
 Lifecycle handlers themselves must finish: a handler that requests a `pause` causes the run to fail rather than suspending teardown.
 
