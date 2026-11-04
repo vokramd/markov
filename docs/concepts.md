@@ -19,16 +19,23 @@ Every step has a `type` that determines what it does. Markov provides these prim
 |------|---------|
 | `shell_exec` | Run a shell command |
 | `script_exec` | Run an inline or repository script through an interpreter |
+| `write_file` | Write content to a file on the runner |
 | `claude` | Run Claude Code with a prompt or skill and enforced limits |
 | `ansible_playbook` | Run `ansible-playbook` |
 | `ansible` | Run an ad-hoc Ansible module |
 | `prompt` | Read local interactive terminal input |
 | `k8s_job` | Create and run a Kubernetes Job |
+| `k8s_job_wait` | Wait for an existing Kubernetes Job |
 | `http_request` | Make an HTTP request |
+| `jev` | Ask a Jev decision service structured questions |
 | `gate` | Evaluate rules and control flow |
 | `set_fact` | Compute and store variables |
 | `load_artifact` | Load files into the context |
 | `assert` | Validate conditions or fail |
+| `reload_workflow` | Replace the running workflow definition (needs `--allow-reload`) |
+| `codify` | Run one iteration of codification on a workflow |
+| `openshell_build`, `openshell_create`, `openshell_upload`, `openshell_exec`, `openshell_download`, `openshell_delete`, `openshell_provider` | Build images for and run work in OpenShell sandboxes |
+| `llm_invoke` | Reserved; parses but has no executor yet |
 
 You can also define custom step types (`step_types`) that wrap a primitive with preset defaults.
 

@@ -99,7 +99,15 @@ func TestParametersAreDocumentedAndStepFieldsExist(t *testing.T) {
 		}
 		doc, ok := sections[st.Name]
 		if !ok {
-			continue // llm_invoke and jev are described in other sections
+			t.Errorf("%s: no \"## %s\" section in docs/reference/step-types.md", st.Name, st.Name)
+			continue
+		}
+		if st.Name != "llm_invoke" { // reserved: no executor, so no behavior to document
+			for _, h := range []string{"\n### Failure Conditions", "\n### Example"} {
+				if !strings.Contains(doc, h) {
+					t.Errorf("%s: its section has no %q heading", st.Name, strings.TrimSpace(h))
+				}
+			}
 		}
 		documented := map[string]bool{}
 		for _, m := range tick.FindAllStringSubmatch(doc, -1) {
@@ -114,6 +122,91 @@ func TestParametersAreDocumentedAndStepFieldsExist(t *testing.T) {
 		for _, pr := range st.Params {
 			if pr.Required && !strings.Contains(doc, "`"+pr.Name+"`") {
 				t.Errorf("%s: required parameter %q is not documented", st.Name, pr.Name)
+			}
+		}
+	}
+}
+
+// executorFiles maps each source file that reads step params to the step types it implements.
+// A new executor file must be added here, or the code-vs-schema test fails.
+var executorFiles = map[string][]string{
+	"../executor/shell_exec.go":   {"shell_exec"},
+	"../executor/script_exec.go":  {"script_exec"},
+	"../executor/write_file.go":   {"write_file"},
+	"../executor/claude.go":       {"claude"},
+	"../executor/ansible.go":      {"ansible", "ansible_playbook"},
+	"../executor/http_request.go": {"http_request"},
+	"../executor/k8s_job.go":      {"k8s_job", "k8s_job_wait"},
+	"../executor/openshell.go":    {"openshell_build", "openshell_create", "openshell_upload", "openshell_exec", "openshell_download", "openshell_delete", "openshell_provider"},
+	"../executor/prompt.go":       {"prompt"},
+	"../executor/jev.go":          {"jev"},
+	"../engine/codify_step.go":    {"codify"},
+	"../engine/reload.go":         {"reload_workflow"},
+	"../engine/engine.go":         {"k8s_job"},
+}
+
+// Every parameter an executor reads (params["x"], or a helper called as f(params, "x")) is in the
+// schema for one of the types that file implements. Names starting with _ are set by the engine.
+// This catches the schema falling behind the code; the docs test above catches the docs falling
+// behind the schema.
+func TestParametersReadByExecutorsAreInTheSchema(t *testing.T) {
+	read := regexp.MustCompile(`(?:params\["([a-z_]+)"\]|[A-Za-z]+\(params, *"([a-z_]+)")`)
+	byType := map[string]map[string]bool{}
+	for _, st := range Build().StepTypes {
+		byType[st.Name] = map[string]bool{}
+		for _, pr := range st.Params {
+			byType[st.Name][pr.Name] = true
+		}
+	}
+	for file, types := range executorFiles {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Errorf("%s: %v", file, err)
+			continue
+		}
+		for _, m := range read.FindAllStringSubmatch(string(src), -1) {
+			name := m[1] + m[2]
+			if strings.HasPrefix(name, "_") {
+				continue
+			}
+			found := false
+			for _, ty := range types {
+				found = found || byType[ty][name]
+			}
+			if !found {
+				t.Errorf("%s reads param %q, which the schema does not list for %v", file, name, types)
+			}
+		}
+	}
+	// Every executor source file is accounted for.
+	for _, dir := range []string{"../executor", "../engine"} {
+		entries, _ := os.ReadDir(dir)
+		for _, e := range entries {
+			path := dir + "/" + e.Name()
+			if strings.HasSuffix(path, "_test.go") || !strings.HasSuffix(path, ".go") {
+				continue
+			}
+			if _, ok := executorFiles[path]; ok {
+				continue
+			}
+			src, _ := os.ReadFile(path)
+			if read.Match(src) {
+				t.Errorf("%s reads step params but is not in executorFiles", path)
+			}
+		}
+	}
+}
+
+// The overview pages that list step types name every built-in type.
+func TestOverviewPagesListEveryStepType(t *testing.T) {
+	for _, page := range []string{"../../docs/concepts.md", "../../docs/README.md"} {
+		data, err := os.ReadFile(page)
+		if err != nil {
+			t.Skipf("docs not available: %v", err)
+		}
+		for _, name := range parser.PrimitiveNames() {
+			if !strings.Contains(string(data), "`"+name+"`") {
+				t.Errorf("%s does not mention step type %s", page, name)
 			}
 		}
 	}

@@ -174,7 +174,10 @@ func stepTypes() []StepType {
 			p("project", "Project directory to codify (default the run's source)"), p("codify_dir", "History directory (default <project>.codify)"), p("prompt_file", "Replacement retro prompt"),
 			p("mode", "strict (outputs stay the same) or loose (decompose into atomic agent steps)"), p("fixed", "Workflows the target reaches that must not change (a reset, a snapshot)"), p("live_hosts", "Hosts reached for real instead of replayed; only for services the workflow resets"),
 		}},
-		StepType{Name: "jev", Inputs: "params", Summary: "Ask a Jev decision service.", Params: []Param{}},
+		StepType{Name: "jev", Inputs: "params", Summary: "Ask a Jev decision service.", Params: []Param{
+			req("connection", "Name of a connection in the file's connections block"), req("state", "Text, object or array the questions are asked about"),
+			req("questions", "Map of question name to a noul, choice or score question"),
+		}},
 		StepType{Name: "llm_invoke", Inputs: "params", Summary: "Invoke a language model.", Params: []Param{}},
 	)
 }

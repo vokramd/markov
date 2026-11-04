@@ -103,6 +103,15 @@ Provide exactly one script source:
 | `stderr` | string | Standard error from the script. |
 | `exit_code` | int | Process exit code. |
 
+### Failure Conditions
+
+- `interpreter` is missing, or not exactly one of `content` and `path` is set.
+- `path` is absolute, escapes the workflow `scripts/` directory, or the workflow has no scripts directory.
+- `args` is not a list of strings, numbers and booleans; `env` is not a map, or has an invalid key.
+- `stdin` cannot be encoded.
+- The script exits non-zero. `stdout`, `stderr` and `exit_code` are still registered, for `rescue`/`always` handling.
+- Output exceeds the step's `max_output` limit.
+
 ### Examples
 
 An inline Python script:
@@ -164,6 +173,15 @@ value, with no size limit and no shell quoting.
 |----------|------|-------------|
 | `path` | string | The file written. |
 | `bytes` | int | Bytes written. |
+
+The file is opened, written and closed in place; replacing a file is not atomic, so a reader can see it partly written.
+
+### Failure Conditions
+
+- `path` or `content` is missing, or `content` cannot be encoded.
+- `mode` or `dir_mode` is not an octal string such as `"0644"`.
+- A parent directory cannot be created, or a path component exists and is not a directory.
+- The file cannot be opened, written or chmodded (permissions, a read-only filesystem).
 
 ### Example
 
@@ -252,6 +270,9 @@ Markov counts turns and tokens from the stream as events arrive. When a limit is
 | `events` | list | Compact events (`kind` plus fields), capped by `events_limit`. Long strings are truncated. |
 | `events_truncated` | bool | True if events were dropped by the cap. |
 | `exit_code`, `stderr` | | Process exit code and standard error. |
+| `api_retries` | int | Present only when the CLI retried API calls: how many retries it reported. |
+| `last_api_error` | map | With `api_retries`: the last retry's `attempt`, `max_retries`, `retry_delay_ms` and `error`. |
+| `sandbox_network` | string[] | With `sandbox`, only when the run failed: network denials and failures the sandbox recorded during the run. They are also appended to the step's error. |
 
 ### Live progress
 
@@ -371,9 +392,23 @@ Also accepted, with the same meaning as for [`ansible_playbook`](#ansible_playbo
 
 ### Output Variables
 
-`stdout`, `stderr`, `exit_code`, and `changed` (true if any host line reports `CHANGED`).
+| Variable | Type | Description |
+|----------|------|-------------|
+| `stdout` | string | Standard output. |
+| `stderr` | string | Standard error. |
+| `exit_code` | int | Process exit code. |
+| `changed` | bool | True if any host line reads `host \| CHANGED`. |
 
-### Example
+Unlike `ansible_playbook`, there is no `recap`: ad-hoc runs print no `PLAY RECAP`.
+
+### Failure Conditions
+
+- `pattern` is missing, `module` is set but empty, or `module_args` is neither a string nor a map.
+- `poll`, `background` or another integer param is not an integer; a list param is not a string or list of strings.
+- A non-zero exit code (a failed or unreachable host). Output is still registered for `rescue`/`always` handling.
+- Output exceeds the step's `max_output` limit.
+
+### Examples
 
 ```yaml
 - name: ping
@@ -383,6 +418,46 @@ Also accepted, with the same meaning as for [`ansible_playbook`](#ansible_playbo
     inventory: "web01,web02,"
     module: ping
     connection: ssh
+```
+
+A module with map arguments, run with privilege escalation; the map is JSON-encoded for `-a`:
+
+```yaml
+- name: ensure_nginx
+  type: ansible
+  register: nginx
+  params:
+    pattern: web
+    inventory: ./inventory.ini
+    module: ansible.builtin.package
+    module_args:
+      name: nginx
+      state: present
+    become: true
+
+- name: restart_if_installed
+  type: ansible
+  when: nginx.changed
+  params:
+    pattern: web
+    inventory: ./inventory.ini
+    module: ansible.builtin.service
+    module_args: "name=nginx state=restarted"
+    become: true
+```
+
+A long command run asynchronously: `background: 600` lets it run up to ten minutes, and `poll: 10` checks every ten seconds:
+
+```yaml
+- name: reindex
+  type: ansible
+  params:
+    pattern: db01
+    inventory: "db01,"
+    module: ansible.builtin.shell
+    module_args: /opt/app/bin/reindex --all
+    background: 600
+    poll: 10
 ```
 
 ---
@@ -1188,11 +1263,15 @@ Validates conditions and fails the workflow immediately if any condition evaluat
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `that` | string[] | yes | List of Pongo2 boolean expressions to evaluate |
-| `msg` | string | no | Custom failure message. If omitted, the default message is `"assertion failed: {expression}"`. |
+| `msg` | string | no | Custom failure message, used verbatim: it is not rendered as a template. If omitted, the message is `assertion failed: <expression>`, naming the first expression that was false. |
 
 ### Evaluation
 
-Each expression in the `that` list is evaluated using `EvalBool`, which wraps the expression in `{% if expr %}true{% endif %}` and checks whether the result is `"true"`. Expressions are evaluated in order; the step fails on the first false expression.
+Each expression in the `that` list is evaluated using `EvalBool`, which wraps the expression in `{% if expr %}true{% endif %}` and checks whether the result is `"true"`. Expressions are evaluated in order; the step fails on the first false expression, and later ones are not evaluated.
+
+Expressions may call the [Jev functions](jev.md#inline-conditions-and-assertions) `jev.noul`, `jev.choice` and `jev.score`, for example `jev.noul('billing', ticket) >= 0.7`.
+
+`assert` registers nothing: a passing step completes with no output, and `register` on it has no effect.
 
 ### Failure Conditions
 
@@ -1218,7 +1297,7 @@ Each expression in the `that` list is evaluated using `EvalBool`, which wraps th
     - "not auto_approved"
     - "not rejected"
     - "not deferred"
-  msg: "Triage gate did not produce expected results for severity={{ severity }}"
+  msg: "Triage gate did not produce the expected results"
 ```
 
 ---
@@ -1257,6 +1336,15 @@ With a debugger control channel attached (`--control stdin`, as the IDE uses), t
 | `changes` | map | `added_workflows`, `removed_workflows`, `changed_workflows` (each with `workflow`, `added_steps`, `removed_steps`, `changed_steps`) and `other_changed` (top-level sections such as `vars` or `rules`). |
 | `rejected` | bool | Set when a control-channel client answered `reject_reload`. |
 | `error` | string | Why the load failed. |
+
+### Failure Conditions
+
+- The run was started without `--allow-reload` (checked before the run starts, when the workflow can reach this step).
+- No `source` param and the run has no source path; `require` is not a list of workflow names.
+- The source cannot be read or does not load as a valid workflow, or lacks a `require`d workflow. The output (with `error`) is still registered and the current definition stays, so `ignore_errors: true` keeps a loop going.
+- With a control channel attached, the wait for an answer is cancelled. A `reject_reload` answer is not a failure: the step succeeds with `rejected: true` and `reloaded: false`.
+
+A reloaded run can never be resumed; that is a property of the run, not a step failure.
 
 ### Example
 
@@ -1314,6 +1402,14 @@ One iteration of [`markov codify`](cli.md#markov-codify) on a workflow of the pr
 | `iteration`, `extracted`, `agent_steps`, `spent_usd` | | The iteration directory, the job moved out of the agent, the agent steps the run had, and the model spend. |
 
 The markov binary for the child runs is `MARKOV_BIN` when set, else the running one.
+
+### Failure Conditions
+
+A rejected candidate is **not** a step failure: the step succeeds and reports it in `status` (`failed`, `live_failed`, `no_change`) and `reasons`. Branch on those, as in the example below. The step fails only when the pass itself cannot run:
+
+- `workflow` is missing, or there is no `project` param and the run has no source path.
+- `keep`, `fixed` or `live_hosts` is not a list of strings.
+- The pass errors: the project cannot be copied, the recording proxy or a child run cannot start, or the retro agent cannot be run.
 
 ### Example
 
@@ -1385,6 +1481,30 @@ Builds an image with `podman build`. OpenShell does not build images: a local ga
 | `image` | string | The image reference to pass to `openshell_create`. |
 | `id` | string | The image ID. |
 
+### Failure Conditions
+
+- `tag` is missing, or `build_args` is not a map of strings.
+- `podman build` (or `podman push`, with `push`) fails; the build's output is in the step's `step_progress` events.
+
+### Example
+
+A multi-stage build for a remote gateway, tagged for a registry it can pull from:
+
+```yaml
+- name: image
+  type: openshell_build
+  register: image
+  params:
+    tag: "registry.example.com/team/report-runner:{{ version }}"
+    context: ./image
+    containerfile: ./image/Containerfile
+    target: runtime
+    build_args:
+      PYTHON_VERSION: "3.12"
+    pull: true
+    push: true
+```
+
 ## openshell_create
 
 Creates a sandbox and returns once it is ready.
@@ -1416,7 +1536,30 @@ Creates a sandbox and returns once it is ready.
 
 ### Failure Conditions
 
+- `env` or `labels` is not a map of strings, or `providers` is not a string or list of strings.
+- `policy` is set on the `sdk` transport.
 - The image cannot be pulled or found, a sandbox with the name exists, or the gateway is unreachable.
+
+### Example
+
+A named sandbox with resource limits, a GPU, a provider and labels. A fixed `name` fails if the sandbox already exists, so leave it unset inside `for_each`:
+
+```yaml
+- name: sandbox
+  type: openshell_create
+  register: sandbox
+  params:
+    name: eval-gpu
+    image: "{{ image.image }}"
+    cpu: "4"
+    memory: 16Gi
+    gpu: 1
+    env:
+      HF_HOME: /sandbox/.cache/huggingface
+    providers: [relay-claude]
+    labels:
+      team: evals
+```
 
 ## openshell_upload
 
@@ -1438,6 +1581,29 @@ Copies a local file or directory into a sandbox directory.
 |----------|------|-------------|
 | `sandbox` | string | The sandbox. |
 | `path` | string | Where `src` landed: `dest/<base name of src>`. |
+
+### Failure Conditions
+
+- `sandbox` or `src` is missing.
+- `src` does not exist locally, the sandbox does not exist, or the gateway is unreachable.
+- On the `sdk` transport, the image has no `sh` or `tar`.
+
+### Example
+
+Upload a repository checkout without its ignored files (build output, virtualenvs), into `/sandbox/work/repo`:
+
+```yaml
+- name: upload_repo
+  type: openshell_upload
+  register: uploaded
+  params:
+    sandbox: "{{ sandbox.name }}"
+    src: ./repo
+    dest: /sandbox/work
+    git_ignore: true
+```
+
+`uploaded.path` is `/sandbox/work/repo`.
 
 ## openshell_exec
 
@@ -1467,7 +1633,33 @@ Runs a command in a sandbox and streams its output.
 ### Failure Conditions
 
 - The command exits non-zero (the error includes stderr) or is stopped by `timeout`. The output is still registered, so `failed_when` or a later step can inspect it.
+- `sandbox` or `command` is missing, `command` is neither a string nor a list of strings, `env` is not a map of strings, `timeout` is not an integer, or `stdin` cannot be encoded.
+- Output exceeds the step's `max_output` limit; the command is cancelled.
 - The sandbox does not exist or the gateway is unreachable.
+
+### Examples
+
+An argv list (no shell, so no quoting), with structured input on stdin and a time limit:
+
+```yaml
+- name: score
+  type: openshell_exec
+  register: score
+  params:
+    sandbox: "{{ sandbox.name }}"
+    workdir: /sandbox/work/repo
+    command: [python3, -m, evals.score, --format, json]
+    stdin: "{{ cases }}"
+    env:
+      LOG_LEVEL: info
+    timeout: 1800
+```
+
+`cases` is a list from an exact expression, so it is sent as JSON. Treat a timeout as a result instead of a failure with `failed_when`:
+
+```yaml
+  failed_when: "score.exit_code != 0 and not score.timed_out"
+```
 
 ## openshell_download
 
@@ -1488,6 +1680,28 @@ Copies a file or directory out of a sandbox into a local directory.
 |----------|------|-------------|
 | `sandbox` | string | The sandbox. |
 | `path` | string | Where `src` landed: `dest/<base name of src>`. |
+
+### Failure Conditions
+
+- `sandbox` or `src` is missing.
+- `src` does not exist in the sandbox, the local `dest` cannot be created, the sandbox does not exist, or the gateway is unreachable.
+- On the `sdk` transport, the image has no `sh` or `tar`.
+
+### Example
+
+Collect a results directory into a per-run directory:
+
+```yaml
+- name: fetch_results
+  type: openshell_download
+  register: results
+  params:
+    sandbox: "{{ sandbox.name }}"
+    src: /sandbox/work/repo/results
+    dest: "./runs/{{ markov_run_id }}"
+```
+
+`results.path` is `./runs/<run id>/results`.
 
 ## openshell_provider
 
@@ -1555,6 +1769,11 @@ Deletes one or more sandboxes. Deleting a sandbox that does not exist succeeds, 
 |----------|------|-------------|
 | `deleted` | string[] | The names deleted. |
 
+### Failure Conditions
+
+- `sandbox` is missing, empty, or not a string or list of strings.
+- The gateway is unreachable or refuses the delete. A sandbox that does not exist is not a failure.
+
 ### Example
 
 The whole lifecycle; `always:` deletes the sandbox even when a step fails:
@@ -1616,7 +1835,56 @@ This type is recognized by the parser as a valid primitive, so workflow YAML ref
   register: classification
 ```
 
-## Jev support
+## jev
 
-`type: jev` calls a configured Jev-compatible API and registers structured answers. See [Jev decisions](jev.md) for parameters, response metadata, and errors.
+`type: jev` calls a configured Jev-compatible API and registers structured answers. [Jev decisions](jev.md) covers connections, question types, response metadata, persistence and errors in full.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection` | string | yes | Name of a connection in the file's `connections:` block (or `connections.yaml` in a directory workflow). |
+| `state` | string, map, or list | yes | What the questions are asked about. An exact variable expression keeps structured state. |
+| `questions` | map | yes | Question name to a Jev question: `type`, `instructions`, and `criteria`. `noul` (yes/no): optional criteria map with exactly `true` and `false`. `choice`: criteria map of 1–255 options. `score`: nonempty criteria list, lowest first. |
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `answers` | map | One entry per question: `answers.<name>.noul` (number), `.choice` (the chosen criteria key), or `.score` (index into the criteria list, 0 to n−1). |
+| `model` | string | Model that answered. |
+| `usage` | map | Token usage reported by the service. |
+| `metadata` | map | Connection, requested model, request ID, elapsed seconds, attempt count, and request fingerprint. |
+
+### Failure Conditions
+
+- `state` is missing, `questions` is empty, or a question fails validation (unknown `type`, bad `criteria`).
+- `connection` names no configured connection, or its credential env var or file is empty or unreadable.
+- Transport failure, HTTP error status, invalid JSON, or a response over 8 MiB, after the connection's retries are exhausted.
+- The response is missing `model` or `usage`, has the wrong number of answers, or an answer that does not match its question (wrong type, a choice that is not a criteria key, a score out of range).
+
+### Example
+
+```yaml
+- name: triage
+  type: jev
+  register: triage
+  params:
+    connection: local_kev
+    state: "{{ ticket }}"
+    questions:
+      billing:
+        type: noul
+        instructions: Is this about a billing problem?
+      urgency:
+        type: score
+        instructions: How urgent is this?
+        criteria: [Routine, Soon, Immediate]
+
+- name: page_billing
+  type: shell_exec
+  when: "triage.answers.billing.noul >= 0.7 and triage.answers.urgency.score == 2"
+  params:
+    command: ./bin/page billing "{{ ticket.id }}"
+```
 {% endraw %}
