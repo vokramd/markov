@@ -665,6 +665,9 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		if existing.OutputJSON != "" {
 			var output map[string]any
 			decodeState(existing.OutputJSON, &output)
+			// A restored secret is masked like a fresh one; root resume only re-notes the
+			// top-level run's secret steps, not those of the sub-runs it re-enters.
+			e.noteStepOutput(&step, output)
 			if step.Type == "set_fact" {
 				for k, v := range output {
 					runCtx[k] = v
@@ -1219,14 +1222,13 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 	if err := e.checkSubRunWorkflow(ctx, subRunID, step, wf.Name); err != nil {
 		return err
 	}
-	varsJSON, _ := json.Marshal(subVars)
 	subRun := &state.Run{
 		RunID:        subRunID,
 		WorkflowFile: e.SourcePath,
 		SourceDigest: e.digest(),
 		Entrypoint:   wf.Name,
 		Status:       state.RunRunning,
-		VarsJSON:     string(varsJSON),
+		VarsJSON:     e.subRunVarsJSON(subVars),
 		ParentRunID:  runID,
 		ParentStep:   step.Name,
 		StartedAt:    time.Now(),
@@ -1430,14 +1432,13 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					errOnce.Do(func() { failed.Store(true); firstErr = err })
 					return
 				}
-				varsJSON, _ := json.Marshal(subVars)
 				subRun := &state.Run{
 					RunID:        subRunID,
 					WorkflowFile: e.SourcePath,
 					SourceDigest: e.digest(),
 					Entrypoint:   wf.Name,
 					Status:       state.RunRunning,
-					VarsJSON:     string(varsJSON),
+					VarsJSON:     e.subRunVarsJSON(subVars),
 					ParentRunID:  runID,
 					ParentStep:   step.Name,
 					ForEachKey:   forEachKey,

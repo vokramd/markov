@@ -23,6 +23,7 @@
 
 ## Pending Tasks
 
+- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/pending/repeat-sub-workflow-calls.md)
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
@@ -67,6 +68,8 @@
 
 ## Fixed Bugs
 
+- [A secret restored on resume inside a sub-workflow is not masked](bugs/fixed/restored-sub-run-secret-unmasked.md)
+- [Secrets passed to sub-workflows are stored in plain text with every sub-run](bugs/fixed/secrets-stored-in-sub-run-vars.md)
 - [A cancelled run's rescue and always steps fail at once](bugs/fixed/cancelled-run-skips-cleanup.md)
 - [set_fact facts see siblings in random order](bugs/fixed/set-fact-sibling-order.md)
 - [JSON integers from http_request render as floats](bugs/fixed/json-integers-render-as-floats.md)

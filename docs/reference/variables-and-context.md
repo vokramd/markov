@@ -393,8 +393,10 @@ Limits:
 
 - Strings shorter than 8 characters are not masked. A value is also masked trimmed and
   URL-query-escaped, but not in other forms (base64, part of the value, split across lines).
-- The state store keeps real values, because resume rebuilds the run's context from it. On
-  resume the masks are rebuilt from the stored vars and the outputs of completed `secret` steps.
+- The state store keeps real values where resume needs them: the top-level run's vars and the
+  outputs of completed `secret` steps. On resume the masks are rebuilt from those. A sub-run's
+  stored vars are masked, since resume rebuilds them from the parent's context; so a secret
+  passed down as a var, call after call, is not stored with each sub-run.
 - Lines the CLI logs before the workflow is loaded are not masked; `--debug` lists `--var` names
   only.
 - Markov cannot mask what a step sends somewhere itself, such as an agent posting a token.

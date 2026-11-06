@@ -1,8 +1,10 @@
 package engine
 
 import (
+	"encoding/json"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/jctanner/markov/pkg/callback"
 	"github.com/jctanner/markov/pkg/executor"
@@ -44,6 +46,17 @@ func (e *Engine) noteSecretParams(step *parser.Step, base string, params map[str
 			e.secrets.Add(step.Name+"."+name, v)
 		}
 	}
+}
+
+// subRunVarsJSON is a sub-run's vars as its state row keeps them: JSON with secrets masked.
+// Nothing reads them back (a resumed run rebuilds each sub-run's vars from its parent's context),
+// so the masked copy loses nothing, and secrets passed down as vars aren't stored once per call.
+func (e *Engine) subRunVarsJSON(vars map[string]any) string {
+	var buf strings.Builder
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false) // keep <secret:NAME> readable
+	_ = enc.Encode(e.secrets.Value(vars))
+	return strings.TrimSuffix(buf.String(), "\n")
 }
 
 // maskedCallback hands its callback a masked copy of every event.

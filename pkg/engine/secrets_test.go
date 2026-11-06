@@ -199,3 +199,134 @@ func eventsJSON(t *testing.T, cb *mockCallback) string {
 	}
 	return buf.String()
 }
+
+func TestSecretsAreMaskedInStoredSubRunVars(t *testing.T) {
+	file, err := parser.Parse([]byte(`
+entrypoint: main
+secrets: [ADMIN]
+vars:
+  ADMIN: ` + adminToken + `
+  items: [a, b]
+workflows:
+  - name: main
+    steps:
+      - name: mint
+        type: http_request
+        register: mint
+        secret: [token]
+      - name: once
+        workflow: use
+        vars:
+          relay_api_key: "{{ mint.token }}"
+      - name: each
+        for_each: items
+        as: item
+        workflow: use
+        vars:
+          relay_api_key: "{{ mint.token }}"
+  - name: use
+    vars:
+      relay_api_key: null
+    steps:
+      - name: call
+        type: shell_exec
+        params:
+          url: "https://github.local/user?t={{ relay_api_key }}&admin={{ ADMIN }}"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng, _ := newTestEngine(t, file, map[string]executor.Executor{
+		"http_request": &mockExec{output: map[string]any{"token": mintedToken}},
+		"shell_exec":   echoExec{},
+	})
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatal(err)
+	}
+	runs, err := eng.store.ListRuns(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	subRuns := 0
+	for _, run := range runs {
+		if run.ParentRunID == "" {
+			continue
+		}
+		subRuns++
+		if strings.Contains(run.VarsJSON, mintedToken) || strings.Contains(run.VarsJSON, adminToken) {
+			t.Errorf("sub-run %s stored a secret in its vars: %s", run.RunID, run.VarsJSON)
+		}
+		if !strings.Contains(run.VarsJSON, "<secret:mint.token>") {
+			t.Errorf("sub-run %s vars have no masked token: %s", run.RunID, run.VarsJSON)
+		}
+		// The sub-workflow was still given the real value.
+		steps, err := eng.store.GetSteps(context.Background(), run.RunID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, s := range steps {
+			if s.StepName == "call" && !strings.Contains(s.OutputJSON, "t="+mintedToken) {
+				t.Errorf("sub-run %s call step got %s", run.RunID, s.OutputJSON)
+			}
+		}
+	}
+	if subRuns != 3 {
+		t.Errorf("got %d sub-runs, want 3", subRuns)
+	}
+}
+
+func TestRestoredSubWorkflowSecretStaysMaskedOnResume(t *testing.T) {
+	file, err := parser.Parse([]byte(`
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: child
+        workflow: use
+  - name: use
+    steps:
+      - name: mint
+        type: http_request
+        register: mint
+        secret: [token]
+      - name: call
+        type: shell_exec
+        params:
+          url: "https://github.local/user?t={{ mint.token }}"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := state.NewSQLiteStore(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { store.Close() })
+	fail := true
+	execs := map[string]executor.Executor{
+		"http_request": &mockExec{output: map[string]any{"token": mintedToken}},
+		"shell_exec":   echoExec{fail: &fail},
+	}
+	first := New(file, store, execs)
+	first.SetCallbacks([]callback.Callback{&mockCallback{}})
+	runID, err := first.Run(context.Background(), "main", nil)
+	if err == nil {
+		t.Fatal("the call step should fail")
+	}
+
+	// A new process resumes: mint is skipped and its token restored from the store, and call fails
+	// again with the token in its error. The restored output must be masked like a fresh one.
+	second := New(file, store, execs)
+	cb := &mockCallback{}
+	second.SetCallbacks([]callback.Callback{cb})
+	if err := second.Resume(context.Background(), runID); err == nil {
+		t.Fatal("the call step should fail again")
+	}
+	events := eventsJSON(t, cb)
+	if strings.Contains(events, mintedToken) {
+		t.Errorf("resumed sub-workflow leaked its restored secret: %s", events)
+	}
+	if !strings.Contains(events, "t=<secret:mint.token>") {
+		t.Errorf("resumed failure has no masked token: %s", events)
+	}
+}
