@@ -23,7 +23,7 @@
 
 ## Current Tasks
 
-- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/current/repeat-sub-workflow-calls.md) (phase 1 done)
+- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/current/repeat-sub-workflow-calls.md) (phases 1 and 3 done; debugger and markov-ide pending)
 
 ## Pending Tasks
 

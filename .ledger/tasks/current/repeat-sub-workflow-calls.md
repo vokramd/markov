@@ -2,8 +2,14 @@
 
 ## Status
 
-Current. Phase 1 (engine) done 2026-11-06; phase 2 (debugger, markov-ide) and phase 3
-(markov-harness) pending. Design revision 4.
+Current. Phase 1 (engine) and phase 3 (markov-harness) done 2026-11-06; phase 2 (debugger,
+markov-ide) pending. Design revision 4.
+
+Phase 3: markov-harness d56e147. `main` repeats `turn` until `/exit`, `turn` repeats `agent_step`
+up to `max_tool_rounds` (50), and the extraction pass repeats `extract_step` up to
+`extract_max_turns`. Its 16 end-to-end tests pass, including the new `test_tool_rounds_are_capped`.
+The longest run ID in a fresh state db is now 68 characters
+(`<run>-chat@0.0~<h>-agent@0.0~<h>-run_mutating-0`), flat however long the session runs.
 
 ### Phase 1 as built
 
