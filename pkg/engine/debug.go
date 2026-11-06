@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,9 +42,14 @@ type Breakpoint struct {
 	Step     string `json:"step"`
 	// Section is steps (default), rescue, or always.
 	Section string `json:"section,omitempty"`
-	// Iteration limits the breakpoint to one for_each key. Without it the breakpoint applies to the
-	// step as a whole (a for_each step pauses once, before the loop starts).
+	// Iteration limits the breakpoint to one for_each key, or on a repeat step to one iteration
+	// index (it pauses before that iteration starts). Without it the breakpoint applies to the step
+	// as a whole (a for_each or repeat step pauses once, before the loop starts).
 	Iteration string `json:"iteration,omitempty"`
+	// Within limits the breakpoint to steps running inside these loops: each selector must match
+	// one of the loops the step runs in (a repeat iteration or a for_each item of a sub-workflow,
+	// at any depth). Without it the breakpoint matches in every iteration.
+	Within []LoopSelector `json:"within,omitempty"`
 	// Phase is before (default, the step is about to run) or after (it just completed).
 	Phase string `json:"phase,omitempty"`
 	// When is a condition, in the same expression syntax as a step's `when`, evaluated against the
@@ -55,6 +61,43 @@ type Breakpoint struct {
 	Log string `json:"log,omitempty"`
 
 	hits int
+}
+
+// LoopSelector picks loop iterations for a breakpoint's Within: the loop step (a repeat step, or
+// a for_each step that calls a workflow) and, optionally, one iteration (a repeat index or a
+// for_each key).
+type LoopSelector struct {
+	Workflow  string `json:"workflow"`
+	Step      string `json:"step"`
+	Iteration string `json:"iteration,omitempty"`
+}
+
+// loopFrame is one loop a step runs inside, outermost first in a debugPoint's loops.
+type loopFrame struct {
+	Kind       string `json:"kind"` // repeat or for_each
+	Workflow   string `json:"workflow"`
+	Step       string `json:"step"`
+	Iteration  string `json:"iteration"` // the repeat index, or the for_each key
+	Generation int    `json:"generation,omitempty"`
+}
+
+type loopFramesKey struct{}
+
+// withLoopFrame records that ctx runs inside one more loop iteration.
+func withLoopFrame(ctx context.Context, f loopFrame) context.Context {
+	outer := loopFrames(ctx)
+	frames := make([]loopFrame, len(outer), len(outer)+1)
+	copy(frames, outer)
+	return context.WithValue(ctx, loopFramesKey{}, append(frames, f))
+}
+
+func loopFrames(ctx context.Context) []loopFrame {
+	frames, _ := ctx.Value(loopFramesKey{}).([]loopFrame)
+	return frames
+}
+
+func (sel LoopSelector) matches(f loopFrame) bool {
+	return sel.Workflow == f.Workflow && sel.Step == f.Step && (sel.Iteration == "" || sel.Iteration == f.Iteration)
 }
 
 // DebugCommand is one JSON line on the control channel.
@@ -81,6 +124,11 @@ type debugPoint struct {
 	section   string
 	iteration string
 	phase     string
+	// loops are the loop iterations the step runs inside, outermost first.
+	loops []loopFrame
+	// boundary marks the pause point before a repeat iteration: only breakpoints (and until)
+	// naming the iteration stop there, not step mode.
+	boundary bool
 }
 
 type pausedState struct {
@@ -239,12 +287,43 @@ func (d *Debugger) resolve(bp Breakpoint) (Breakpoint, error) {
 		return bp, fmt.Errorf("unknown workflow %q (workflows: %s)", bp.Workflow, quoteList(names))
 	}
 	steps := sectionList(wf, bp.Section)
+	found := false
 	for _, s := range steps {
 		if s.Name == bp.Step {
-			return bp, nil
+			found = true
+			break
 		}
 	}
-	return bp, fmt.Errorf("workflow %q has no step %q in %s (steps: %s)", bp.Workflow, bp.Step, bp.Section, quoteList(stepNames(steps)))
+	if !found {
+		return bp, fmt.Errorf("workflow %q has no step %q in %s (steps: %s)", bp.Workflow, bp.Step, bp.Section, quoteList(stepNames(steps)))
+	}
+	for _, sel := range bp.Within {
+		if err := checkLoopSelector(file, sel); err != nil {
+			return bp, err
+		}
+	}
+	return bp, nil
+}
+
+// checkLoopSelector requires a within selector to name a loop step: a repeat step, or a for_each
+// step that calls a workflow (a typed for_each runs no steps inside it).
+func checkLoopSelector(file *parser.WorkflowFile, sel LoopSelector) error {
+	wf := file.GetWorkflow(sel.Workflow)
+	if wf == nil {
+		return fmt.Errorf("within: unknown workflow %q", sel.Workflow)
+	}
+	for _, section := range []string{sectionSteps, sectionRescue, sectionAlways} {
+		for _, s := range sectionList(wf, section) {
+			if s.Name != sel.Step {
+				continue
+			}
+			if s.Repeat != nil || (s.ForEach != "" && s.Workflow != "") {
+				return nil
+			}
+			return fmt.Errorf("within: step %q of workflow %q is not a loop (a repeat step, or a for_each that calls a workflow)", sel.Step, sel.Workflow)
+		}
+	}
+	return fmt.Errorf("within: workflow %q has no step %q", sel.Workflow, sel.Step)
 }
 
 func quoteList(items []string) string {
@@ -371,7 +450,22 @@ func splitStateName(stateName, stepName string) (section, iteration string) {
 }
 
 func (b *Breakpoint) matches(p debugPoint) bool {
-	return b.Workflow == p.workflow && b.Step == p.step && b.Section == p.section && b.Phase == p.phase && b.Iteration == p.iteration
+	if b.Workflow != p.workflow || b.Step != p.step || b.Section != p.section || b.Phase != p.phase || b.Iteration != p.iteration {
+		return false
+	}
+	for _, sel := range b.Within {
+		found := false
+		for _, f := range p.loops {
+			if sel.matches(f) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func snapshotVars(m map[string]any) (out map[string]any) {
@@ -432,6 +526,9 @@ func (d *Debugger) match(e *Engine, p debugPoint, vars map[string]any) (reason s
 		if bp.Log != "" {
 			msg, err := e.tmpl.Render(bp.Log, vars)
 			ld := map[string]any{"message": msg, "phase": p.phase, "section": p.section, "iteration": p.iteration}
+			if len(p.loops) > 0 {
+				ld["loops"] = p.loops
+			}
 			if err != nil {
 				ld["error"] = err.Error()
 			}
@@ -440,7 +537,7 @@ func (d *Debugger) match(e *Engine, p debugPoint, vars map[string]any) (reason s
 		}
 		return "breakpoint", map[string]any{"hits": bp.hits}, logs
 	}
-	if d.stepMode && p.phase == phaseBefore {
+	if d.stepMode && p.phase == phaseBefore && !p.boundary {
 		return "step", nil, logs
 	}
 	return "", nil, logs
@@ -478,6 +575,9 @@ func (d *Debugger) pause(ctx context.Context, p debugPoint, vars, output map[str
 	}
 	if output != nil {
 		data["output"] = output
+	}
+	if len(p.loops) > 0 {
+		data["loops"] = p.loops
 	}
 	for k, v := range extra {
 		data[k] = v
@@ -581,10 +681,28 @@ func (e *Engine) debugPause(ctx context.Context, runID, workflowName string, ste
 		return nil
 	}
 	section, iteration := splitStateName(stateName, step.Name)
-	p := debugPoint{runID: runID, workflow: workflowName, step: step.Name, stepType: step.Type, section: section, iteration: iteration, phase: phase}
+	p := debugPoint{runID: runID, workflow: workflowName, step: step.Name, stepType: step.Type, section: section, iteration: iteration, phase: phase, loops: loopFrames(ctx)}
+	return e.debugPauseAt(ctx, p, runCtx, output)
+}
+
+// debugPauseIteration is the hook before iteration index of a repeat step: it stops only for a
+// breakpoint (or until) that names the iteration. vars are what the iteration's vars: render
+// against (the caller's context and repeat).
+func (e *Engine) debugPauseIteration(ctx context.Context, runID, workflowName string, step parser.Step, stateName string, index int, vars map[string]any) error {
+	if e.debugger == nil {
+		return nil
+	}
+	section, _ := splitStateName(stateName, step.Name)
+	p := debugPoint{runID: runID, workflow: workflowName, step: step.Name, stepType: step.Type, section: section,
+		iteration: strconv.Itoa(index), phase: phaseBefore, loops: loopFrames(ctx), boundary: true}
+	return e.debugPauseAt(ctx, p, vars, nil)
+}
+
+func (e *Engine) debugPauseAt(ctx context.Context, p debugPoint, runCtx, output map[string]any) error {
+	d := e.debugger
 	reason, extra, logs := d.match(e, p, runCtx)
 	for _, l := range logs {
-		d.emit(runID, workflowName, step.Name, "logpoint", l)
+		d.emit(p.runID, p.workflow, p.step, "logpoint", l)
 	}
 	if reason == "" {
 		return nil

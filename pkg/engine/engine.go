@@ -1483,7 +1483,8 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					})
 				})
 
-				err = e.executeWorkflow(withFile(ctx, wfFile), subRunID, wf, subVars)
+				itemCtx := withLoopFrame(withFile(ctx, wfFile), loopFrame{Kind: "for_each", Workflow: workflowName, Step: step.Name, Iteration: forEachKey})
+				err = e.executeWorkflow(itemCtx, subRunID, wf, subVars)
 
 				feNow := time.Now()
 				feDuration := feNow.Sub(subRun.StartedAt).Seconds()

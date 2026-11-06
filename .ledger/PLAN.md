@@ -21,16 +21,13 @@
 
 - None
 
-## Current Tasks
-
-- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/current/repeat-sub-workflow-calls.md) (phases 1 and 3 done; debugger and markov-ide pending)
-
 ## Pending Tasks
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
 
+- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/done/repeat-sub-workflow-calls.md)
 - [Streaming http_request (SSE) and the tty:// callback](tasks/done/http-request-streaming.md)
 - [Live command output, stream progress kinds, and tty:// show styles](tasks/done/live-command-output-and-tty-show.md)
 - [Complete reference docs for every step type](tasks/done/step-type-reference-docs.md)

@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -493,7 +494,7 @@ func TestResolveShorthandNeverSplitsOnADelimiter(t *testing.T) {
 	}
 	for in, want := range ok {
 		got, err := d.ResolveShorthand(in)
-		if err != nil || got != want {
+		if err != nil || !reflect.DeepEqual(got, want) {
 			t.Errorf("ResolveShorthand(%q) = %+v, %v; want %+v", in, got, err, want)
 		}
 	}
@@ -532,5 +533,135 @@ func TestDebugContinueDropsStepPausesQueuedBehindIt(t *testing.T) {
 	}
 	if paused != 2 {
 		t.Errorf("paused %d times; continue should have dropped the queued step pauses (want 2: the loop, then one iteration)", paused)
+	}
+}
+
+func repeatDebugFile(t *testing.T) *parser.WorkflowFile {
+	t.Helper()
+	return parseOrFatal(t, strings.Replace(counterWorkflow, "%s", `        repeat:
+          until: "next >= limit"
+          max: 10`, 1))
+}
+
+func TestDebugRepeatIterationBreakpointPausesBeforeThatIteration(t *testing.T) {
+	r := startDebug(t, repeatDebugFile(t), func(d *Debugger) {
+		if _, rejected := d.SetBreakpoints([]Breakpoint{{Workflow: "main", Step: "loop", Iteration: "2"}}); rejected != nil {
+			t.Fatalf("rejected: %v", rejected)
+		}
+	})
+	p := r.next("paused")
+	vars, _ := p.Data["variables"].(map[string]any)
+	rep, _ := vars["repeat"].(map[string]any)
+	if p.WorkflowName != "main" || p.StepName != "loop" || p.Data["iteration"] != "2" || fmt.Sprint(rep["index"]) != "2" {
+		t.Fatalf("paused = %+v", p)
+	}
+	if prev, _ := rep["previous"].(map[string]any); fmt.Sprint(prev["next"]) != "2" {
+		t.Errorf("repeat.previous = %v, want the second iteration's results", rep["previous"])
+	}
+	r.send(`{"cmd":"continue"}`)
+	if err := r.finish(); err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(eventsJSON(t, r.cb.mockCallback), `"kind":"paused"`); n != 1 {
+		t.Errorf("paused %d times, want once", n)
+	}
+}
+
+func TestDebugWithinSelectsStepsInsideALoopIteration(t *testing.T) {
+	r := startDebug(t, repeatDebugFile(t), func(d *Debugger) {
+		d.SetBreakpoints([]Breakpoint{{Workflow: "count", Step: "bump", Within: []LoopSelector{{Workflow: "main", Step: "loop", Iteration: "1"}}}})
+	})
+	p := r.next("paused")
+	loops, _ := p.Data["loops"].([]loopFrame)
+	if p.WorkflowName != "count" || len(loops) != 1 || loops[0].Kind != "repeat" || loops[0].Step != "loop" || loops[0].Iteration != "1" {
+		t.Fatalf("paused = %+v (loops %#v)", p, p.Data["loops"])
+	}
+	r.send(`{"cmd":"continue"}`)
+	if err := r.finish(); err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(eventsJSON(t, r.cb.mockCallback), `"kind":"paused"`); n != 1 {
+		t.Errorf("paused %d times, want only in iteration 1", n)
+	}
+
+	// Without an iteration, within matches in every iteration of that loop.
+	r = startDebug(t, repeatDebugFile(t), func(d *Debugger) {
+		d.SetBreakpoints([]Breakpoint{{Workflow: "count", Step: "bump", Within: []LoopSelector{{Workflow: "main", Step: "loop"}}}})
+	})
+	var seen []string
+	for i := 0; i < 3; i++ {
+		p := r.next("paused")
+		loops, _ := p.Data["loops"].([]loopFrame)
+		seen = append(seen, loops[0].Iteration)
+		r.send(`{"cmd":"continue"}`)
+	}
+	if err := r.finish(); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(seen, ",") != "0,1,2" {
+		t.Errorf("paused in iterations %v", seen)
+	}
+}
+
+func TestDebugStepModeGoesIntoAnIterationNotItsBoundary(t *testing.T) {
+	r := startDebug(t, repeatDebugFile(t), func(d *Debugger) {
+		d.SetBreakpoints([]Breakpoint{{Workflow: "main", Step: "loop"}})
+	})
+	if p := r.next("paused"); p.StepName != "loop" || p.Data["iteration"] != "" {
+		t.Fatalf("the loop as a whole should pause first: %+v", p)
+	}
+	r.send(`{"cmd":"step"}`)
+	if p := r.next("paused"); p.WorkflowName != "count" || p.StepName != "bump" {
+		t.Fatalf("step should go to the iteration's first step, got %s.%s (iteration %v)", p.WorkflowName, p.StepName, p.Data["iteration"])
+	}
+	r.send(`{"cmd":"continue"}`)
+	if err := r.finish(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDebugWithinMustNameALoop(t *testing.T) {
+	d := NewDebugger(repeatDebugFile(t))
+	_, rejected := d.SetBreakpoints([]Breakpoint{
+		{Workflow: "count", Step: "bump", Within: []LoopSelector{{Workflow: "count", Step: "bump"}}},
+		{Workflow: "count", Step: "bump", Within: []LoopSelector{{Workflow: "main", Step: "nope"}}},
+	})
+	if len(rejected) != 2 || !strings.Contains(fmt.Sprint(rejected[0]["error"]), "is not a loop") || !strings.Contains(fmt.Sprint(rejected[1]["error"]), "has no step") {
+		t.Errorf("rejected = %v", rejected)
+	}
+}
+
+func TestDebugWithinAForEachItem(t *testing.T) {
+	wf := parseOrFatal(t, `
+entrypoint: main
+vars:
+  hosts: [web-1, web-2, web-3]
+workflows:
+  - name: main
+    steps:
+      - name: each
+        for_each: hosts
+        as: host
+        workflow: check
+        vars:
+          host: "{{ host }}"
+  - name: check
+    vars:
+      host: ~
+    steps:
+      - {name: ping, type: shell_exec, params: {command: "echo {{ host }}"}}
+`)
+	r := startDebug(t, wf, func(d *Debugger) {
+		d.SetBreakpoints([]Breakpoint{{Workflow: "check", Step: "ping", Within: []LoopSelector{{Workflow: "main", Step: "each", Iteration: "1"}}}})
+	})
+	p := r.next("paused")
+	loops, _ := p.Data["loops"].([]loopFrame)
+	vars, _ := p.Data["variables"].(map[string]any)
+	if len(loops) != 1 || loops[0].Kind != "for_each" || loops[0].Iteration != "1" || vars["host"] != "web-2" {
+		t.Fatalf("paused = %+v", p)
+	}
+	r.send(`{"cmd":"continue"}`)
+	if err := r.finish(); err != nil {
+		t.Fatal(err)
 	}
 }

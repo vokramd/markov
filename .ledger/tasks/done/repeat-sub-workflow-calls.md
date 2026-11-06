@@ -2,8 +2,24 @@
 
 ## Status
 
-Current. Phase 1 (engine) and phase 3 (markov-harness) done 2026-11-06; phase 2 (debugger,
-markov-ide) pending. Design revision 4.
+Done 2026-11-06: phase 1 (engine), phase 2 (debugger, markov-ide), phase 3 (markov-harness).
+Design revision 4. Later work is `resume: true` (below) and typed-step polling, each its own task.
+
+Phase 2 as built:
+- **Debugger** (`pkg/engine/debug.go`):
+  - A repeat step's `iteration` breakpoint pauses before that iteration, through
+    `debugPauseIteration`. That pause point is skipped by step mode.
+  - `Breakpoint.within` takes `LoopSelector`s matched against the loop frames a step runs inside.
+    Repeat iterations and `for_each` sub-workflow items push them (`withLoopFrame`).
+  - Paused events and logpoints carry `loops`.
+  - Selectors must name a loop step.
+- **Events:** `step_progress` kind `repeat_iteration` (`index`, `generation`) as each iteration
+  starts.
+- **Docs:** `debugging.md` (iteration on repeat, `within`, `loops`), `repeat.md` (Debugging,
+  events), `callbacks.md` (sub-run `generation`/`iteration`).
+- **Tests:** five `TestDebug*` repeat/within tests.
+- **markov-ide:** its task `repeat-loops`: graph label and outline, inspector iteration count,
+  `within` in the breakpoint dialog, loops in the paused panel.
 
 Phase 3: markov-harness d56e147. `main` repeats `turn` until `/exit`, `turn` repeats `agent_step`
 up to `max_tool_rounds` (50), and the extraction pass repeats `extract_step` up to

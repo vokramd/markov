@@ -90,10 +90,14 @@ func TestRepeatStopsWhenUntilIsTrue(t *testing.T) {
 	file := parseOrFatal(t, strings.Replace(counterWorkflow, "%s", `        repeat:
           until: "next >= limit"
           max: 10`, 1))
-	eng, _ := newTestEngine(t, file, nil)
+	eng, cb := newTestEngine(t, file, nil)
 	runID, err := eng.Run(context.Background(), "main", nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	events := eventsJSON(t, cb)
+	if n := strings.Count(events, `"kind":"repeat_iteration"`); n != 3 || !strings.Contains(events, `"kind":"repeat_stopped","data":{"count":3,"generation":0,"stopped_by":"until"}`) {
+		t.Errorf("progress events: %d repeat_iteration; %s", n, events)
 	}
 	env := loopEnvelope(t, eng, runID, "loop")
 	last, _ := env["last"].(map[string]any)

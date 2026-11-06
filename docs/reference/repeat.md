@@ -150,9 +150,22 @@ sub-run row records its owner. A call that finds a row owned by another call fai
 instead of using it.
 
 Each iteration emits `sub_run_started` and then `sub_run_completed` or `sub_run_failed`, with
-`generation` and `iteration` fields. The step's `step_started` has `resolved_type: repeat`. When
-the loop ends, the step emits a `step_progress` event of kind `repeat_stopped`, whose data is
-`stopped_by`, `count` and `generation`.
+`generation` and `iteration` fields. The step's `step_started` has `resolved_type: repeat`. As each iteration starts, the step
+emits a `step_progress` event of kind `repeat_iteration` (`index`, `generation`), and when the
+loop ends one of kind `repeat_stopped` (`stopped_by`, `count`, `generation`).
+
+## Debugging
+
+- **Pausing before an iteration:** a breakpoint on the repeat step with an `iteration` (`"3"`)
+  pauses before that iteration starts. Its variables include `repeat.index` and
+  `repeat.previous`.
+- **Pausing inside an iteration:** a breakpoint with `within:
+  [{workflow, step, iteration?}]` stops at a step only while it runs inside that loop (or that
+  one iteration of it), at any depth.
+- **What a pause shows:** paused events list the loops the step runs inside, as `loops`.
+- **Step mode** steps into an iteration's first step rather than stopping between iterations.
+
+See [Debugging](debugging.md#breakpoints).
 
 ## Storage
 

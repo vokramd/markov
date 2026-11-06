@@ -179,9 +179,11 @@ Debug events are informational and are not stored in the state store.
 
 | Event Type | When Fired | Key Fields |
 |------------|------------|------------|
-| `sub_run_started` | Sub-workflow begins | `parent_run_id`, `parent_step`, `workflow_name`, `for_each_key` |
-| `sub_run_completed` | Sub-workflow succeeds | `parent_run_id`, `parent_step`, `workflow_name`, `for_each_key`, `duration_seconds` |
-| `sub_run_failed` | Sub-workflow fails | `parent_run_id`, `parent_step`, `workflow_name`, `for_each_key`, `error`, `duration_seconds` |
+| `sub_run_started` | Sub-workflow begins | `parent_run_id`, `parent_step`, `workflow_name`, `for_each_key`, `generation`, `iteration` |
+| `sub_run_completed` | Sub-workflow succeeds | `parent_run_id`, `parent_step`, `workflow_name`, `for_each_key`, `generation`, `iteration`, `duration_seconds` |
+| `sub_run_failed` | Sub-workflow fails | `parent_run_id`, `parent_step`, `workflow_name`, `for_each_key`, `generation`, `iteration`, `error`, `duration_seconds` |
+
+`generation` and `iteration` are set on the sub-runs of a [`repeat`](repeat.md) step: which start of the loop and which iteration.
 
 ## Event lifecycle
 

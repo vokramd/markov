@@ -65,7 +65,22 @@ func (e *Engine) executeRepeat(ctx context.Context, runID, workflowName, stateSt
 		}
 		caller["repeat"] = meta
 
-		result, err := e.runRepeatIteration(withRepeat(ctx, step.Name), runID, workflowName, step, caller, gen, i)
+		if err := e.debugPauseIteration(ctx, runID, workflowName, step, stateStepName, i, caller); err != nil {
+			return e.finishRepeat(ctx, runID, workflowName, stateStepName, step, runCtx, started, gen, env, err)
+		}
+		index := i
+		e.fireEvent(func(cb callback.Callback) error {
+			return cb.OnStepProgress(callback.StepProgressEvent{
+				EventHeader:  callback.EventHeader{Timestamp: time.Now(), RunID: runID, EventType: "step_progress"},
+				WorkflowName: workflowName,
+				StepName:     step.Name,
+				StepType:     step.Type,
+				Kind:         "repeat_iteration",
+				Data:         map[string]any{"index": index, "generation": gen},
+			})
+		})
+		iterCtx := withLoopFrame(withRepeat(ctx, step.Name), loopFrame{Kind: "repeat", Workflow: workflowName, Step: step.Name, Iteration: strconv.Itoa(i), Generation: gen})
+		result, err := e.runRepeatIteration(iterCtx, runID, workflowName, step, caller, gen, i)
 		env["count"] = i + 1
 		env["last"] = result
 		if err != nil {

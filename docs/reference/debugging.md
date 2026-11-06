@@ -38,11 +38,23 @@ A breakpoint is a JSON object. Names are never parsed out of a string, so workfl
 | `workflow` | yes | Workflow name. |
 | `step` | yes | Step name. |
 | `section` | no | `steps` (default), `rescue`, or `always`. |
-| `iteration` | no | Only this `for_each` key. Without it the breakpoint applies to the step as a whole: a `for_each` step pauses once, before the loop starts. |
+| `iteration` | no | Only this `for_each` key, or on a [`repeat`](repeat.md) step only this iteration index (`"0"`, `"1"`, …), pausing before that iteration starts with `repeat.index` and `repeat.previous` in its variables. Without it the breakpoint applies to the step as a whole: a `for_each` or `repeat` step pauses once, before the loop starts. |
+| `within` | no | A list of loop selectors, `{workflow, step, iteration?}`. The breakpoint fires only for steps running inside each of those loops: a `repeat` step's iterations, or the items of a `for_each` that calls a workflow, at any depth. A selector without `iteration` matches every iteration of that loop. Each selector must name a loop step, or the breakpoint is unresolved. |
 | `phase` | no | `before` (default: the step is about to run) or `after` (it just completed; the pause carries its output). |
 | `when` | no | A condition in the same syntax as a step's `when`, evaluated against the variables the step sees. If the condition itself fails to evaluate, the run pauses and reports the error rather than silently never firing. Conditions must be side-effect free; Jev functions are not available in them. |
 | `skip` | no | Ignore the first N hits. |
 | `log` | no | A template. The breakpoint becomes a logpoint: the rendered message is reported in a `logpoint` event and the run continues. |
+
+Step mode (`step`) goes from a `repeat` step into the first step of each iteration. It doesn't stop between iterations; set an `iteration` breakpoint for that.
+
+```json
+{"cmd":"set_breakpoints","breakpoints":[
+  {"workflow":"main","step":"chat","iteration":"3"},
+  {"workflow":"agent_step","step":"call_model","within":[{"workflow":"main","step":"chat","iteration":"3"}]}
+]}
+```
+
+The first pauses before the fourth iteration of the `chat` loop. The second pauses at `call_model` only while that iteration runs, however deeply it is called.
 
 A breakpoint only fires for a step that will actually run: a step skipped by its own `when:`, or replayed as already completed by `markov resume`, does not pause. A step in a sub-workflow is matched by the sub-workflow's name; the `run_id` of the event identifies which call it belongs to (a sub-workflow run is named `<parent run id>-<call step name>`).
 
@@ -88,7 +100,7 @@ After a reload the breakpoints are resolved again against the new definition. Th
 
 ## What a pause contains
 
-See [debug events](callbacks.md#debug-events). The `paused` event has `workflow_name`, `step_name`, and `data` with `reason` (`breakpoint`, `step`, `until`, `condition_error`), `phase`, `section`, `iteration`, `step_type`, `variables` and, for `after`, `output`. Variables are the JSON form of the context the step sees; very large contexts are replaced by their key list.
+See [debug events](callbacks.md#debug-events). The `paused` event has `workflow_name`, `step_name`, and `data` with `reason` (`breakpoint`, `step`, `until`, `condition_error`), `phase`, `section`, `iteration`, `step_type`, `variables`, `loops` and, for `after`, `output`. `loops` lists the loop iterations the step runs inside, outermost first, each `{kind: repeat|for_each, workflow, step, iteration, generation?}`; it is left out outside loops. Logpoints carry `loops` too. Variables are the JSON form of the context the step sees; very large contexts are replaced by their key list.
 
 ## Example session
 
