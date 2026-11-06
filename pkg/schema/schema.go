@@ -93,10 +93,11 @@ func params(types ...StepType) []StepType { return types }
 // schema test fails when a parameter here is missing from the docs, or a built-in type is missing here.
 func stepTypes() []StepType {
 	return params(
-		StepType{Name: "shell_exec", Inputs: "params", Summary: "Run a shell command.", Params: []Param{req("command", "Shell command to execute")}},
+		StepType{Name: "shell_exec", Inputs: "params", Summary: "Run a shell command.", Params: []Param{req("command", "Shell command to execute"), p("live_output", "Report each output line as output progress while it runs")}},
 		StepType{Name: "script_exec", Inputs: "params", Summary: "Run an inline script or a script from scripts/.", Params: []Param{
 			req("interpreter", "Interpreter executable, such as python3 or bash"), p("content", "Inline script body (or path)"), p("path", "Script path relative to the workflow scripts/ directory (or content)"),
 			p("args", "Arguments passed to the script"), p("env", "Environment variables"), p("stdin", "Standard input; a map or list is sent as JSON"),
+			p("live_output", "Report each output line as output progress while it runs"),
 		}},
 		StepType{Name: "write_file", Inputs: "params", Summary: "Write content to a file on the runner, creating parent directories.", Params: []Param{
 			req("path", "File to write"), req("content", "Text, or a map or list written as indented JSON"),
@@ -126,6 +127,7 @@ func stepTypes() []StepType {
 			p("method", "Default GET"), p("url", "Full URL (or base_url)"), p("base_url", ""), p("path", ""), p("body", "JSON-encoded automatically"), p("headers", ""),
 			p("basic_auth", "username and password"), p("ignore_status", "true or a list of status codes treated as success"), p("tls_insecure", ""), p("tls_ca_cert", ""),
 			p("paginate", "true (follow Link headers) or a map: next, cursor, cursor_param, page_param, items, max_pages"),
+			p("stream", "sse, or a map: format (sse), text, thinking (dotted paths reported as live text and live thinking)"),
 		}},
 		StepType{Name: "k8s_job", Inputs: "params", Summary: "Run a Kubernetes Job and wait for it.", Params: []Param{
 			req("image", "Container image"), p("command", ""), p("args", ""), p("env", ""), p("secrets", ""), p("volumes", ""), p("init_containers", ""), p("resources", ""), p("affinity", ""),

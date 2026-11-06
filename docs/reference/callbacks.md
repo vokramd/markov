@@ -31,6 +31,37 @@ Appends one JSON line per event to a local file.
 --callback jsonl:///var/log/markov-events.jsonl
 ```
 
+### tty:// -- Live text in the terminal
+
+Shows the live progress of running steps in a terminal as it arrives: the `step_progress` kinds
+it is told to show, each in a style.
+
+| Style | Renders |
+|-------|---------|
+| `text` | Verbatim, so the pieces of a streamed reply join up. |
+| `dim` | Verbatim, dimmed when the output is a terminal. |
+| `lines` | Each event as one line, dimmed on a terminal, with a newline. |
+| `count` | A status line counting the characters received so far (`… tool input: 1,204 chars`), redrawn in place and cleared when anything else is written or the step ends. Only on a terminal. |
+
+The default is `show=text,thinking:dim,output:lines`: the `text` path of a
+[streaming `http_request`](step-types.md#streaming) and a `claude` step's assistant messages, a
+stream's `thinking`, and `output` lines from `script_exec` or `shell_exec` with `live_output`
+and from the openshell steps. `?show=` replaces it with a comma-separated list of `kind:style`
+(a kind without a style is `text`). When the kind changes within a step, a blank line separates
+them; when a step that wrote text ends without a final newline, one is added. Every other event
+is ignored, so this pairs with another callback for the full record.
+
+| URL | Writes to |
+|-----|-----------|
+| `tty://` | The controlling terminal, `/dev/tty`, even when stdout and stderr are redirected. The run fails to start when there is none. |
+| `tty://stdout` | Standard output |
+| `tty://stderr` | Standard error |
+
+```bash
+markov run chat.yaml --callback tty:// 2>>markov.log
+markov run chat.yaml --callback 'tty://?show=text,thinking:dim,output:lines,tool_input:count'
+```
+
 ### http:// / https:// -- Async HTTP POST
 
 Events are queued and sent asynchronously via a background goroutine.
@@ -105,9 +136,9 @@ All events share a common header:
 | `step_completed` | Step succeeds | `workflow_name`, `step_name`, `step_type`, `output`, `duration_seconds` |
 | `step_failed` | Step fails | `workflow_name`, `step_name`, `step_type`, `error`, `duration_seconds`, and `output` when the step's executor returned any before failing (a shell step's `stdout`/`stderr`, a `claude` step's events and `sandbox_network`). A step over its `max_output` has `error_kind: "max_output"`, `output_bytes`, `limit_bytes`, `stream` (what a streaming executor cut off) and `largest` (`[{path, bytes, items}]`), and no `output` ([Output limits](workflow-file.md#output-limits)) |
 | `step_skipped` | Step skipped (when: false) | `workflow_name`, `step_name`, `reason` |
-| `step_progress` | Live progress from inside a running step (emitted by `claude`, `openshell_exec` and `openshell_build`) | `workflow_name`, `step_name`, `step_type`, `kind`, `data` |
+| `step_progress` | Live progress from inside a running step (emitted by `claude`, `openshell_exec`, `openshell_build` and a streaming `http_request`) | `workflow_name`, `step_name`, `step_type`, `kind`, `data` |
 
-`step_progress` events are informational: they are delivered to callbacks only and are not stored in the state store. For `claude` steps, `kind` is one of `init`, `text`, `tool_use`, `tool_result`, `usage` (running `turns` and `tokens` totals), `api_retry` (the CLI could not reach the API and will retry: `attempt`, `max_retries`, `retry_delay_ms`, `error`), `limit_exceeded`, or `result`. See [claude](step-types.md#claude). `openshell_exec` and `openshell_build` emit `output` with `stream` (`stdout` or `stderr`) and `text` (one line).
+`step_progress` events are informational: they are delivered to callbacks only and are not stored in the state store. For `claude` steps, `kind` is one of `init`, `text`, `tool_use`, `tool_result`, `usage` (running `turns` and `tokens` totals), `api_retry` (the CLI could not reach the API and will retry: `attempt`, `max_retries`, `retry_delay_ms`, `error`), `limit_exceeded`, or `result`. See [claude](step-types.md#claude). `openshell_exec` and `openshell_build` emit `output` with `stream` (`stdout` or `stderr`) and `text` (one line). A streaming `http_request` emits `sse` for each server-sent event (`event`, `data`) and, for each kind configured by `stream.text`, `stream.thinking` and `stream.progress`, that kind (`text`); see [Streaming](step-types.md#streaming). `script_exec` and `shell_exec` with `live_output` emit `output` like the openshell steps.
 
 ### Debug events
 

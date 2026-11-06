@@ -31,6 +31,7 @@ Runs a shell command via `bash -c`. The command executes on the Markov runner ho
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `command` | string | yes | Shell command to execute |
+| `live_output` | bool | no | Report each line of stdout and stderr while the command runs, as a `step_progress` event of kind `output` (`stream`, `text`), which the [`tty://` callback](callbacks.md#tty----live-text-in-the-terminal) prints as it arrives. The output variables are unchanged. Default `false`. |
 
 ### Output Variables
 
@@ -94,6 +95,7 @@ Provide exactly one script source:
 | `args` | list | no | Arguments passed to the script after its path. Strings, numbers and booleans; numbers and booleans are passed as their text (`3`, `true`). |
 | `env` | map | no | Environment variables added to or overriding the runner environment. Values as for `args`. |
 | `stdin` | string, map or list | no | Standard input for the script. A map or list (from an exact expression) is sent as JSON. Use it for large values: a single argument is limited to about 128 KB on Linux, stdin is not. |
+| `live_output` | bool | no | Report each line of stdout and stderr while the script runs, as a `step_progress` event of kind `output` (`stream`, `text`), which the [`tty://` callback](callbacks.md#tty----live-text-in-the-terminal) prints as it arrives. The output variables are unchanged. Default `false`. |
 
 ### Output Variables
 
@@ -790,6 +792,7 @@ Makes HTTP requests with automatic JSON body encoding and response parsing.
 | `tls_insecure` | bool | `false` | Skip TLS certificate verification for HTTPS requests. Intended for local development or trusted test environments. |
 | `tls_ca_cert` | string | -- | Path to a PEM-encoded CA certificate bundle to trust for this request. Useful for self-signed or private CA certificates. |
 | `paginate` | bool or map | -- | Follow a paginated list and return all its items as one list. `true` follows `Link` headers; a map says how the API pages (see Pagination). |
+| `stream` | string or map | -- | Read a streamed response as it arrives: `sse` for server-sent events, or a map with `format: sse` and paths into each event's data to report live (`text`, `thinking`, `progress`) (see Streaming). Cannot be combined with `paginate`. |
 
 When a `body` is provided, the `Content-Type` header is set to `application/json`. A custom `Content-Type` value in `headers` overrides that default. If both `basic_auth` and a custom `Authorization` header are provided, `basic_auth` takes precedence.
 
@@ -802,7 +805,7 @@ Either `url` or `base_url` must be specified. When both `base_url` and `path` ar
 | Variable | Type | Description |
 |----------|------|-------------|
 | `status_code` | int | HTTP response status code |
-| `body` | any | Response body. Auto-parsed as JSON if the response is valid JSON (whole numbers become integers); otherwise returned as a string. With `paginate`, the items of every page in one list. |
+| `body` | any | Response body. Auto-parsed as JSON if the response is valid JSON (whole numbers become integers); otherwise returned as a string. With `paginate`, the items of every page in one list. With `stream`, an event-stream response's events in one list, each `{event, data}`. |
 | `headers` | map | Response headers by canonical name (`Content-Type`, `Link`); repeated values are joined with `, `. With `paginate`, the last page's. |
 | `pages` | int | With `paginate`: how many pages were fetched. |
 | `truncated` | bool | With `paginate`: true when `max_pages` stopped it before the last page. |
@@ -826,10 +829,53 @@ headers, body) is the same for every page; only the URL changes. Ask for large p
 (`per_page=100` on GitHub) to make fewer requests. A page that fails stops the step with the
 error, naming the page; an error status allowed by `ignore_status` ends the list there.
 
+### Streaming
+
+`stream: sse` reads a `text/event-stream` response event by event instead of waiting for it to
+end, and sends `Accept: text/event-stream` (a `headers` value overrides it). Each complete event
+becomes a `step_progress` event of kind `sse` the moment it arrives, with `event` (its `event:`
+field, or `message`) and `data` (its `data:` lines joined with newlines, decoded when they are
+JSON). Comments (`:` lines, often keep-alives) are skipped; `id:` and `retry:` are ignored.
+When the stream ends, `body` holds every event as `{event, data}`, in order.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `format` | `sse` | The stream format. Only `sse` is supported. |
+| `text` | -- | A dotted path into each event's `data`. When it names a non-empty string, that string is also reported as a `text` progress event, which the [`tty://` callback](callbacks.md#tty----live-text-in-the-terminal) writes to the terminal as it arrives. |
+| `thinking` | -- | The same for a model's reasoning: reported as a `thinking` progress event, which `tty://` writes dimmed, with a blank line before the text that follows. |
+| `progress` | -- | A map of progress kind to dotted path, for any other kind: each non-empty string found is reported as a progress event of that kind, with `text`. `text: p` is the same as `progress: {text: p}`. A kind can't be `sse` or be set twice. |
+
+A response that is not an event stream (an API that answers an error with plain JSON) is read
+whole and parsed as usual, so `body` is the error document. The bytes of the stream count
+against the step's output limit as they arrive. Streaming a model's reply, showing its text as
+it is written:
+
+```yaml
+- name: call_model
+  type: http_request
+  params:
+    method: POST
+    url: "{{ api }}/v1/messages"
+    headers: {x-api-key: "{{ api_key }}", anthropic-version: "2023-06-01"}
+    body: {model: "{{ model }}", max_tokens: 1024, stream: true, messages: "{{ messages }}"}
+    stream:
+      format: sse
+      text: delta.text          # content_block_delta events carry the next piece of text
+      thinking: delta.thinking  # ... or of extended thinking
+      progress:
+        tool_input: delta.partial_json   # a tool call's input as it is written
+    ignore_status: true
+  register: reply               # reply.body: [{event: message_start, data: {...}}, ...]
+```
+
+Run it with `--callback 'tty://?show=text,thinking:dim,tool_input:count'` to see the text as it arrives, the thinking dimmed, and a running count of the tool input.
+
 ### Failure Conditions
 
 - Neither `url` nor `base_url` is provided.
 - `paginate` is malformed, or a page's items (the body, or `items`) are not a list.
+- `stream` is malformed, or combined with `paginate`.
+- An event stream breaks off with a read error. The events read before it are kept in `body`.
 - The HTTP request fails at the transport level (DNS, connection refused, etc.).
 - The response status code is >= 400 and is not allowed by `ignore_status`. The step fails, but output variables (including the response body) are still populated.
 

@@ -44,6 +44,13 @@ func (e *HTTPRequest) Execute(ctx context.Context, params map[string]any) (*Resu
 	if err != nil {
 		return nil, err
 	}
+	stream, err := streamingFromParams(params["stream"])
+	if err != nil {
+		return nil, err
+	}
+	if stream != nil && pages != nil {
+		return nil, fmt.Errorf("http_request: stream and paginate cannot be combined")
+	}
 	client, err := e.clientForParams(params)
 	if err != nil {
 		return nil, err
@@ -51,14 +58,14 @@ func (e *HTTPRequest) Execute(ctx context.Context, params map[string]any) (*Resu
 	// Every page counts against the step's one output limit.
 	ctx, _ = withCounter(ctx)
 	if pages == nil {
-		output, _, err := e.send(ctx, client, method, url, params)
+		output, _, err := e.send(ctx, client, method, url, params, stream)
 		return resultOrNil(output), err
 	}
 
 	// Follow the pages, collecting their items into one list.
 	var items []any
 	for page := 1; ; page++ {
-		output, header, err := e.send(ctx, client, method, url, params)
+		output, header, err := e.send(ctx, client, method, url, params, nil)
 		if err != nil {
 			if output == nil {
 				return nil, fmt.Errorf("%w (page %d)", err, page)
@@ -106,8 +113,9 @@ func resultOrNil(output map[string]any) *Result {
 }
 
 // send makes one request. The output is set whenever a response arrived, also when its status
-// is an error that ignore_status does not allow.
-func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url string, params map[string]any) (map[string]any, http.Header, error) {
+// is an error that ignore_status does not allow. With stream set, a text/event-stream response is
+// read event by event and its body is the list of events; any other response is read whole.
+func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url string, params map[string]any, stream *streaming) (map[string]any, http.Header, error) {
 	var bodyReader io.Reader
 	if body, ok := params["body"]; ok {
 		encoded, err := json.Marshal(body)
@@ -125,6 +133,9 @@ func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url
 	if bodyReader != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	if stream != nil {
+		req.Header.Set("Accept", "text/event-stream")
+	}
 	if err := applyHeaders(req, params["headers"]); err != nil {
 		return nil, nil, err
 	}
@@ -139,6 +150,21 @@ func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url
 	defer resp.Body.Close()
 
 	_, counter := withCounter(ctx)
+	if stream != nil && isEventStream(resp.Header.Get("Content-Type")) {
+		events, err := readSSE(ctx, resp.Body, counter, stream)
+		if _, over := outputlimit.As(err); over {
+			return nil, nil, limitErr("http_request", err)
+		}
+		output := map[string]any{
+			"status_code": resp.StatusCode,
+			"headers":     headerOutput(resp.Header),
+			"body":        events,
+		}
+		if err != nil {
+			return output, resp.Header, fmt.Errorf("http_request: reading event stream: %w", err)
+		}
+		return output, resp.Header, statusError(resp.StatusCode, params)
+	}
 	respBody, err := readCapped(resp.Body, counter, "body")
 	if _, over := outputlimit.As(err); over {
 		return nil, nil, limitErr("http_request", err)
@@ -157,15 +183,19 @@ func (e *HTTPRequest) send(ctx context.Context, client *http.Client, method, url
 		output["body"] = parsed
 	}
 
-	ignoreStatus, err := shouldIgnoreStatus(resp.StatusCode, params["ignore_status"])
-	if err != nil {
-		return output, resp.Header, err
-	}
-	if resp.StatusCode >= 400 && !ignoreStatus {
-		return output, resp.Header, fmt.Errorf("http_request: status %d", resp.StatusCode)
-	}
+	return output, resp.Header, statusError(resp.StatusCode, params)
+}
 
-	return output, resp.Header, nil
+// statusError fails an error status that ignore_status does not allow.
+func statusError(statusCode int, params map[string]any) error {
+	ignoreStatus, err := shouldIgnoreStatus(statusCode, params["ignore_status"])
+	if err != nil {
+		return err
+	}
+	if statusCode >= 400 && !ignoreStatus {
+		return fmt.Errorf("http_request: status %d", statusCode)
+	}
+	return nil
 }
 
 func (e *HTTPRequest) clientForParams(params map[string]any) (*http.Client, error) {

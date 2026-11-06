@@ -22,7 +22,11 @@ func (e *ShellExec) Execute(ctx context.Context, params map[string]any) (*Result
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 
-	stdout, stderr, err := runCapped(ctx, cmd)
+	live, err := liveOutputParam(params["live_output"], "shell_exec")
+	if err != nil {
+		return nil, err
+	}
+	stdout, stderr, err := runCappedLive(ctx, cmd, live)
 	if _, over := outputlimit.As(err); over {
 		return nil, limitErr("shell_exec", err)
 	}

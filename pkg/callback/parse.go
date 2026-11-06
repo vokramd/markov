@@ -15,6 +15,10 @@ func ParseCallbackURL(rawURL string, headers map[string]string, bufferSize int, 
 		return NewJSONLCallback(path)
 	}
 
+	if strings.HasPrefix(rawURL, "tty://") {
+		return NewTTYCallback(strings.TrimPrefix(rawURL, "tty://"))
+	}
+
 	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
 		if _, err := url.Parse(rawURL); err != nil {
 			return nil, fmt.Errorf("invalid HTTP callback URL: %w", err)
@@ -37,5 +41,5 @@ func ParseCallbackURL(rawURL string, headers map[string]string, bufferSize int, 
 		return NewGRPCCallback(addr, !useTLS || tlsInsecure, tlsCertPath)
 	}
 
-	return nil, fmt.Errorf("unsupported callback scheme in %q (supported: jsonl://, http://, https://, grpc://, grpcs://)", rawURL)
+	return nil, fmt.Errorf("unsupported callback scheme in %q (supported: jsonl://, tty://, http://, https://, grpc://, grpcs://)", rawURL)
 }

@@ -87,7 +87,7 @@ func addStateStoreFlag(cmd *cobra.Command, defaultValue string) {
 
 // addCallbackFlags registers the event-callback flags (run and resume both report events).
 func addCallbackFlags(cmd *cobra.Command) {
-	cmd.Flags().StringArrayVar(&flagCallbacks, "callback", nil, "Callback destination URL (repeatable). Schemes: jsonl://, http://, https://, grpc://, grpcs://")
+	cmd.Flags().StringArrayVar(&flagCallbacks, "callback", nil, "Callback destination URL (repeatable). Schemes: jsonl://, tty://, http://, https://, grpc://, grpcs://")
 	cmd.Flags().StringArrayVar(&flagCallbackHeaders, "callback-header", nil, "Extra HTTP headers for http callbacks (key=value, repeatable)")
 	cmd.Flags().BoolVar(&flagCallbackTLSInsecure, "callback-tls-insecure", false, "Skip TLS verification for callback connections")
 	cmd.Flags().StringVar(&flagCallbackTLSCert, "callback-tls-cert", "", "Client TLS certificate for callback connections")

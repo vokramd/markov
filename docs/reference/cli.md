@@ -463,6 +463,7 @@ The `--callback` flag accepts URLs with the following schemes:
 | Scheme | Description |
 |--------|-------------|
 | `jsonl://` | Append events as JSON lines to a local file. Example: `jsonl:///var/log/markov/events.jsonl` |
+| `tty://` | Write steps' live progress (reply text, thinking dimmed, command output lines) to the terminal as it arrives; `tty://stdout` and `tty://stderr` write there instead, and `?show=kind:style,...` picks the kinds. |
 | `http://` | POST events to an HTTP endpoint. |
 | `https://` | POST events to an HTTPS endpoint. |
 | `grpc://` | Stream events to a gRPC endpoint. |

@@ -4,7 +4,9 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -137,5 +139,56 @@ func TestScriptExecStdin(t *testing.T) {
 	}
 	if got := result.Output["stdout"]; got != `[{"a":1}]` {
 		t.Fatalf("JSON stdin = %q", got)
+	}
+}
+
+// With live_output, each line is reported while the script is still running: the script waits
+// for a file that the progress handler creates when it sees the first line.
+func TestScriptExecLiveOutputReportsLinesAsTheyAreWritten(t *testing.T) {
+	gate := filepath.Join(t.TempDir(), "seen")
+	var mu sync.Mutex
+	var lines []string
+	ctx := WithProgress(context.Background(), func(kind string, data map[string]any) {
+		if kind != "output" {
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		lines = append(lines, data["stream"].(string)+":"+data["text"].(string))
+		if data["text"] == "first" {
+			_ = os.WriteFile(gate, nil, 0600)
+		}
+	})
+	result, err := NewScriptExec().Execute(ctx, map[string]any{
+		"interpreter": "sh",
+		"content":     "echo first\nfor i in $(seq 100); do [ -e \"$1\" ] && break; sleep 0.05; done\n[ -e \"$1\" ] || exit 3\necho oops >&2\nprintf last",
+		"args":        []any{gate},
+		"live_output": true,
+	})
+	if err != nil {
+		t.Fatalf("Execute() error = %v (the first line was not reported while the script ran)", err)
+	}
+	if got, want := result.Output["stdout"], "first\nlast"; got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	sort.Strings(lines[1:]) // stdout and stderr lines after the first may interleave either way
+	if got, want := strings.Join(lines, ","), "stdout:first,stderr:oops,stdout:last"; got != want {
+		t.Fatalf("output progress = %s, want %s", got, want)
+	}
+}
+
+func TestScriptExecReportsNoOutputProgressByDefault(t *testing.T) {
+	reported := false
+	ctx := WithProgress(context.Background(), func(string, map[string]any) { reported = true })
+	if _, err := NewScriptExec().Execute(ctx, map[string]any{"interpreter": "sh", "content": "echo hi"}); err != nil {
+		t.Fatal(err)
+	}
+	if reported {
+		t.Fatal("progress reported without live_output")
+	}
+	if _, err := NewScriptExec().Execute(ctx, map[string]any{"interpreter": "sh", "content": "echo hi", "live_output": "yes"}); err == nil {
+		t.Fatal("non-boolean live_output accepted")
 	}
 }

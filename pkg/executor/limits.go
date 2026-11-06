@@ -14,6 +14,12 @@ import (
 // (outputlimit.Limit(ctx)). Past the limit the process is killed, so a runaway command stops
 // instead of filling memory, and the limit error is returned.
 func runCapped(ctx context.Context, cmd *exec.Cmd) (stdout, stderr string, err error) {
+	return runCappedLive(ctx, cmd, false)
+}
+
+// runCappedLive is runCapped that, when live is set, also reports each line of stdout and stderr
+// as an `output` progress event (stream, text) as it is written.
+func runCappedLive(ctx context.Context, cmd *exec.Cmd, live bool) (stdout, stderr string, err error) {
 	counter := outputlimit.NewCounter(outputlimit.Limit(ctx))
 	var out, errOut bytes.Buffer
 	kill := func() {
@@ -23,6 +29,13 @@ func runCapped(ctx context.Context, cmd *exec.Cmd) (stdout, stderr string, err e
 	}
 	cmd.Stdout = counter.Writer(&out, "stdout", kill)
 	cmd.Stderr = counter.Writer(&errOut, "stderr", kill)
+	if live {
+		outLines, errLines := newProgressLines(ctx, "stdout"), newProgressLines(ctx, "stderr")
+		defer outLines.Flush()
+		defer errLines.Flush()
+		cmd.Stdout = io.MultiWriter(cmd.Stdout, outLines)
+		cmd.Stderr = io.MultiWriter(cmd.Stderr, errLines)
+	}
 	err = cmd.Run()
 	if lim := counter.Err(); lim != nil {
 		return out.String(), errOut.String(), lim
@@ -68,4 +81,16 @@ func withCounter(ctx context.Context) (context.Context, *outputlimit.Counter) {
 // outputlimit.As.
 func limitErr(name string, err error) error {
 	return fmt.Errorf("%s: %w", name, err)
+}
+
+// liveOutputParam reads the optional boolean live_output param of a command step.
+func liveOutputParam(raw any, step string) (bool, error) {
+	if raw == nil {
+		return false, nil
+	}
+	live, ok := raw.(bool)
+	if !ok {
+		return false, fmt.Errorf("%s: live_output must be a boolean", step)
+	}
+	return live, nil
 }

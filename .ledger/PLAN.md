@@ -27,6 +27,8 @@
 
 ## Completed Tasks
 
+- [Streaming http_request (SSE) and the tty:// callback](tasks/done/http-request-streaming.md)
+- [Live command output, stream progress kinds, and tty:// show styles](tasks/done/live-command-output-and-tty-show.md)
 - [Complete reference docs for every step type](tasks/done/step-type-reference-docs.md)
 - [claude in sandboxes, and openshell_provider](tasks/done/openshell-claude-and-providers.md) (after plan 004)
 - [OpenShell SDK transport](tasks/done/openshell-sdk-transport.md) (plan 004 phase 2)

@@ -89,7 +89,11 @@ func (e *ScriptExec) Execute(ctx context.Context, params map[string]any) (*Resul
 		}
 		cmd.Stdin = strings.NewReader(input)
 	}
-	stdout, stderr, err := runCapped(ctx, cmd)
+	live, err := liveOutputParam(params["live_output"], "script_exec")
+	if err != nil {
+		return nil, err
+	}
+	stdout, stderr, err := runCappedLive(ctx, cmd, live)
 	if _, over := outputlimit.As(err); over {
 		return nil, limitErr("script_exec", err)
 	}
