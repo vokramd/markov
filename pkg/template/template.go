@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"unicode"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/jctanner/markov/pkg/jsonvalue"
@@ -242,11 +243,11 @@ func (e *Engine) renderValue(v any, ctx map[string]any) (any, error) {
 			return val, nil
 		}
 		if rendered, ok, err := e.renderNativeExpression(val, ctx); ok || err != nil {
-			return rendered, err
+			return withSurroundingSpace(val, rendered), err
 		}
 		if expr, ok := exactExpression(val); ok {
 			if value, ok, err := e.evalNative(expr, ctx); ok || err != nil {
-				return value, err
+				return withSurroundingSpace(val, value), err
 			}
 		}
 		return e.Render(val, ctx)
@@ -309,6 +310,19 @@ func (e *Engine) renderNativeExpression(tmpl string, ctx map[string]any) (any, b
 		}
 	}
 	return value, true, nil
+}
+
+// withSurroundingSpace puts back the whitespace around an exact {{ expr }} (such as the newline a
+// YAML block scalar ends with) when its value is a string: it is part of what was written. A
+// structured value (a list, a map, a number) can't carry it and stays native.
+func withSurroundingSpace(tmpl string, value any) any {
+	s, ok := value.(string)
+	if !ok {
+		return value
+	}
+	lead := tmpl[:len(tmpl)-len(strings.TrimLeftFunc(tmpl, unicode.IsSpace))]
+	trail := tmpl[len(strings.TrimRightFunc(tmpl, unicode.IsSpace)):]
+	return lead + s + trail
 }
 
 func exactExpression(tmpl string) (string, bool) {

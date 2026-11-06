@@ -156,6 +156,11 @@ vars:
 
 An expression that is undefined still renders as the empty string.
 
+Whitespace around the expression, such as the newline a YAML `|` block scalar ends with, doesn't
+stop a value from being native. It is kept when the value is a string, since it is part of what
+was written: `"{{ message | to_json }}\n"` ends with its newline. A list, a map or a number has
+nowhere to carry it and comes out native without it.
+
 This exact-expression path is triggered only when the whole string is the expression, with no surrounding text. Mixed templates still render to strings:
 
 ```yaml
@@ -294,7 +299,7 @@ If the rendered output (trimmed) equals `"true"`, the result is `true`. Otherwis
 
 ## Type Coercion
 
-After template rendering in `set_fact` steps, string results are coerced to native Go types by `coerceString` (in `facts.go:146`). This ensures that computed values have the expected types downstream.
+After template rendering in `set_fact` steps and a call's `vars:`, string results are coerced to native Go types by `coerceString` (in `facts.go`). This ensures that computed values have the expected types downstream. Surrounding whitespace is ignored when reading a bool, a number or JSON (`"3\n"` is `3`); a string that is none of those is kept exactly, whitespace included.
 
 | Rendered String | Coerced Type | Coerced Value |
 |---|---|---|
@@ -306,7 +311,7 @@ After template rendering in `set_fact` steps, string results are coerced to nati
 | `"3.14"` | `float64` | `3.14` |
 | `'["a","b"]'` | `[]any` | Parsed JSON array |
 | `'{"k":"v"}'` | `map[string]any` | Parsed JSON object |
-| Anything else | `string` | Kept as-is |
+| Anything else | `string` | Kept as-is, including leading and trailing whitespace |
 
 Coercion order matters: integer parsing is attempted before float parsing. JSON parsing is only attempted if the string starts with `[` or `{`.
 

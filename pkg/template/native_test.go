@@ -133,3 +133,28 @@ func TestFlattenAndPluck(t *testing.T) {
 		}
 	}
 }
+
+// An exact {{ expr }} with text around it, such as the newline a YAML block scalar ends with, keeps
+// that text when the value is a string: it is part of what was written. A structured value (a
+// list, a map) can't carry it, so it stays native.
+func TestExactExpressionKeepsSurroundingWhitespaceForStrings(t *testing.T) {
+	ctx := map[string]any{"s": "a", "obj": map[string]any{"k": 1}, "list": []any{1, 2}, "n": 3}
+	cases := map[string]any{
+		"{{ s }}\n":             "a\n",
+		"  {{ s }}":             "  a",
+		"{{ obj | to_json }}\n": `{"k":1}` + "\n",
+		"{{ s }}":               "a",
+		"{{ list }}\n":          []any{1, 2},
+		"{{ obj }}\n":           map[string]any{"k": 1},
+		"{{ n }}\n":             3,
+	}
+	for tmpl, want := range cases {
+		got, err := New().RenderMap(map[string]any{"v": tmpl}, ctx)
+		if err != nil {
+			t.Fatalf("%q: %v", tmpl, err)
+		}
+		if !reflect.DeepEqual(got["v"], want) {
+			t.Errorf("%q: got %#v, want %#v", tmpl, got["v"], want)
+		}
+	}
+}

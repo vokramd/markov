@@ -222,3 +222,43 @@ func TestResumedChildGetsTheSameScope(t *testing.T) {
 		t.Fatalf("after resume: api %v, listing %v, other %v", a["api"], a["listing"], a["other"])
 	}
 }
+
+// A rendered string keeps its whitespace through set_fact and call vars; only values that read as
+// a number, a bool or JSON are converted.
+func TestSetFactAndCallVarsKeepATrailingNewline(t *testing.T) {
+	file := parseOrFatal(t, `
+entrypoint: main
+vars:
+  word: hello
+workflows:
+  - name: main
+    steps:
+      - name: facts
+        type: set_fact
+        vars:
+          line: "{{ word }}\n"
+          padded: "  {{ word }}"
+          count: "{{ 2 + 1 }}\n"
+      - name: call
+        workflow: child
+        register: child
+        vars:
+          line: "{{ word }}\n"
+      - name: check
+        type: assert
+        that:
+          - "line|length == 6"
+          - "padded|length == 7"
+          - "count == 3"
+          - "child.line|length == 6"
+  - name: child
+    vars:
+      line: ~
+    steps:
+      - {name: noop, type: set_fact, vars: {seen: "true"}}
+`)
+	eng, _ := newTestEngine(t, file, nil)
+	if _, err := eng.Run(context.Background(), "main", nil); err != nil {
+		t.Fatal(err)
+	}
+}

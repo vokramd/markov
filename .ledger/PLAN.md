@@ -68,6 +68,7 @@
 
 ## Fixed Bugs
 
+- [Whitespace around an exact expression, and around set_fact strings, is dropped](bugs/fixed/exact-expression-drops-surrounding-whitespace.md)
 - [A secret restored on resume inside a sub-workflow is not masked](bugs/fixed/restored-sub-run-secret-unmasked.md)
 - [Secrets passed to sub-workflows are stored in plain text with every sub-run](bugs/fixed/secrets-stored-in-sub-run-vars.md)
 - [A cancelled run's rescue and always steps fail at once](bugs/fixed/cancelled-run-skips-cleanup.md)

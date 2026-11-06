@@ -171,8 +171,10 @@ func extractFromJSONExpr(tmpl string) (string, bool) {
 	return path, true
 }
 
-func coerceString(s string) any {
-	s = strings.TrimSpace(s)
+// coerceString reads a value off its text, ignoring surrounding whitespace: a bool, a number or
+// JSON. Anything else is an ordinary string and is returned as written, whitespace included.
+func coerceString(raw string) any {
+	s := strings.TrimSpace(raw)
 	if s == "True" || s == "true" {
 		return true
 	}
@@ -180,7 +182,7 @@ func coerceString(s string) any {
 		return false
 	}
 	if s == "None" || s == "" {
-		return s
+		return raw
 	}
 	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return int(i)
@@ -193,7 +195,7 @@ func coerceString(s string) any {
 			return parsed
 		}
 	}
-	return s
+	return raw
 }
 
 // CoerceString converts a CLI or rendered string to Markov's canonical native
