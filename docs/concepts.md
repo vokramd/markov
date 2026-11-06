@@ -71,9 +71,18 @@ A durable gate `pause` is intentionally different from failure: it does not run 
 
 A step can invoke another workflow by name using the `workflow` field instead of `type`. A sub-workflow sees the globals (the file-level vars), its own `vars:` (its parameters), and what the calling step passes with `pass:` or `vars:`; not the caller's registers or facts. Changes inside a sub-workflow don't propagate back to the parent unless captured with `register`.
 
-## Recursive Workflows
+## Loops
 
-Workflows can call themselves. Combined with gate steps, this enables looping: a gate evaluates rules against the current state and decides whether to continue or pause for explicit resume input. This follows the Markov chain principle — each iteration's next move depends only on the current state.
+A step with `repeat` runs its sub-workflow again and again until a condition holds, up to a limit:
+a bounded do-while loop. Each iteration gets what the previous one produced (`repeat.previous`)
+and nothing else. This follows the Markov chain principle: each iteration's next move depends only
+on the current state. Iterations are flat sub-runs of the caller. An unfinished loop starts over
+when its run is resumed. See [Repeat](reference/repeat.md).
+
+Workflows can also call themselves. Combined with gate steps, recursion can loop with a durable
+pause between iterations, which `repeat` doesn't support yet. A gate evaluates rules against the
+current state and decides whether to continue or pause for explicit resume input. Each recursive
+call nests one level deeper, and nothing bounds the depth, so prefer `repeat` for long loops.
 
 ## Rule Engine and Gates
 

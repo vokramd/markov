@@ -29,6 +29,7 @@ Complete, field-by-field documentation for the markov YAML DSL:
 - [Template Engine](reference/template-engine.md) — Pongo2 templates, filters, expressions, and type coercion
 - [Rule Engine](reference/rule-engine.md) — rules, gates, condition syntax, FactStore, and Grule evaluation
 - [Fan-Out (for_each)](reference/for-each.md) — for_each, for_each_key, for_each_sort, concurrency
+- [Repeat](reference/repeat.md) — bounded do-while loops over a sub-workflow: until, max, repeat.index and repeat.previous
 - [Variables and Context](reference/variables-and-context.md) — vars, register, set_fact, context resolution, and data flow
 - [Artifacts](reference/artifacts.md) — loading YAML, markdown, and table files into the context
 - [Callbacks](reference/callbacks.md) — event system, HTTP/gRPC/JSONL backends, event types

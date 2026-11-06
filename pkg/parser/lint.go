@@ -70,7 +70,7 @@ func Lint(wf *WorkflowFile) []Issue {
 		rep := strings.NewReplacer(pairs...)
 		for _, s := range allSteps(w) {
 			for _, name := range stepReads(wf, s, rep) {
-				if visible[name] || strings.HasPrefix(name, "markov_") {
+				if visible[name] || strings.HasPrefix(name, "markov_") || (name == "repeat" && s.Repeat != nil) {
 					continue
 				}
 				isErr := called[w.Name]
@@ -91,6 +91,7 @@ func Lint(wf *WorkflowFile) []Issue {
 			if child == nil {
 				continue
 			}
+			issues = append(issues, lintRepeatUntil(wf, w, s, child)...)
 			for _, name := range passedNames(s) {
 				if _, ok := child.Vars[name]; ok || isGlobalName(wf, name) {
 					continue
@@ -98,6 +99,44 @@ func Lint(wf *WorkflowFile) []Issue {
 				issues = append(issues, Issue{Error: true, Workflow: w.Name, Step: s.Name, Name: name, Msg: fmt.Sprintf("passes %q, which workflow %q does not declare in its vars:", name, child.Name)})
 			}
 		}
+	}
+	return issues
+}
+
+// lintRepeatUntil warns about names a repeat step's until reads that the iteration's results
+// can't hold: until sees what the called workflow was passed and what its steps set, plus
+// repeat. Outputs can be conditional, so this is a hint; the runtime check is the real one.
+func lintRepeatUntil(wf *WorkflowFile, w *Workflow, s Step, child *Workflow) []Issue {
+	if s.Repeat == nil || s.Repeat.Until == "" {
+		return nil
+	}
+	visible := visibleNames(wf, child)
+	for _, n := range passedNames(s) {
+		visible[n] = true
+	}
+	visible["repeat"] = true
+	var pairs []string
+	for name := range visible {
+		if strings.Contains(name, "-") {
+			pairs = append(pairs, name, strings.ReplaceAll(name, "-", "_"))
+			visible[strings.ReplaceAll(name, "-", "_")] = true
+		}
+	}
+	rep := strings.NewReplacer(pairs...)
+	names := map[string]bool{}
+	if IsTemplated(s.Repeat.Until) {
+		collectTemplateNames(s.Repeat.Until, names, rep)
+	} else {
+		collectExprNamesExcept(rep.Replace(s.Repeat.Until), names, nil)
+	}
+	delete(names, "")
+	var issues []Issue
+	for _, name := range sortedKeys(names) {
+		if visible[name] || isGlobalName(wf, name) {
+			continue
+		}
+		issues = append(issues, Issue{Workflow: w.Name, Step: s.Name, Name: name,
+			Msg: fmt.Sprintf("repeat until reads %q, which workflow %q's results don't hold: until sees what it is passed and what its steps set, plus repeat", name, child.Name)})
 	}
 	return issues
 }
@@ -237,6 +276,9 @@ func stepReads(wf *WorkflowFile, s Step, rep *strings.Replacer) []string {
 	for _, a := range s.Artifacts {
 		tmpl(a.Path)
 	}
+	if s.Repeat != nil {
+		tmpl(s.Repeat.Max) // until reads the iteration's results, checked in lintRepeatUntil
+	}
 	delete(names, "")
 	out := make([]string, 0, len(names))
 	for n := range names {
@@ -331,4 +373,13 @@ func collectExprNamesExcept(expr string, names, local map[string]bool) {
 
 func isIdentChar(c byte) bool {
 	return c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+}
+
+func sortedKeys(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

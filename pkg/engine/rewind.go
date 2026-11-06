@@ -141,7 +141,7 @@ func (e *Engine) changedSteps(ctx context.Context, runID string) ([]ChangedStep,
 	if err != nil {
 		return nil, err
 	}
-	for _, c := range children {
+	for _, c := range currentGenerations(children) {
 		sub, err := e.changedSteps(ctx, c.RunID)
 		if err != nil {
 			return nil, err

@@ -761,16 +761,25 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 
 	if step.Workflow != "" {
 		swStart := time.Now()
+		resolved := "workflow"
+		if step.Repeat != nil {
+			resolved = "repeat"
+		}
 		e.fireEvent(func(cb callback.Callback) error {
 			return cb.OnStepStarted(callback.StepStartedEvent{
 				EventHeader:  callback.EventHeader{Timestamp: swStart, RunID: runID, EventType: "step_started"},
 				WorkflowName: workflowName,
 				StepName:     step.Name,
 				StepType:     step.Type,
-				ResolvedType: "workflow",
+				ResolvedType: resolved,
 			})
 		})
-		err := e.executeSubWorkflow(ctx, runID, workflowName, step, runCtx)
+		var err error
+		if step.Repeat != nil {
+			err = e.executeRepeat(ctx, runID, workflowName, stateStepName, step, runCtx)
+		} else {
+			err = e.executeSubWorkflow(ctx, runID, workflowName, step, runCtx)
+		}
 		swEnd := time.Now()
 		if err != nil {
 			if IsPaused(err) {
@@ -928,6 +937,14 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 			"facts":       result.Facts,
 		})
 		completed := time.Now()
+		if loop, inLoop := insideRepeat(ctx); inLoop && result.Action == "pause" {
+			// A paused iteration can't be resumed (repeat resume: false), so the gate fails here,
+			// before the iteration's rescue and always run, instead of pausing.
+			var output map[string]any
+			json.Unmarshal(outputJSON, &output)
+			return e.failStepWithOutput(ctx, runID, workflowName, stateStepName, base, now,
+				fmt.Errorf("gate %q chose pause inside repeat step %q; pausing inside repeat is not supported yet", step.Name, loop), output)
+		}
 		if result.Action == "pause" {
 			e.store.SaveStep(ctx, &state.StepResult{
 				RunID:        runID,
@@ -1219,7 +1236,9 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 
 	e.noteVars(e.fileFor(ctx), subVars)
 	subRunID := fmt.Sprintf("%s-%s", runID, step.Name)
-	if err := e.checkSubRunWorkflow(ctx, subRunID, step, wf.Name); err != nil {
+	owner := subRunOwner{Kind: "call", Parent: runID, Workflow: workflowName, Step: step.Name}
+	exists, err := e.claimSubRun(ctx, subRunID, owner, step, wf.Name)
+	if err != nil {
 		return err
 	}
 	subRun := &state.Run{
@@ -1231,9 +1250,12 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 		VarsJSON:     e.subRunVarsJSON(subVars),
 		ParentRunID:  runID,
 		ParentStep:   step.Name,
+		Owner:        owner.encode(),
 		StartedAt:    time.Now(),
 	}
-	e.store.CreateRun(ctx, subRun)
+	if err := e.startSubRun(ctx, subRun, exists); err != nil {
+		return err
+	}
 
 	e.fireEvent(func(cb callback.Callback) error {
 		return cb.OnSubRunStarted(callback.SubRunStartedEvent{
@@ -1428,7 +1450,9 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 
 				e.noteVars(e.fileFor(ctx), subVars)
 				subRunID := fmt.Sprintf("%s-%s-%s", runID, step.Name, forEachKey)
-				if err := e.checkSubRunWorkflow(ctx, subRunID, step, wf.Name); err != nil {
+				owner := subRunOwner{Kind: "for_each", Parent: runID, Workflow: workflowName, Step: step.Name, Key: forEachKey}
+				exists, err := e.claimSubRun(ctx, subRunID, owner, step, wf.Name)
+				if err != nil {
 					errOnce.Do(func() { failed.Store(true); firstErr = err })
 					return
 				}
@@ -1442,9 +1466,13 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					ParentRunID:  runID,
 					ParentStep:   step.Name,
 					ForEachKey:   forEachKey,
+					Owner:        owner.encode(),
 					StartedAt:    time.Now(),
 				}
-				e.store.CreateRun(ctx, subRun)
+				if err := e.startSubRun(ctx, subRun, exists); err != nil {
+					errOnce.Do(func() { failed.Store(true); firstErr = err })
+					return
+				}
 				e.fireEvent(func(cb callback.Callback) error {
 					return cb.OnSubRunStarted(callback.SubRunStartedEvent{
 						EventHeader:  callback.EventHeader{Timestamp: subRun.StartedAt, RunID: subRunID, EventType: "sub_run_started"},
@@ -1638,19 +1666,6 @@ func (e *Engine) resolveSubWorkflow(runCtx context.Context, at stepInfo, step pa
 		return nil, nil, fmt.Errorf("sub-workflow %q not found", name)
 	}
 	return wf, file, nil
-}
-
-// checkSubRunWorkflow refuses to resume a sub-run in a different workflow from the one it ran
-// before. Step state is keyed by workflow and step name, so the other workflow's finished steps
-// would be ignored and its work silently redone or mixed in. This can only happen when a
-// templated workflow name resolves differently on resume.
-func (e *Engine) checkSubRunWorkflow(ctx context.Context, subRunID string, step parser.Step, name string) error {
-	prev, err := e.store.GetRun(ctx, subRunID)
-	if err != nil || prev == nil || prev.Entrypoint == "" || prev.Entrypoint == name {
-		return nil
-	}
-	return fmt.Errorf("sub-run %s ran workflow %q, but %q now resolves to %q; it can't be resumed in place (start a new run, or rewind to before step %q)",
-		subRunID, prev.Entrypoint, step.Workflow, name, step.Name)
 }
 
 // decodeState reads JSON saved in the state store back into workflow values. Whole numbers come

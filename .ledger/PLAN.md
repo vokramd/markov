@@ -21,9 +21,12 @@
 
 - None
 
+## Current Tasks
+
+- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/current/repeat-sub-workflow-calls.md) (phase 1 done)
+
 ## Pending Tasks
 
-- [`repeat`: bounded do-while loops for sub-workflow calls](tasks/pending/repeat-sub-workflow-calls.md)
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks

@@ -1,0 +1,46 @@
+---
+# A bounded do-while loop with repeat: the same 0..9 count as loop-test.yaml, without recursion.
+#
+#   markov run examples/repeat.yaml
+#
+# "count" runs once per iteration, each time as its own sub-run of main (flat, not nested).
+# Each iteration is passed the previous one's result through repeat.previous, and the loop
+# stops when until is true or after max iterations. See docs/reference/repeat.md.
+
+entrypoint: main
+
+vars:
+  max_iterations: 10
+
+workflows:
+  - name: main
+    steps:
+      - name: loop
+        workflow: count
+        register: loop
+        vars:
+          iteration: "{{ repeat.index }}"
+          total: "{% if repeat.previous %}{{ repeat.previous.total }}{% else %}0{% endif %}"
+        repeat:
+          until: "iteration + 1 >= max_iterations"
+          max: "{{ max_iterations }}"
+
+      - name: report
+        type: shell_exec
+        params:
+          command: "echo 'ran {{ loop.count }} iterations (stopped by {{ loop.stopped_by }}); total {{ loop.last.total }}'"
+
+  - name: count
+    vars:
+      iteration: ~
+      total: ~
+    steps:
+      - name: work
+        type: shell_exec
+        params:
+          command: "echo 'iteration {{ iteration }}'"
+
+      - name: add
+        type: set_fact
+        vars:
+          total: "{{ total + iteration }}"

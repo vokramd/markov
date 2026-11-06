@@ -160,25 +160,34 @@ type SubRunStartedEvent struct {
 	ParentStep   string `json:"parent_step"`
 	WorkflowName string `json:"workflow_name"`
 	ForEachKey   string `json:"for_each_key,omitempty"`
+	// Generation and Iteration identify a repeat step's iteration (docs/reference/repeat.md).
+	Generation *int `json:"generation,omitempty"`
+	Iteration  *int `json:"iteration,omitempty"`
 }
 
 type SubRunCompletedEvent struct {
 	EventHeader
-	ParentRunID  string  `json:"parent_run_id"`
-	ParentStep   string  `json:"parent_step"`
-	WorkflowName string  `json:"workflow_name"`
-	ForEachKey   string  `json:"for_each_key,omitempty"`
-	Duration     float64 `json:"duration_seconds"`
+	ParentRunID  string `json:"parent_run_id"`
+	ParentStep   string `json:"parent_step"`
+	WorkflowName string `json:"workflow_name"`
+	ForEachKey   string `json:"for_each_key,omitempty"`
+	// Generation and Iteration identify a repeat step's iteration (docs/reference/repeat.md).
+	Generation *int    `json:"generation,omitempty"`
+	Iteration  *int    `json:"iteration,omitempty"`
+	Duration   float64 `json:"duration_seconds"`
 }
 
 type SubRunFailedEvent struct {
 	EventHeader
-	ParentRunID  string  `json:"parent_run_id"`
-	ParentStep   string  `json:"parent_step"`
-	WorkflowName string  `json:"workflow_name"`
-	ForEachKey   string  `json:"for_each_key,omitempty"`
-	Error        string  `json:"error"`
-	Duration     float64 `json:"duration_seconds"`
+	ParentRunID  string `json:"parent_run_id"`
+	ParentStep   string `json:"parent_step"`
+	WorkflowName string `json:"workflow_name"`
+	ForEachKey   string `json:"for_each_key,omitempty"`
+	// Generation and Iteration identify a repeat step's iteration (docs/reference/repeat.md).
+	Generation *int    `json:"generation,omitempty"`
+	Iteration  *int    `json:"iteration,omitempty"`
+	Error      string  `json:"error"`
+	Duration   float64 `json:"duration_seconds"`
 }
 
 // WorkflowReloadedEvent reports that a reload_workflow step replaced the workflow definition.

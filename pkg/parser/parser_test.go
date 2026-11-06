@@ -951,3 +951,95 @@ workflows:
 		t.Fatalf("bad size: %v", err)
 	}
 }
+
+func TestRepeatValidation(t *testing.T) {
+	call := func(extra, repeat string) string {
+		return `
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: loop
+        workflow: child
+` + extra + `
+        repeat:
+` + repeat + `
+  - name: child
+    steps:
+      - {name: s, type: set_fact, vars: {done: "true"}}
+`
+	}
+	cases := []struct {
+		name, extra, repeat, want string
+	}{
+		{"ok", "", `          until: "done"
+          max: 3`, ""},
+		{"ok expression", "", `          until: "done"
+          max: "{{ limit }}"`, ""},
+		{"no until", "", `          max: 3`, "repeat needs until"},
+		{"no max", "", `          until: "done"`, "repeat needs max"},
+		{"zero max", "", `          until: "done"
+          max: 0`, "repeat max must be at least 1"},
+		{"text max", "", `          until: "done"
+          max: lots`, "repeat max must be a positive whole number"},
+		{"bool max", "", `          until: "done"
+          max: true`, "repeat max must be a positive whole number"},
+		{"bad on_max", "", `          until: "done"
+          max: 3
+          on_max: retry`, "on_max must be fail or stop"},
+		{"resume true", "", `          until: "done"
+          max: 3
+          resume: true`, "resume: true (resuming an unfinished loop in place) is not supported yet"},
+		{"with for_each", "        for_each: items\n        as: item", `          until: "done"
+          max: 3`, "repeat can't be combined with for_each"},
+	}
+	for _, c := range cases {
+		_, err := Parse([]byte(call(c.extra, c.repeat)))
+		switch {
+		case c.want == "" && err != nil:
+			t.Errorf("%s: %v", c.name, err)
+		case c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)):
+			t.Errorf("%s: err = %v, want %q", c.name, err, c.want)
+		}
+	}
+	_, err := Parse([]byte(`
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - {name: loop, type: shell_exec, repeat: {until: "true", max: 2}}
+`))
+	if err == nil || !strings.Contains(err.Error(), "repeat runs a called workflow again; this step calls none") {
+		t.Errorf("repeat on a typed step: %v", err)
+	}
+}
+
+func TestLintRepeat(t *testing.T) {
+	got := lintMessages(t, `
+entrypoint: main
+vars: {limit: 3}
+workflows:
+  - name: main
+    steps:
+      - name: loop
+        workflow: child
+        register: loop
+        vars:
+          n: "{{ repeat.index }}"
+          prev: "{{ repeat.previous }}"
+        repeat:
+          until: "done and n < limit and repeat.index < 9 and missing"
+          max: "{{ limit }}"
+      - {name: after, type: shell_exec, params: {url: "{{ loop.count }}"}}
+  - name: child
+    vars: {n: ~, prev: ~}
+    steps:
+      - {name: s, type: set_fact, vars: {done: "true"}}
+`)
+	want := []string{
+		`warning: workflow "main", step "loop": repeat until reads "missing", which workflow "child"'s results don't hold: until sees what it is passed and what its steps set, plus repeat`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("Lint:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

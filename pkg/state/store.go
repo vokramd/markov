@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strings"
 	"time"
@@ -27,6 +28,10 @@ const (
 	StepSkipped   StepStatus = "skipped"
 )
 
+// ErrRunNotFound is wrapped by GetRun when no run has the ID, so a caller can tell a missing
+// run from a store that failed.
+var ErrRunNotFound = errors.New("not found")
+
 type Run struct {
 	RunID        string
 	WorkflowFile string
@@ -37,8 +42,12 @@ type Run struct {
 	ParentRunID  string
 	ParentStep   string
 	ForEachKey   string
-	StartedAt    time.Time
-	CompletedAt  *time.Time
+	// Owner says which call made this sub-run (see engine's subRunOwner), as canonical JSON. A
+	// producer that finds an existing row with a different owner refuses to reuse it. Empty on
+	// top-level runs and on rows written before owners were recorded.
+	Owner       string
+	StartedAt   time.Time
+	CompletedAt *time.Time
 }
 
 // SourceCheck records the workflow source that was present for one resume

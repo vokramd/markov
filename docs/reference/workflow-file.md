@@ -232,6 +232,7 @@ A step is the unit of execution within a workflow. Each step either runs a primi
 | IgnoreErrors | `ignore_errors` | bool | no | When the step fails, record the failure and carry on. The registered output keeps whatever the step produced, plus `failed: true` and `error`. On a sub-workflow, the registered context gets the same two keys; on `for_each`, failed items are marked that way and the loop runs every item. Errors in the workflow itself, such as a template that doesn't parse, still fail the step. |
 | FailedWhen | `failed_when` | string | no | Expression that alone decides whether the step failed, evaluated after it runs. It sees the step's output as `result` and under the `register` name; an executor error is in `result.error`. True fails the step (and `ignore_errors` still applies); false makes it succeed even if the executor reported an error. Not allowed on sub-workflow steps. |
 | MaxOutput | `max_output` | size | no | How much the step may produce: `512KB`, `64MB`, `2GB` (powers of 1024) or a number of bytes; `0` for no limit. Over it, the step fails. Defaults to its step type's, then the file's, then `--max-output`, then 64 MB. See [Output limits](#output-limits). |
+| Repeat | `repeat` | object | no | Run the called workflow again and again, a bounded do-while loop: `until` (required, checked after each iteration against its results), `max` (required, an int or an expression), `on_max` (`fail` or `stop`), `resume` (must be `false`). Each iteration is its own sub-run of the calling run; `repeat.index` and `repeat.previous` are available to the step's `vars:` and `until`. Only on a step with `workflow`, and not with `for_each`. See [Repeat](repeat.md). |
 | Secret | `secret` | bool or string[] | no | Marks the step's output as secret, so its values are masked in events and log lines from the moment the step returns (its own `step_completed` included). `true` marks every string in the output; a list marks dotted paths into it (`[token, body.token]`); on `set_fact` the paths are fact names. Later steps still get the real values. Not allowed on sub-workflow, `gate` and `assert` steps. See [Secrets](variables-and-context.md#secrets). |
 
 ```yaml
@@ -260,6 +261,15 @@ steps:
     workflow: cleanup
     vars:
       target: "{{ target }}"
+
+  # A bounded loop over a sub-workflow
+  - name: poll
+    workflow: check-status
+    vars:
+      attempt: "{{ repeat.index }}"
+    repeat:
+      until: "status == 'ready'"
+      max: 20
 ```
 
 ---
@@ -467,6 +477,7 @@ and `params` maps of a custom step type may contain application-specific keys.
 10. **`forks` defaults to 5** if set to 0 or a negative value.
 11. **Sub-workflow references** must point to a workflow name that exists in the file.
 12. **`secret`** is `true` or a list of dotted output paths, and is only allowed on steps that produce their own output (not sub-workflow, `gate` or `assert` steps).
+13. **`repeat`** needs `workflow`, `until` and `max` (a whole number of at least 1, or an expression); `on_max` is `fail` or `stop`; `resume: true` is rejected (not supported yet); it can't be combined with `for_each`, `as`, `for_each_key`, `for_each_sort`, `for_each_when` or `concurrency`.
 
 ---
 

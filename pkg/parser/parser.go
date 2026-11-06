@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/jctanner/markov/pkg/outputlimit"
@@ -375,6 +376,9 @@ func validateSteps(wf *WorkflowFile, workflowName, section string, steps []Step,
 			return fmt.Errorf("workflow %q, step %q: must have type or workflow", workflowName, s.Name)
 		}
 
+		if err := validateRepeat(s); err != nil {
+			return fmt.Errorf("workflow %q, step %q: %w", workflowName, s.Name, err)
+		}
 		if s.FailedWhen != "" && s.Workflow != "" {
 			return fmt.Errorf("workflow %q, step %q: failed_when applies to step types, not sub-workflows", workflowName, s.Name)
 		}
@@ -620,4 +624,47 @@ func mapAny(raw any) (map[string]any, bool) {
 	default:
 		return nil, false
 	}
+}
+
+// validateRepeat checks a step's repeat block. A templated max is checked when the loop starts.
+func validateRepeat(s Step) error {
+	r := s.Repeat
+	if r == nil {
+		return nil
+	}
+	if s.Workflow == "" {
+		return fmt.Errorf("repeat runs a called workflow again; this step calls none")
+	}
+	if s.ForEach != "" || s.As != "" || s.ForEachKey != "" || s.ForEachSort != "" || s.ForEachWhen != "" || s.Concurrency != 0 {
+		return fmt.Errorf("repeat can't be combined with for_each (or as, for_each_key, for_each_sort, for_each_when, concurrency)")
+	}
+	if strings.TrimSpace(r.Until) == "" {
+		return fmt.Errorf("repeat needs until: the condition, checked after each iteration, that ends the loop")
+	}
+	switch m := r.Max.(type) {
+	case nil:
+		return fmt.Errorf("repeat needs max: the most iterations it may run")
+	case int:
+		if m < 1 {
+			return fmt.Errorf("repeat max must be at least 1, not %d", m)
+		}
+	case string:
+		if !IsTemplated(m) {
+			n, err := strconv.Atoi(strings.TrimSpace(m))
+			if err != nil || n < 1 {
+				return fmt.Errorf("repeat max must be a positive whole number or an expression, not %q", m)
+			}
+		}
+	default:
+		return fmt.Errorf("repeat max must be a positive whole number or an expression, not %v", m)
+	}
+	switch r.OnMax {
+	case "", "fail", "stop":
+	default:
+		return fmt.Errorf("repeat on_max must be fail or stop, not %q", r.OnMax)
+	}
+	if r.Resume {
+		return fmt.Errorf("repeat resume: true (resuming an unfinished loop in place) is not supported yet; leave it false, and a resumed run starts the loop over (see docs/reference/repeat.md)")
+	}
+	return nil
 }

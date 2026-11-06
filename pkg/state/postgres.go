@@ -40,6 +40,7 @@ func migratePostgres(db *sql.DB) error {
 			parent_run_id   TEXT,
 			parent_step     TEXT,
 			for_each_key    TEXT,
+			owner           TEXT,
 			started_at      TIMESTAMPTZ NOT NULL,
 			completed_at    TIMESTAMPTZ
 		);
@@ -81,6 +82,7 @@ func migratePostgres(db *sql.DB) error {
 
 		ALTER TABLE runs ADD COLUMN IF NOT EXISTS source_digest TEXT;
 		ALTER TABLE steps ADD COLUMN IF NOT EXISTS definition_hash TEXT;
+		ALTER TABLE runs ADD COLUMN IF NOT EXISTS owner TEXT;
 	`)
 	if err != nil {
 		return fmt.Errorf("migrating postgres schema: %w", err)
@@ -94,10 +96,10 @@ func (s *PostgresStore) Close() error {
 
 func (s *PostgresStore) CreateRun(ctx context.Context, run *Run) error {
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO runs (run_id, workflow_file, source_digest, entrypoint, status, vars_json, parent_run_id, parent_step, for_each_key, started_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		INSERT INTO runs (run_id, workflow_file, source_digest, entrypoint, status, vars_json, parent_run_id, parent_step, for_each_key, started_at, owner)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		run.RunID, run.WorkflowFile, nullStr(run.SourceDigest), run.Entrypoint, run.Status, run.VarsJSON,
-		nullStr(run.ParentRunID), nullStr(run.ParentStep), nullStr(run.ForEachKey), run.StartedAt)
+		nullStr(run.ParentRunID), nullStr(run.ParentStep), nullStr(run.ForEachKey), run.StartedAt, nullStr(run.Owner))
 	if err != nil {
 		return fmt.Errorf("creating run: %w", err)
 	}
@@ -117,16 +119,16 @@ func (s *PostgresStore) UpdateRun(ctx context.Context, run *Run) error {
 func (s *PostgresStore) GetRun(ctx context.Context, runID string) (*Run, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT run_id, workflow_file, source_digest, entrypoint, status, vars_json,
-		       parent_run_id, parent_step, for_each_key, started_at, completed_at
+		       parent_run_id, parent_step, for_each_key, started_at, completed_at, owner
 		FROM runs WHERE run_id = $1`, runID)
 
 	var run Run
-	var sourceDigest, parentRunID, parentStep, forEachKey sql.NullString
+	var sourceDigest, parentRunID, parentStep, forEachKey, owner sql.NullString
 	var completedAt sql.NullTime
 	err := row.Scan(&run.RunID, &run.WorkflowFile, &sourceDigest, &run.Entrypoint, &run.Status, &run.VarsJSON,
-		&parentRunID, &parentStep, &forEachKey, &run.StartedAt, &completedAt)
+		&parentRunID, &parentStep, &forEachKey, &run.StartedAt, &completedAt, &owner)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("run %q not found", runID)
+		return nil, fmt.Errorf("run %q %w", runID, ErrRunNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("getting run: %w", err)
@@ -135,6 +137,7 @@ func (s *PostgresStore) GetRun(ctx context.Context, runID string) (*Run, error) 
 	run.SourceDigest = sourceDigest.String
 	run.ParentStep = parentStep.String
 	run.ForEachKey = forEachKey.String
+	run.Owner = owner.String
 	if completedAt.Valid {
 		run.CompletedAt = &completedAt.Time
 	}
@@ -144,7 +147,7 @@ func (s *PostgresStore) GetRun(ctx context.Context, runID string) (*Run, error) 
 func (s *PostgresStore) ListRuns(ctx context.Context) ([]*Run, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT run_id, workflow_file, source_digest, entrypoint, status, vars_json,
-		       parent_run_id, parent_step, for_each_key, started_at, completed_at
+		       parent_run_id, parent_step, for_each_key, started_at, completed_at, owner
 		FROM runs ORDER BY started_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("listing runs: %w", err)
@@ -154,16 +157,17 @@ func (s *PostgresStore) ListRuns(ctx context.Context) ([]*Run, error) {
 	var runs []*Run
 	for rows.Next() {
 		var run Run
-		var sourceDigest, parentRunID, parentStep, forEachKey sql.NullString
+		var sourceDigest, parentRunID, parentStep, forEachKey, owner sql.NullString
 		var completedAt sql.NullTime
 		if err := rows.Scan(&run.RunID, &run.WorkflowFile, &sourceDigest, &run.Entrypoint, &run.Status, &run.VarsJSON,
-			&parentRunID, &parentStep, &forEachKey, &run.StartedAt, &completedAt); err != nil {
+			&parentRunID, &parentStep, &forEachKey, &run.StartedAt, &completedAt, &owner); err != nil {
 			return nil, fmt.Errorf("scanning run: %w", err)
 		}
 		run.ParentRunID = parentRunID.String
 		run.SourceDigest = sourceDigest.String
 		run.ParentStep = parentStep.String
 		run.ForEachKey = forEachKey.String
+		run.Owner = owner.String
 		if completedAt.Valid {
 			run.CompletedAt = &completedAt.Time
 		}
@@ -178,7 +182,7 @@ func (s *PostgresStore) ListRuns(ctx context.Context) ([]*Run, error) {
 func (s *PostgresStore) GetChildRuns(ctx context.Context, parentRunID string) ([]*Run, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT run_id, workflow_file, source_digest, entrypoint, status, vars_json,
-		       parent_run_id, parent_step, for_each_key, started_at, completed_at
+		       parent_run_id, parent_step, for_each_key, started_at, completed_at, owner
 		FROM runs WHERE parent_run_id = $1 ORDER BY started_at`, parentRunID)
 	if err != nil {
 		return nil, fmt.Errorf("getting child runs: %w", err)
@@ -188,16 +192,17 @@ func (s *PostgresStore) GetChildRuns(ctx context.Context, parentRunID string) ([
 	var runs []*Run
 	for rows.Next() {
 		var run Run
-		var sourceDigest, parentRID, parentStep, forEachKey sql.NullString
+		var sourceDigest, parentRID, parentStep, forEachKey, owner sql.NullString
 		var completedAt sql.NullTime
 		if err := rows.Scan(&run.RunID, &run.WorkflowFile, &sourceDigest, &run.Entrypoint, &run.Status, &run.VarsJSON,
-			&parentRID, &parentStep, &forEachKey, &run.StartedAt, &completedAt); err != nil {
+			&parentRID, &parentStep, &forEachKey, &run.StartedAt, &completedAt, &owner); err != nil {
 			return nil, fmt.Errorf("scanning child run: %w", err)
 		}
 		run.ParentRunID = parentRID.String
 		run.SourceDigest = sourceDigest.String
 		run.ParentStep = parentStep.String
 		run.ForEachKey = forEachKey.String
+		run.Owner = owner.String
 		if completedAt.Valid {
 			run.CompletedAt = &completedAt.Time
 		}

@@ -117,6 +117,23 @@ type Step struct {
 	Secret SecretOutput `yaml:"secret"`
 	// MaxOutput is how much the step may produce (0: no limit); over it, the step fails.
 	MaxOutput outputlimit.Size `yaml:"max_output"`
+	// Repeat runs the called workflow again and again, a bounded do-while loop; see
+	// docs/reference/repeat.md. Only on a step that calls a workflow.
+	Repeat *Repeat `yaml:"repeat"`
+}
+
+// Repeat is a step's `repeat` block.
+type Repeat struct {
+	// Until is evaluated after each iteration, against that iteration's results and `repeat`;
+	// true ends the loop.
+	Until string `yaml:"until"`
+	// Max bounds the iterations: an int, or an expression rendered once when the loop starts.
+	Max any `yaml:"max"`
+	// OnMax is what reaching Max without Until does: "fail" (the default) or "stop".
+	OnMax string `yaml:"on_max"`
+	// Resume true (resume an unfinished loop in place) is not supported yet. With false, the
+	// default, a resumed run starts an unfinished loop over at iteration 0.
+	Resume bool `yaml:"resume"`
 }
 
 // SecretOutput is a step's `secret` setting: true (every string in the output) or a list of

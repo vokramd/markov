@@ -118,6 +118,10 @@ Rules in a `gate` step can include `set_fact` maps. When a rule fires, its facts
 
 ## Variable Scoping
 
+A `repeat` step also has `repeat.index` and `repeat.previous` where its `vars:` and `until` are
+rendered, and its `until` sees the iteration's results rather than the caller's context. See
+[Repeat](repeat.md#repeat-the-index-and-the-previous-result).
+
 There are three kinds of variable, and what a workflow sees depends on which kind it is.
 
 | Declared | Kind | Seen by |
