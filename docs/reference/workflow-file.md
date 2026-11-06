@@ -91,8 +91,40 @@ The files map directly to the single-file schema:
 | `step_types/*.yaml` | map | Additional step type definition maps, merged by filename |
 | `scripts/` | directory | Scripts referenced by `script_exec` `path` values |
 | `workflows/*.yaml` | map | One workflow object per file, without a wrapping `workflows:` key |
+| `workflows/<folder>/…/*.yaml` | map | The same, grouped in subfolders; named by their path (see below) |
 
-In directory mode, workflow filenames are only organizational. Markov loads every `workflows/*.yaml` file and identifies workflows by each file's `name:` field. The `meta.yaml` `entrypoint` and the CLI `--workflow` override both refer to that workflow name, not to the YAML filename. For example, `markov run pipeline/ --workflow deploy` runs the workflow object whose `name` is `deploy`; it does not require or specially search for `workflows/deploy.yaml`.
+In directory mode, the filenames of workflows directly in `workflows/` are only organizational. Markov loads every `workflows/*.yaml` file and identifies workflows by each file's `name:` field. The `meta.yaml` `entrypoint` and the CLI `--workflow` override both refer to that workflow name, not to the YAML filename. For example, `markov run pipeline/ --workflow deploy` runs the workflow object whose `name` is `deploy`; it does not require or specially search for `workflows/deploy.yaml`.
+
+### Subfolders and qualified names
+
+Workflows can be grouped in subfolders of `workflows/`, at any depth. A file in a subfolder is named by its path, with
+`/` read as `.`: `workflows/tools/grep.yaml` is the workflow `tools.grep`, and `workflows/tools/net/fetch.yaml` is
+`tools.net.fetch`. Its `name:` may be left out; if it is given, it must be that name, and a different one is an error
+naming the expected one. Call it by the full name:
+
+```text
+pipeline/
+  workflows/
+    main.yaml          # name: main
+    tools/
+      grep.yaml        # tools.grep
+      bash.yaml        # tools.bash
+```
+
+```yaml
+# workflows/main.yaml
+name: main
+steps:
+  - name: search
+    workflow: tools.grep
+  - name: run_tool
+    workflow: "tools.{{ tool }}"    # a templated name works the same way
+```
+
+Names are always written in full: there are no relative names, and a subfolder has no vars or scope of its own.
+Folders and files whose names start with `.` are skipped. Two paths that read the same (`workflows/a.b/c.yaml` and
+`workflows/a/b/c.yaml`, both `a.b.c`) are a duplicate workflow name. Dotted names work in a single-file workflow and
+directly in `workflows/` too, with `name: tools.grep`.
 
 Minimal example:
 

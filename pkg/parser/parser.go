@@ -73,29 +73,23 @@ func ParseDir(path string) (*WorkflowFile, error) {
 		return nil, err
 	}
 
-	workflowDir := filepath.Join(path, "workflows")
-	entries, err := os.ReadDir(workflowDir)
+	files, err := DirWorkflowFiles(path)
 	if err != nil {
-		return nil, fmt.Errorf("reading workflows directory %q: %w", workflowDir, err)
+		return nil, err
 	}
-	var workflowFiles []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if filepath.Ext(entry.Name()) == ".yaml" {
-			workflowFiles = append(workflowFiles, filepath.Join(workflowDir, entry.Name()))
-		}
-	}
-	sort.Strings(workflowFiles)
-	if len(workflowFiles) == 0 {
-		return nil, fmt.Errorf("directory workflow %q: no workflow files found in workflows/*.yaml", path)
-	}
-
-	for _, workflowPath := range workflowFiles {
+	for _, f := range files {
 		var workflow Workflow
-		if err := readYAML(workflowPath, &workflow); err != nil {
+		if err := readYAML(f.Path, &workflow); err != nil {
 			return nil, err
+		}
+		if f.Name != "" {
+			switch workflow.Name {
+			case "":
+				workflow.Name = f.Name
+			case f.Name:
+			default:
+				return nil, fmt.Errorf("%s: a workflow in a subfolder is named by its path: name %q should be %q (or leave name out)", f.Rel, workflow.Name, f.Name)
+			}
 		}
 		wf.Workflows = append(wf.Workflows, workflow)
 	}
@@ -107,6 +101,58 @@ func ParseDir(path string) (*WorkflowFile, error) {
 		return nil, err
 	}
 	return &wf, nil
+}
+
+// DirWorkflowFile is one workflow file of a directory workflow.
+type DirWorkflowFile struct {
+	Path string // on disk
+	Rel  string // from the workflow directory, with slashes: workflows/tools/grep.yaml
+	// Name is the qualified name a file in a subfolder must have: its path below workflows/,
+	// without .yaml, with / read as . (workflows/tools/grep.yaml is tools.grep). Empty for a file
+	// directly in workflows/, whose name: is its own.
+	Name string
+}
+
+// DirWorkflowFiles lists the .yaml files under a directory workflow's workflows/, subfolders
+// included, in path order. Hidden files and folders (a leading dot) are skipped.
+func DirWorkflowFiles(path string) ([]DirWorkflowFile, error) {
+	workflowDir := filepath.Join(path, "workflows")
+	if _, err := os.Stat(workflowDir); err != nil {
+		return nil, fmt.Errorf("reading workflows directory %q: %w", workflowDir, err)
+	}
+	var files []DirWorkflowFile
+	err := filepath.WalkDir(workflowDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p != workflowDir && strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() || filepath.Ext(d.Name()) != ".yaml" {
+			return nil
+		}
+		rel, err := filepath.Rel(workflowDir, p)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		f := DirWorkflowFile{Path: p, Rel: "workflows/" + rel}
+		if strings.Contains(rel, "/") {
+			f.Name = strings.ReplaceAll(strings.TrimSuffix(rel, ".yaml"), "/", ".")
+		}
+		files = append(files, f)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("reading workflows directory %q: %w", workflowDir, err)
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("directory workflow %q: no workflow files found in workflows/", path)
+	}
+	return files, nil
 }
 
 func Parse(data []byte) (*WorkflowFile, error) {

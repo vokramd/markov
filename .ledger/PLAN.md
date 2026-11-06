@@ -27,6 +27,7 @@
 
 ## Completed Tasks
 
+- [Workflow subdirectories with qualified names](tasks/done/workflow-subdirectories.md)
 - [`repeat`: bounded do-while loops for sub-workflow calls](tasks/done/repeat-sub-workflow-calls.md)
 - [Streaming http_request (SSE) and the tty:// callback](tasks/done/http-request-streaming.md)
 - [Live command output, stream progress kinds, and tty:// show styles](tasks/done/live-command-output-and-tty-show.md)

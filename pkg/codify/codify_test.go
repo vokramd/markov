@@ -748,3 +748,19 @@ func TestPromptsCarryTheDeterministicAgenticSplit(t *testing.T) {
 		t.Errorf("history lacks the repeat counts:\n%s", doc)
 	}
 }
+
+func TestEditableSetFindsAWorkflowInASubfolder(t *testing.T) {
+	root := project(t, "http://x")
+	write(t, root, "workflows/tools/fetch.yaml", "steps:\n  - name: s\n    type: shell_exec\n    params:\n      command: echo\n")
+	write(t, root, "workflows/target.yaml", "name: target\nsteps:\n  - name: c\n    workflow: tools.fetch\n")
+	p, err := LoadProject(root, "target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(p.Reach, ",") != "target,tools.fetch" {
+		t.Fatalf("reach = %v", p.Reach)
+	}
+	if !p.Editable("workflows/tools/fetch.yaml") || !slices.Contains(p.EditableFiles(), "workflows/tools/fetch.yaml") {
+		t.Errorf("the nested workflow's file is not editable: %v", p.EditableFiles())
+	}
+}

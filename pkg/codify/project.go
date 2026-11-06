@@ -58,9 +58,13 @@ func LoadProject(dir, target string, fixed ...string) (*Project, error) {
 		return nil, fmt.Errorf("no workflow %q (workflows: %s)", target, strings.Join(names, ", "))
 	}
 	p := &Project{Dir: dir, Target: target, File: file, files: map[string]string{}}
-	matches, _ := filepath.Glob(filepath.Join(dir, "workflows", "*.yaml"))
-	for _, m := range matches {
-		data, err := os.ReadFile(m)
+	files, _ := parser.DirWorkflowFiles(dir)
+	for _, f := range files {
+		if f.Name != "" { // in a subfolder: named by its path
+			p.files[f.Name] = f.Rel
+			continue
+		}
+		data, err := os.ReadFile(f.Path)
 		if err != nil {
 			continue
 		}
@@ -68,7 +72,7 @@ func LoadProject(dir, target string, fixed ...string) (*Project, error) {
 			Name string `yaml:"name"`
 		}
 		if yaml.Unmarshal(data, &head) == nil && head.Name != "" {
-			p.files[head.Name] = "workflows/" + filepath.Base(m)
+			p.files[head.Name] = f.Rel
 		}
 	}
 	p.Reach = reach(file, target)

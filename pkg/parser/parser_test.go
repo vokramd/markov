@@ -1043,3 +1043,78 @@ workflows:
 		t.Fatalf("Lint:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+func writeNested(t *testing.T, dir, rel, content string) {
+	t.Helper()
+	path := filepath.Join(dir, "workflows", filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, path, content)
+}
+
+func TestParseDirLoadsSubfoldersByQualifiedName(t *testing.T) {
+	dir := makeDirectoryWorkflow(t)
+	writeNested(t, dir, "tools/grep.yaml", "steps:\n  - {name: s, type: shell_exec, params: {command: echo}}\n")
+	writeNested(t, dir, "tools/net/fetch.yaml", "name: tools.net.fetch\nsteps:\n  - {name: s, type: shell_exec, params: {command: echo}}\n")
+	writeNested(t, dir, ".hidden/skip.yaml", "name: broken: [\n")
+	writeNested(t, dir, "tools/.swap.yaml", "name: broken: [\n")
+	writeNested(t, dir, "tools/notes.txt", "not a workflow\n")
+	writeNested(t, dir, "caller.yaml", "name: caller\nsteps:\n  - {name: a, workflow: tools.grep}\n  - {name: b, workflow: tools.net.fetch}\n")
+
+	wf, err := ParseFile(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"main", "caller", "tools.grep", "tools.net.fetch"} {
+		if wf.GetWorkflow(name) == nil {
+			t.Errorf("no workflow %q", name)
+		}
+	}
+	if len(wf.Workflows) != 5 { // and the helper's child
+		t.Errorf("loaded %d workflows, want 5", len(wf.Workflows))
+	}
+	files, err := DirWorkflowFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range files {
+		got = append(got, f.Rel+"="+f.Name)
+	}
+	want := "workflows/caller.yaml= workflows/child.yaml= workflows/main.yaml= workflows/tools/grep.yaml=tools.grep workflows/tools/net/fetch.yaml=tools.net.fetch"
+	if strings.Join(got, " ") != want {
+		t.Errorf("files:\n%s\nwant:\n%s", strings.Join(got, " "), want)
+	}
+}
+
+func TestParseDirRejectsASubfolderNameThatDoesNotMatchItsPath(t *testing.T) {
+	dir := makeDirectoryWorkflow(t)
+	writeNested(t, dir, "tools/grep.yaml", "name: grep\nsteps:\n  - {name: s, type: shell_exec, params: {command: echo}}\n")
+	_, err := ParseFile(dir)
+	if err == nil || !strings.Contains(err.Error(), `workflows/tools/grep.yaml: a workflow in a subfolder is named by its path: name "grep" should be "tools.grep"`) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestParseDirCatchesADottedFolderCollidingWithANestedOne(t *testing.T) {
+	dir := makeDirectoryWorkflow(t)
+	writeNested(t, dir, "a.b/c.yaml", "steps:\n  - {name: s, type: shell_exec, params: {command: echo}}\n")
+	writeNested(t, dir, "a/b/c.yaml", "steps:\n  - {name: s, type: shell_exec, params: {command: echo}}\n")
+	_, err := ParseFile(dir)
+	if err == nil || !strings.Contains(err.Error(), `duplicate workflow name "a.b.c"`) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestParseDirTopLevelFilesKeepTheirOwnNames(t *testing.T) {
+	dir := makeDirectoryWorkflow(t)
+	writeNested(t, dir, "anything.yaml", "name: deploy\nsteps:\n  - {name: s, type: shell_exec, params: {command: echo}}\n")
+	wf, err := ParseFile(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wf.GetWorkflow("deploy") == nil || wf.GetWorkflow("anything") != nil {
+		t.Error("a top-level file's name: should stand, whatever its filename")
+	}
+}
