@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 // Sub-run ownership. Sub-run IDs are concatenations of names (<run>-<step>, <run>-<step>-<key>),

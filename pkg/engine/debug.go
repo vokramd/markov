@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // The debugger pauses a run in memory at breakpoints and accepts commands while paused. See

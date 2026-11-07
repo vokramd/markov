@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package markov;
 
-option go_package = "github.com/jctanner/markov/api/proto";
+option go_package = "github.com/vokramd/markov/api/proto";
 
 import "google/protobuf/timestamp.proto";
 

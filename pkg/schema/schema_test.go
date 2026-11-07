@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 func TestEveryBuiltInStepTypeIsDescribedExactlyOnce(t *testing.T) {

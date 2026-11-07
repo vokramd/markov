@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 // Definition hashes and rewinding a resumed run. A completed step is skipped on resume because

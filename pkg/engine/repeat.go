@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 // repeat: a bounded do-while loop over a called workflow (docs/reference/repeat.md). Each

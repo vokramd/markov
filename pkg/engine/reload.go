@@ -10,11 +10,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/source"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/source"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 // Hot reload of the workflow definition: the reload_workflow step (ADR-0006, plan 003).

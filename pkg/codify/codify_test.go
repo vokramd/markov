@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/callback"
 )
 
 var markovBin string

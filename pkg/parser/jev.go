@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"github.com/jctanner/markov/pkg/jev"
+	"github.com/vokramd/markov/pkg/jev"
 	"os"
 	"path/filepath"
 )

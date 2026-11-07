@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 //go:embed retro.md

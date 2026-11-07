@@ -6,10 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/secret"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/secret"
 )
 
 // Secrets is the masker for this engine's runs: every event and, when the CLI routes its log

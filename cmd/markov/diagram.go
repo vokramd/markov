@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 type runNode struct {

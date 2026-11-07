@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 // A run codify starts is contained, so a runaway candidate is one rejected iteration rather than

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jctanner/markov/pkg/openshell"
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/openshell"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 // OpenShell runs one of the openshell_* step types. Every step but openshell_build reaches the

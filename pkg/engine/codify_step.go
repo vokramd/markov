@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/jctanner/markov/pkg/codify"
-	"github.com/jctanner/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/codify"
+	"github.com/vokramd/markov/pkg/executor"
 )
 
 // codifyExecutor implements the codify step type: one iteration of `markov codify` on a

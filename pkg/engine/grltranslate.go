@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 type tokenKind int

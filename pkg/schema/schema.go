@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // Version changes when the shape of this output changes incompatibly.

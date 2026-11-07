@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 func TestJevStepsConditionsGateAndResume(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/jsonvalue"
+	"github.com/vokramd/markov/pkg/jsonvalue"
 )
 
 // evalFacts evaluates every fact against runCtx as it was before the step and leaves runCtx

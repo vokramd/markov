@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 type lifecycleExecutor struct {

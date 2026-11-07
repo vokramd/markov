@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/jev"
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/jev"
+	"github.com/vokramd/markov/pkg/outputlimit"
 	"gopkg.in/yaml.v3"
 )
 

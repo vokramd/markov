@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // reloadWF is a workflow whose main calls `work`, reloads from {{ next_source }}, calls `work`

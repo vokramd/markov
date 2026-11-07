@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 	"gopkg.in/yaml.v3"
 )
 

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // paramsByID records the params of every call, keyed by the "id" param, and fails a call whose

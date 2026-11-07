@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 type progressLog struct {

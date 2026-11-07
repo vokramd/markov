@@ -3,7 +3,7 @@ package callback
 import (
 	"time"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 type EventHeader struct {

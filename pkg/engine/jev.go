@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/jev"
-	"github.com/jctanner/markov/pkg/state"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/jev"
+	"github.com/vokramd/markov/pkg/state"
 )
 
 // A decision is a durable child operation of a step, including when that step

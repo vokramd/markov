@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // emits returns a fixed output, for a register a child must not see.

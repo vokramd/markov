@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jctanner/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/callback"
 )
 
 // CodifyWorkflow names the virtual workflow codify's own phases are reported as: its steps are

@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/flosch/pongo2/v6"
-	"github.com/jctanner/markov/pkg/jsonvalue"
+	"github.com/vokramd/markov/pkg/jsonvalue"
 )
 
 func init() {

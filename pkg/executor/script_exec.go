@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 // ScriptExec runs either inline script content or a script from the workflow's

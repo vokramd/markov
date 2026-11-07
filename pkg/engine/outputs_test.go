@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/outputlimit"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 func size(n int64) outputlimit.Size { return outputlimit.Size{Bytes: n, Set: true} }

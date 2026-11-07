@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // Variable scope. The file-level vars are the run's globals: every workflow sees them, and no

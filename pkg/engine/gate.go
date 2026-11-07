@@ -9,7 +9,7 @@ import (
 	gruleBuilder "github.com/hyperjumptech/grule-rule-engine/builder"
 	gruleEngine "github.com/hyperjumptech/grule-rule-engine/engine"
 	grulePkg "github.com/hyperjumptech/grule-rule-engine/pkg"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 type gateResult struct {

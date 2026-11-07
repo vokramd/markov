@@ -3,7 +3,7 @@ package executor
 import (
 	"context"
 	"fmt"
-	"github.com/jctanner/markov/pkg/jev"
+	"github.com/vokramd/markov/pkg/jev"
 )
 
 type Jev struct{ client *jev.Client }

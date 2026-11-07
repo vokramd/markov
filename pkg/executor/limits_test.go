@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markov/pkg/openshell"
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/openshell"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 func limited(n int64) context.Context {

@@ -9,19 +9,20 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/codify"
-	"github.com/jctanner/markov/pkg/engine"
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/openshell"
-	"github.com/jctanner/markov/pkg/outputlimit"
-	"github.com/jctanner/markov/pkg/parser"
-	"github.com/jctanner/markov/pkg/schema"
-	"github.com/jctanner/markov/pkg/state"
 	"github.com/spf13/cobra"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/codify"
+	"github.com/vokramd/markov/pkg/engine"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/openshell"
+	"github.com/vokramd/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/schema"
+	"github.com/vokramd/markov/pkg/state"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -103,14 +104,29 @@ func addDebugFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&flagControl, "control", "", "Read debugger commands as JSON lines from this source (only: stdin)")
 }
 
+// version is set at release time (goreleaser's -X main.version); a `go install` build reports its
+// module version instead, and a local build "dev".
+var version = ""
+
+func versionString() string {
+	if version != "" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "dev"
+}
+
 func main() {
 	// A run codify started asks to be the first a machine-wide out-of-memory kill takes.
 	codify.RaiseOOMScore()
 	stateStorePath := defaultStateStorePath()
 
 	root := &cobra.Command{
-		Use:   "markov",
-		Short: "YAML workflow engine for Kubernetes",
+		Use:     "markov",
+		Short:   "Workflow engine for chaining agents with code",
+		Version: versionString(),
 	}
 
 	runCmd := &cobra.Command{

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 // defaultRepeatKey is where a repeat-run record keeps its change count when --repeat-changes

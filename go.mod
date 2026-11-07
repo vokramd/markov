@@ -1,4 +1,4 @@
-module github.com/jctanner/markov
+module github.com/vokramd/markov
 
 go 1.25.13
 

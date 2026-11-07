@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/jsonvalue"
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/jsonvalue"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 type HTTPRequest struct {

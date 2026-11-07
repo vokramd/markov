@@ -1,9 +1,9 @@
 BINARY  := markov
 BINDIR  := bin
-MODULE  := github.com/jctanner/markov
+MODULE  := github.com/vokramd/markov
 CMDDIR  := ./cmd/markov
 
-IMAGE   ?= ghcr.io/jctanner/markov
+IMAGE   ?= ghcr.io/vokramd/markov
 TAG     ?= latest
 GOFLAGS ?=
 

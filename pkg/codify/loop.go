@@ -20,10 +20,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jctanner/markov/docs"
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/outputlimit"
-	"github.com/jctanner/markov/pkg/schema"
+	"github.com/vokramd/markov/docs"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/schema"
 )
 
 // Config is one `markov codify` invocation.

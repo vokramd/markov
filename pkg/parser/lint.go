@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/template"
+	"github.com/vokramd/markov/pkg/template"
 )
 
 // Issue is something `markov validate` reports about a workflow's variables.

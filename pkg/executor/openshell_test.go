@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markov/pkg/openshell"
+	"github.com/vokramd/markov/pkg/openshell"
 )
 
 // fakeTransport records what the executors asked for.

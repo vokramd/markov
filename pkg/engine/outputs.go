@@ -3,9 +3,9 @@ package engine
 import (
 	"context"
 
-	"github.com/jctanner/markov/pkg/callback"
-	"github.com/jctanner/markov/pkg/outputlimit"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/callback"
+	"github.com/vokramd/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // outputLimit is how much a step may produce, most specific first: the step's max_output, its

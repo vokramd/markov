@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/parser"
 	"gopkg.in/yaml.v3"
 )
 

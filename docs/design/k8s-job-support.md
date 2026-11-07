@@ -126,7 +126,7 @@ spec:
   serviceAccountName: pipeline-agent
   containers:
     - name: markov
-      image: ghcr.io/jctanner/markov:latest
+      image: ghcr.io/vokramd/markov:latest
       command: ["markov", "run", "/etc/markov/workflow.yaml"]
       args:
         - --callback

@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/jctanner/markov/pkg/jsonvalue"
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/jsonvalue"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 // streaming says how http_request reads a streamed response: `stream: sse` or a map

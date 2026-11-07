@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/jctanner/markov/pkg/executor"
-	"github.com/jctanner/markov/pkg/parser"
+	"github.com/vokramd/markov/pkg/executor"
+	"github.com/vokramd/markov/pkg/parser"
 )
 
 // recordExec records each call's params and fails when params["fail"] is true, returning

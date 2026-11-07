@@ -7,7 +7,7 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/jctanner/markov/pkg/outputlimit"
+	"github.com/vokramd/markov/pkg/outputlimit"
 )
 
 // runCapped runs cmd with its stdout and stderr counted together against the step's output limit

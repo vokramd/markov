@@ -15,7 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/jctanner/markov/pkg/openshell"
+	"github.com/vokramd/markov/pkg/openshell"
 )
 
 const (
