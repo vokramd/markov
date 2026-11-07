@@ -50,7 +50,7 @@ A [Markov chain](https://en.wikipedia.org/wiki/Markov_chain) is a system that tr
 
 ## Built with Markov
 
-- [markovd](https://github.com/vokramd/markovd) — web dashboard and HTTP API: trigger runs and follow them live
+- [markovd](https://github.com/vokramd/markovd) — web dashboard and HTTP API: trigger and schedule runs, and follow them live
 - [markov-harness](https://github.com/vokramd/markov-harness) — a minimal Claude Code-style coding agent written entirely as a Markov workflow: streaming replies, tools with approvals, memory and prompt caching
 
 ## Documentation
