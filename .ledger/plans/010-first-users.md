@@ -4,12 +4,13 @@ Created 2026-11-06. Users, not customers: people who run markov on their own wor
 and tell us where it broke. Paying for markovd or Markov IDE comes later, from people the engine
 already serves.
 
-**Status:** phase 1 under way (2026-11-07). Done, not yet released or pushed: `.goreleaser.yaml` (linux and darwin,
-amd64 and arm64, static, `-X main.version`), `.github/workflows/ci.yml` (fmt, vet, test, static build on pushes to
-main and PRs) and `release.yml` (goreleaser on `v*` tags), `markov --version`, `examples/quickstart.yaml` with a
-README Install / Quick Start that needs no cluster (`TestQuickstartExampleRuns` runs it), and Apache-2.0 in
-markov-harness. Left: GitHub descriptions, topics and Discussions; the first tag. The
-goreleaser config has not been checked by goreleaser itself yet (`goreleaser check`).
+**Status:** phase 1 done (2026-11-07): v0.1.0 released (https://github.com/vokramd/markov/releases/tag/v0.1.0)
+with static linux and darwin, amd64 and arm64 binaries from goreleaser on the tag; CI (fmt, vet, test, static build)
+on main and PRs; `markov --version`; the module moved to `github.com/vokramd/markov` (markovd too), so
+`go install github.com/vokramd/markov/cmd/markov@latest` works; `examples/quickstart.yaml` and a README Install /
+Quick Start that need no cluster (`TestQuickstartExampleRuns`); descriptions and topics on markov, markovd and
+markov-harness, Discussions on markov; Apache-2.0 in markov-harness. On the way, the GitHub Pages build of docs/,
+broken since 2026-10-10, was fixed. Phase 2, the Codify tutorial, is next.
 
 ## Where we are
 
