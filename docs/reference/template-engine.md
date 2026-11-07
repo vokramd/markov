@@ -318,7 +318,6 @@ Coercion order matters: integer parsing is attempted before float parsing. JSON 
 ## Jev support
 
 Step `when` and `assert.that` support durable `jev.noul`, `jev.choice`, and `jev.score` calls against named definitions. These helpers are not general template filters. See [Jev decisions](jev.md).
-{% endraw %}
 
 ## Markov's pongo2
 
@@ -328,3 +327,4 @@ Markov builds with a patched copy of pongo2 v6.0.0 in `third_party/pongo2` (see 
 Django's template language, not Jinja2's: there is no inline `a if cond else b` (use
 `a | default:b` for "a, or b when a is empty", or `{% if %}...{% endif %}` in a string), and
 `a or b` returns a boolean, not the first truthy value.
+{% endraw %}
