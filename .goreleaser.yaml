@@ -1,0 +1,35 @@
+# Release builds: push a tag (git tag v0.1.0 && git push origin v0.1.0) and
+# .github/workflows/release.yml runs goreleaser, which builds these binaries and publishes the
+# GitHub release with them. Check this file locally with `goreleaser check`, and try a build
+# without publishing with `goreleaser release --snapshot --clean`.
+version: 2
+
+project_name: markov
+
+builds:
+  - main: ./cmd/markov
+    binary: markov
+    env:
+      - CGO_ENABLED=0   # static, like make build-static: runs in any container or sandbox
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^Ledger:"

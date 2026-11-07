@@ -5,18 +5,22 @@ Get from zero to a running workflow in under 5 minutes.
 
 ## Prerequisites
 
-- **Go 1.21+** — to build from source
+- **Nothing**, with a release binary. **Go 1.25+** to build from source.
+- **The [`claude` CLI](https://github.com/anthropics/claude-code)** (optional) — only needed for `claude` steps
 - **A Kubernetes cluster** (optional) — only needed for `k8s_job` steps
 
 ## Installation
 
+Download a binary for Linux or macOS (amd64, arm64) from the
+[releases](https://github.com/vokramd/markov/releases), unpack it and put `markov` on your `PATH`. Or build it:
+
 ```bash
-git clone https://github.com/jctanner/markov.git
+git clone https://github.com/vokramd/markov.git
 cd markov
-go build -o markov ./cmd/markov
+make build            # bin/markov; or: go install github.com/vokramd/markov/cmd/markov@latest
 ```
 
-Or use the pre-built binary in `bin/markov`.
+`markov --version` prints the version.
 
 ## Your First Workflow
 

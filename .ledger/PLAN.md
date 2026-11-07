@@ -16,6 +16,7 @@
 - [Secrets masked in events and logs](plans/007-secret-masking.md) — phase 1 done: declared and secret-named vars and `secret:` step outputs masked by value in every event and log line; the state store keeps real values for resume. Use in github-workflow-example and the store question next.
 - [Variable scope: globals, parameters and locals](plans/008-variable-scope.md) — done (2026-10-25): file-level vars are read-only globals (a call may shadow one); a workflow's `vars:` are its parameters (`~` required); calls fill them with `pass:` or `vars:` and children no longer inherit the caller's context; a typed `for_each` register keeps `{item, output}` per element; validate checks for names a workflow cannot see.
 - [Output limits, and runaway runs as codify evidence](plans/009-output-limits.md) — phases 1–4 done (2026-10-25), the trial next: `max_output` on every step (64 MB default, step / step type / file / CLI), enforced while streaming and on completion, failing with a breakdown of what was big; codify runs in a memory-limited scope and reads event logs a line at a time; `output_sizes.md` evidence and retro guidance on splitting, fanning out or moving work to scripts.
+- [First users](plans/010-first-users.md) — phase 1 under way (2026-11-07; releases, CI, Quick Start done, not released): make the first five minutes work (releases, a laptop Quick Start, GitHub metadata), a Codify tutorial, launch with the markov-harness story, a Claude Code plugin, and the first ten users by hand.
 
 ## Active Tasks
 

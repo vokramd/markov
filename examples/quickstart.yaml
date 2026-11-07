@@ -1,0 +1,76 @@
+# Quick start: runs anywhere markov does, with no cluster and no agent.
+#
+#   markov run examples/quickstart.yaml --callback tty://
+#
+# It fans out over a list (for_each), loops a sub-workflow until a condition holds (repeat),
+# branches (when), and writes a report (write_file). Then:
+#
+#   markov status <run-id> --steps     # every step, its status and duration
+#   cat quickstart-report.md
+#
+# For an agent step, see examples/claude.yaml (needs the claude CLI).
+
+entrypoint: main
+
+vars:
+  services: [api, web, worker]
+  report: quickstart-report.md
+
+workflows:
+  - name: main
+    steps:
+      # Fan out: one check per service, all three at once.
+      - name: check
+        for_each: services
+        as: service
+        concurrency: 3
+        type: shell_exec
+        register: checks
+        params:
+          command: "sleep 0.$((RANDOM % 9 + 1)); echo \"{{ service }} is up\""
+          live_output: true
+
+      # Loop: run warm_up again until it reports the cache is warm, at most 5 times.
+      - name: warm
+        workflow: warm_up
+        register: warm
+        vars:
+          round: "{{ repeat.index + 1 }}"
+        repeat:
+          until: "warmed"
+          max: 5
+
+      # Branch: only when the loop got there.
+      - name: ready
+        when: "warm.last.warmed"
+        type: shell_exec
+        params:
+          command: "echo 'all {{ services | length }} services up; cache warm after {{ warm.count }} rounds'"
+          live_output: true
+
+      - name: write_report
+        type: write_file
+        params:
+          path: "{{ report }}"
+          content: |
+            # Quick start report
+
+            {% for c in checks %}- {{ c.checks.stdout | trim }}
+            {% endfor %}
+            Cache warm after {{ warm.count }} rounds (stopped by {{ warm.stopped_by }}).
+
+  - name: warm_up
+    description: One round of warming; the cache is warm from round 3.
+    vars:
+      round: ~
+    steps:
+      - name: fill
+        type: shell_exec
+        params:
+          command: "echo 'warming cache, round {{ round }}'"
+          live_output: true
+
+      - name: done
+        type: set_fact
+        vars:
+          warmed: "round >= 3"

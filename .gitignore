@@ -10,3 +10,5 @@ references/cosim-workflow-poc/claude-skill-chain-poc/
 references/cosim-workflow-poc/yaml-agent-chain-poc/
 examples/codification/*.codify/
 __pycache__/
+/dist/
+/quickstart-report.md

@@ -66,34 +66,56 @@ Full documentation is available at [docs/](docs/), including:
 
 See [docs/design/project-comparisons.md](docs/design/project-comparisons.md) for detailed comparisons with Ansible, Argo Workflows, Jenkins, Tekton, Kestra, CrewAI, and LangGraph.
 
-## Quick Start
+## Install
+
+Download a binary for Linux or macOS (amd64, arm64) from the [releases](https://github.com/vokramd/markov/releases),
+unpack it and put `markov` on your `PATH`:
 
 ```bash
-go build -o markov ./cmd/markov
-
-# Validate a workflow file
-markov validate examples/k8s-job-test.yaml
-
-# Validate a directory workflow
-markov validate examples/dir-based-hello-world
-
-# Run a workflow
-markov run examples/k8s-job-test.yaml --namespace markov-test --verbose
-
-# Run a directory workflow
-markov run examples/dir-based-hello-world --verbose
-
-# Check status
-markov status <run-id> --steps
-
-# Resume a failed run
-markov resume <run-id>
-
-# Generate a Mermaid diagram of a completed run
-markov diagram <run-id>
+tar -xzf markov_<version>_<os>_<arch>.tar.gz markov && sudo mv markov /usr/local/bin/
 ```
 
-## Example
+Or build it with Go 1.25 or later:
+
+```bash
+go install github.com/vokramd/markov/cmd/markov@latest   # or, from a clone: make build (bin/markov)
+```
+
+## Quick Start
+
+Nothing but `markov` is needed: no cluster, no agent.
+
+```bash
+git clone https://github.com/vokramd/markov && cd markov
+
+markov validate examples/quickstart.yaml
+markov run examples/quickstart.yaml --callback tty://   # fan-out, a loop, a branch, a report
+cat quickstart-report.md
+markov status <run-id> --steps                          # what ran, and how long each step took
+```
+
+[`examples/quickstart.yaml`](examples/quickstart.yaml) checks three services at once (`for_each`), repeats a
+sub-workflow until it reports the cache is warm (`repeat`), runs a step only if it did (`when`), and writes a
+report (`write_file`). Next:
+
+- **An agent step:** [`examples/claude.yaml`](examples/claude.yaml) asks Claude a question with enforced limits
+  (needs the [`claude` CLI](https://github.com/anthropics/claude-code)).
+- **Codify:** [`markov codify`](docs/reference/cli.md#markov-codify) moves the work an agent step does that needs no
+  judgment into native steps.
+- **Getting started:** [docs/getting-started.md](docs/getting-started.md).
+
+Resume a failed or paused run with `markov resume <run-id>`, and draw a finished one with `markov diagram <run-id>`
+(Mermaid).
+
+## On Kubernetes
+
+`k8s_job` steps create `batch/v1` Jobs directly, in the namespace you give:
+
+```bash
+markov run examples/k8s-job-test.yaml --namespace markov-test --verbose
+```
+
+### Example
 
 ```yaml
 entrypoint: main

@@ -1,0 +1,27 @@
+# Build, vet, format check and tests on every push to main and every pull request.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Format
+        run: make fmt
+      - name: Vet
+        run: make vet
+      - name: Test
+        run: make test
+      - name: Static build
+        run: make build-static
