@@ -2,7 +2,7 @@
 
 # Markov Documentation
 
-Markov is a Go-based YAML workflow engine for Kubernetes. Define workflows declaratively, and Markov executes them as K8s Jobs, HTTP requests, or shell commands with built-in concurrency, conditionals, checkpoint/resume, and a rule engine.
+Markov is a Go workflow engine for chaining agents with code. Declarative YAML workflows mix agent steps (Claude Code), scripts, HTTP APIs and Kubernetes Jobs, with concurrency, conditionals, loops, a rule engine and checkpoint/resume. [Codify](reference/cli.md#markov-codify) progressively moves the work that needs no judgment out of agent steps into native ones.
 
 ## Quick Links
 
