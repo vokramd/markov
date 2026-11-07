@@ -178,7 +178,7 @@ workflows:
             - "--issue"
             - "{{ issue }}"
             - "--model"
-            - "{{ rfe-analysis.artifacts.result.complexity == 'high' | ternary('opus', 'sonnet') }}"
+            - "{% if rfe-analysis.artifacts.result.complexity == 'high' %}opus{% else %}sonnet{% endif %}"
             - "--runner"
             - "{{ runner }}"
         artifacts:

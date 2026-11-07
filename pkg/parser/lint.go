@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/jctanner/markov/pkg/template"
 )
 
 // Issue is something `markov validate` reports about a workflow's variables.
@@ -84,6 +86,7 @@ func Lint(wf *WorkflowFile) []Issue {
 				}
 				issues = append(issues, Issue{Error: isErr, Workflow: w.Name, Step: s.Name, Name: name, Msg: msg})
 			}
+			issues = append(issues, lintTemplates(wf, w, s)...)
 			if s.Workflow == "" || IsTemplated(s.Workflow) {
 				continue
 			}
@@ -222,62 +225,113 @@ func visibleNames(wf *WorkflowFile, w *Workflow) map[string]bool {
 	return v
 }
 
+// lintTemplates reports a step's templates and expressions that don't parse: a syntax error, or
+// a filter or tag that doesn't exist. Each would otherwise fail only when the step runs.
+func lintTemplates(wf *WorkflowFile, w *Workflow, s Step) []Issue {
+	var issues []Issue
+	seen := map[string]bool{}
+	report := func(text string, err error) {
+		if err == nil || seen[text] {
+			return
+		}
+		seen[text] = true
+		issues = append(issues, Issue{Error: true, Workflow: w.Name, Step: s.Name, Msg: fmt.Sprintf("%q does not parse: %v", text, err)})
+	}
+	expr := func(e string) {
+		if IsTemplated(e) {
+			report(e, template.Check(e))
+		} else {
+			report(e, template.CheckExpr(e))
+		}
+	}
+	walkStepText(wf, s, func(t string) {
+		if IsTemplated(t) {
+			report(t, template.Check(t))
+		}
+	}, expr)
+	if s.Repeat != nil && s.Repeat.Until != "" {
+		expr(s.Repeat.Until)
+	}
+	return issues
+}
+
+// walkStepText calls tmpl with each template string a step holds and expr with each
+// expression (when, that and the like, and set_fact strings), as the engine reads them.
+// Fact sources ({from: path}) are paths, not templates, and are skipped.
+func walkStepText(wf *WorkflowFile, s Step, tmpl func(string), expr func(string)) {
+	var walk func(v any)
+	walk = func(v any) {
+		switch t := v.(type) {
+		case string:
+			tmpl(t)
+		case map[string]any:
+			for _, x := range t {
+				walk(x)
+			}
+		case []any:
+			for _, x := range t {
+				walk(x)
+			}
+		}
+	}
+	if s.Type != "" {
+		_, params := wf.ResolveStepType(&s)
+		walk(params)
+	}
+	for _, e := range []string{s.When, s.ForEach, s.ForEachWhen, s.FailedWhen} {
+		if e != "" {
+			expr(e)
+		}
+	}
+	for _, e := range s.That {
+		expr(e)
+	}
+	walk(s.Msg)
+	walk(s.Workflow)
+	for _, v := range s.Vars {
+		if str, ok := v.(string); ok && s.Type == "set_fact" {
+			expr(str)
+		} else {
+			walk(v)
+		}
+	}
+	for _, v := range s.Facts {
+		if m, ok := v.(map[string]any); ok {
+			if _, ok := m["from"].(string); ok {
+				continue
+			}
+		}
+		walk(v)
+	}
+	for _, a := range s.Artifacts {
+		walk(a.Path)
+	}
+	if s.Repeat != nil {
+		walk(s.Repeat.Max) // until reads the iteration's results, not the step's scope
+	}
+}
+
 // stepReads is the names a step reads, from its templates and expressions, sorted.
 func stepReads(wf *WorkflowFile, s Step, rep *strings.Replacer) []string {
 	names := map[string]bool{}
-	tmpl := func(v any) { collectTemplateNames(v, names, rep) }
-	expr := func(e string) {
+	walkStepText(wf, s, func(t string) {
+		collectTemplateNames(t, names, rep)
+	}, func(e string) {
 		if IsTemplated(e) {
 			collectTemplateNames(e, names, rep)
 		} else {
 			collectExprNamesExcept(rep.Replace(e), names, nil)
 		}
-	}
-	if s.Type != "" {
-		_, params := wf.ResolveStepType(&s)
-		tmpl(params)
-	}
-	if s.When != "" {
-		expr(s.When)
-	}
-	if s.ForEach != "" {
-		expr(s.ForEach)
-	}
-	if s.ForEachWhen != "" {
-		expr(s.ForEachWhen)
-	}
-	if s.FailedWhen != "" {
-		expr(s.FailedWhen)
-	}
-	for _, t := range s.That {
-		expr(t)
-	}
-	tmpl(s.Msg)
-	tmpl(s.Workflow)
+	})
 	for _, n := range s.Pass {
 		names[n] = true
-	}
-	for _, v := range s.Vars {
-		if str, ok := v.(string); ok && s.Type == "set_fact" {
-			expr(str)
-		} else {
-			tmpl(v)
-		}
 	}
 	for _, v := range s.Facts {
 		if m, ok := v.(map[string]any); ok {
 			if from, ok := m["from"].(string); ok {
 				names[rootName(from)] = true
-				continue
 			}
 		}
-		tmpl(v)
-	}
-	for _, a := range s.Artifacts {
-		tmpl(a.Path)
-	}
-	if s.Repeat != nil {
-		tmpl(s.Repeat.Max) // until reads the iteration's results, checked in lintRepeatUntil
 	}
 	delete(names, "")
 	out := make([]string, 0, len(names))

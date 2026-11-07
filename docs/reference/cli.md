@@ -280,6 +280,12 @@ warning: workflow "main", step "report": reads "target", which is not declared: 
 error: workflow "child", step "use": reads "listing", which this workflow cannot see: declare it in the workflow's vars: (and have callers pass it), or make it a file-level var
 ```
 
+It parses every template and expression a step holds (params, `when`, `that`, `until`, `set_fact` values and the like), so a syntax error or a filter or tag that doesn't exist is an error before the run gets to that step:
+
+```
+error: workflow "main", step "label": "{{ desc | truncate:50 }}" does not parse: [Error (where: parser) in <string> | Line 1 Col 11 near 'truncate'] Filter 'truncate' does not exist.
+```
+
 On success (warnings at most), prints `valid` and exits with code 0. On failure, prints the validation error, or the findings and their count, and exits with code 1. `markov run` logs the same findings as warnings and runs anyway.
 
 **Examples:**

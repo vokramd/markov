@@ -1118,3 +1118,48 @@ func TestParseDirTopLevelFilesKeepTheirOwnNames(t *testing.T) {
 		t.Error("a top-level file's name: should stand, whatever its filename")
 	}
 }
+
+// A template or expression that doesn't parse, such as one using a filter that doesn't exist,
+// is an error before the run rather than when the step gets to it.
+func TestLintTemplatesThatDoNotParse(t *testing.T) {
+	got := lintMessages(t, `
+entrypoint: main
+workflows:
+  - name: main
+    steps:
+      - name: fine
+        type: shell_exec
+        when: "1 == 1"
+        params: {cmd: "{{ 'a' | upper | to_json }}", plain: "no template"}
+      - name: filter
+        type: shell_exec
+        params: {cmd: "{{ 'abc' | truncate:2 }}"}
+      - name: tag
+        type: shell_exec
+        when: "1 =="
+        params: {cmd: "{% bogus %}"}
+      - name: facts
+        type: set_fact
+        vars: {a: "1 == 1", b: "{{ 'x' | nope }}"}
+`)
+	want := []string{
+		`error: workflow "main", step "filter": "{{ 'abc' | truncate:2 }}" does not parse: [Error (where: parser) in <string> | Line 1 Col 12 near 'truncate'] Filter 'truncate' does not exist.`,
+		`error: workflow "main", step "tag": "{% bogus %}" does not parse:`,
+		`error: workflow "main", step "tag": "1 ==" does not parse:`,
+		`error: workflow "main", step "facts": "{{ 'x' | nope }}" does not parse: [Error (where: parser) in <string> | Line 1 Col 10 near 'nope'] Filter 'nope' does not exist.`,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("Lint:\n%s", strings.Join(got, "\n"))
+	}
+	for _, w := range want {
+		found := false
+		for _, g := range got {
+			if strings.HasPrefix(g, w) {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("missing %q in:\n%s", w, strings.Join(got, "\n"))
+		}
+	}
+}

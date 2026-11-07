@@ -211,6 +211,19 @@ func execute(t *pongo2.Template, ctx map[string]any) (result string, err error) 
 	return t.Execute(pongo2.Context(ctx))
 }
 
+// Check parses a template without running it, so a syntax error or an unknown filter or tag
+// shows before a run does.
+func Check(tmpl string) error {
+	_, err := pongo2.FromString(tmpl)
+	return err
+}
+
+// CheckExpr parses an expression (without braces) the way EvalBool does, without running it.
+func CheckExpr(expr string) error {
+	_, err := pongo2.FromString(fmt.Sprintf("{%% if %s %%}true{%% endif %%}", expr))
+	return err
+}
+
 func (e *Engine) RenderMap(params map[string]any, ctx map[string]any) (map[string]any, error) {
 	result := make(map[string]any)
 	for k, v := range params {

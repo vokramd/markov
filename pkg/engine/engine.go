@@ -989,14 +989,22 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 		if len(step.Artifacts) == 0 {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("load_artifact step has no artifacts defined"))
 		}
-		artifacts, err := e.loadArtifacts(step.Artifacts, runCtx)
-		if err != nil {
-			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("loading artifacts: %w", err))
+		artifacts, loadErr := e.loadArtifacts(step.Artifacts, runCtx)
+		if loadErr != nil {
+			loadErr = fmt.Errorf("loading artifacts: %w", loadErr)
+			if !step.IgnoreErrors {
+				return e.failStep(ctx, runID, workflowName, stateStepName, base, now, loadErr)
+			}
+			artifacts = map[string]any{}
+			log.Printf("[run:%s] step %q failed, ignored (ignore_errors): %v", runID, step.Name, loadErr)
 		}
 		if err := e.checkOutput(ctx, &step, artifacts); err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)
 		}
 		runCtx[step.Name] = map[string]any{"artifacts": artifacts}
+		if loadErr != nil {
+			runCtx[step.Name] = ignoredFailure(runCtx[step.Name].(map[string]any), loadErr)
+		}
 		e.noteStepOutput(&step, runCtx[step.Name].(map[string]any))
 		e.verbose("[run:%s]   loaded %d artifact(s)", runID, len(artifacts))
 		completed := time.Now()
@@ -1170,15 +1178,23 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 	}
 
 	if len(step.Artifacts) > 0 {
-		artifacts, err := e.loadArtifacts(step.Artifacts, runCtx)
-		if err != nil {
-			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, fmt.Errorf("loading artifacts: %w", err))
+		artifacts, loadErr := e.loadArtifacts(step.Artifacts, runCtx)
+		if loadErr != nil {
+			loadErr = fmt.Errorf("loading artifacts: %w", loadErr)
+			if !step.IgnoreErrors {
+				return e.failStep(ctx, runID, workflowName, stateStepName, base, now, loadErr)
+			}
+			artifacts = map[string]any{}
+			log.Printf("[run:%s] step %q artifacts failed, ignored (ignore_errors): %v", runID, step.Name, loadErr)
 		}
 		stepData := map[string]any{"artifacts": artifacts}
 		if output != nil {
 			for k, v := range output {
 				stepData[k] = v
 			}
+		}
+		if loadErr != nil {
+			stepData = ignoredFailure(stepData, loadErr)
 		}
 		if err := e.checkOutput(ctx, &step, stepData); err != nil {
 			return e.failStep(ctx, runID, workflowName, stateStepName, base, now, err)

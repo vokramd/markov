@@ -1254,6 +1254,9 @@ For `k8s` source, the engine lists running pods in the workflow namespace (up to
 - A file is missing and `optional` is `false`.
 - A YAML file fails to parse.
 
+With `ignore_errors: true`, any of these except an empty `artifacts` map leaves the step succeeded with
+`{step_name}.artifacts` empty, plus `failed: true` and `error`. The same holds for `artifacts` attached to another step type.
+
 ### Example
 
 ```yaml

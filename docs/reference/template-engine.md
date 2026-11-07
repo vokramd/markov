@@ -37,7 +37,7 @@ Filters transform values using the pipe (`|`) operator.
 greeting: "{{ name | upper }}"
 
 # Filter with argument
-label: "{{ description | truncate:50 }}"
+label: "{{ description | truncatechars:50 }}"
 
 # Chained filters
 slug: "{{ title | lower | cut:' ' }}"
@@ -211,9 +211,9 @@ These are the most commonly useful filters from Pongo2's built-in set.
 | `first` | First element of list/string | `{{ items \| first }}` |
 | `last` | Last element of list/string | `{{ items \| last }}` |
 | `add` | Add a number | `{{ count \| add:1 }}` |
-| `truncate` | Truncate string to length | `{{ desc \| truncate:80 }}` |
+| `truncatechars` | Truncate string to length, counting the `...` it ends with | `{{ desc \| truncatechars:80 }}` |
 | `title` | Title-case string | `{{ name \| title }}` |
-| `capitalize` | Capitalize first character | `{{ word \| capitalize }}` |
+| `capfirst` | Capitalize first character | `{{ word \| capfirst }}` |
 | `striptags` | Remove HTML tags | `{{ html \| striptags }}` |
 | `safe` | Mark as safe (no auto-escaping) | `{{ raw_html \| safe }}` |
 | `escapejs` | Escape for JavaScript strings | `{{ val \| escapejs }}` |
@@ -221,7 +221,7 @@ These are the most commonly useful filters from Pongo2's built-in set.
 | `wordcount` | Count words in string | `{{ text \| wordcount }}` |
 | `yesno` | Map true/false/nil to strings | `{{ flag \| yesno:"yes,no,maybe" }}` |
 | `slice` | Slice a list | `{{ items \| slice:"1:3" }}` |
-| `reverse` | Reverse a list or string | `{{ items \| reverse }}` |
+| `reversed` (a `for` option, not a filter) | Loop over a list backwards | `{% for x in items reversed %}` |
 | `pluralize` | Pluralize suffix based on count | `{{ count \| pluralize:"item,items" }}` |
 | `center` | Center-pad a string | `{{ name \| center:20 }}` |
 | `ljust` | Left-justify (right-pad) string | `{{ name \| ljust:20 }}` |

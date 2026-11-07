@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -69,6 +70,41 @@ func TestIgnoreErrorsRecordsFailureAndContinues(t *testing.T) {
 	}
 	if got := rec.messages(); !reflect.DeepEqual(got, []any{nil, "failed True"}) {
 		t.Fatalf("calls: %#v", got)
+	}
+}
+
+func TestIgnoreErrorsOnAMissingArtifact(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing.txt")
+	artifacts := map[string]parser.Artifact{"text": {Path: missing, Source: "local"}}
+	for _, tc := range []struct {
+		name string
+		step parser.Step
+	}{
+		{"load_artifact", parser.Step{Name: "load", Type: "load_artifact", Artifacts: artifacts, IgnoreErrors: true}},
+		{"attached", parser.Step{Name: "load", Type: "shell_exec", Params: map[string]any{"msg": "x"}, Artifacts: artifacts, IgnoreErrors: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &recordExec{}
+			wf := &parser.WorkflowFile{Entrypoint: "main", Workflows: []parser.Workflow{{
+				Name: "main",
+				Steps: []parser.Step{
+					tc.step,
+					{Name: "after", Type: "shell_exec", Params: map[string]any{"msg": "{{ load.failed }} {{ load.artifacts.text | default:'none' }}"}},
+				},
+			}}}
+			runCtx, err := runMain(t, wf, rec)
+			if err != nil {
+				t.Fatalf("run failed: %v", err)
+			}
+			load := runCtx["load"].(map[string]any)
+			if load["failed"] != true || !strings.Contains(load["error"].(string), "missing.txt") {
+				t.Fatalf("step output: %#v", load)
+			}
+			msgs := rec.messages()
+			if got := msgs[len(msgs)-1]; got != "True none" {
+				t.Fatalf("after: %#v", got)
+			}
+		})
 	}
 }
 
