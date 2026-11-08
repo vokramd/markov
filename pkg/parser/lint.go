@@ -252,7 +252,36 @@ func lintTemplates(wf *WorkflowFile, w *Workflow, s Step) []Issue {
 	if s.Repeat != nil && s.Repeat.Until != "" {
 		expr(s.Repeat.Until)
 	}
+	if s.Type == "set_fact" {
+		names := make([]string, 0, len(s.Vars))
+		for name := range s.Vars {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			if str, ok := s.Vars[name].(string); ok && looksLikeAValue(str) {
+				issues = append(issues, Issue{Workflow: w.Name, Step: s.Name, Name: name, Msg: fmt.Sprintf(
+					"%s: %q is a boolean expression (a plain set_fact string), so it stores true or false; to store the value, write \"{{ %s }}\"",
+					name, str, strings.TrimSpace(str))})
+			}
+		}
+	}
 	return issues
+}
+
+// dataFilter matches an expression that ends in a filter producing data rather than a truth value.
+var dataFilter = regexp.MustCompile(`\|\s*(pluck|flatten|fromjson|from_json|to_json|tojson|csv|seq|join|split|trim|upper|lower|title|capfirst|slice|sort|reverse|make_list|urlencode)(\s*:\s*('[^']*'|"[^"]*"|[^|\s]+))?\s*$`)
+
+// booleanOps are what make an expression a test rather than a value.
+var booleanOps = regexp.MustCompile(`==|!=|<|>|\b(and|or|not|in|is)\b`)
+
+// looksLikeAValue is true for a plain set_fact string that computes a value but would be stored as
+// a boolean: `kids | pluck:'leaves' | flatten` rather than `"{{ kids | pluck:'leaves' | flatten }}"`.
+func looksLikeAValue(expr string) bool {
+	if IsTemplated(expr) {
+		return false
+	}
+	return dataFilter.MatchString(expr) && !booleanOps.MatchString(expr)
 }
 
 // walkStepText calls tmpl with each template string a step holds and expr with each

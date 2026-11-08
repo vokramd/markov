@@ -1244,7 +1244,7 @@ Each value in the `vars` map is evaluated according to its type:
 | String that is exactly one `{{ expr }}` | Evaluated to the expression's native value: `"{{ tiers[tier] }}"` stores the map, `"{{ names \| csv }}"` the list. A value that comes out as text is coerced as in the next row |
 | String containing `{{` or `{%` | Rendered as a Pongo2 template, then coerced: `"true"` becomes `true` (bool), integer strings are parsed to `int`, JSON arrays/objects are parsed into native types |
 | String with `{{ path \| from_json }}` or `{{ path \| fromjson }}` | The context path is resolved and its string value is parsed as JSON, preserving structure (maps, arrays, nested types) |
-| Plain string (no template syntax) | Evaluated as a boolean expression via `{% if expr %}true{% endif %}` |
+| Plain string (no template syntax) | Evaluated as a boolean expression via `{% if expr %}true{% endif %}`. `markov validate` warns when one ends in a filter that produces data (`"items \| join:','"`): write `"{{ items \| join:',' }}"` to store the value |
 | Map with a `from` key | Table lookup (see below) |
 | Any other map, or a list | Rendered like step params: template strings are rendered (exact expressions keep native types) and other strings are kept as they are, so a whole record can be built in one fact |
 | Any other type | Stored directly (int, bool) |

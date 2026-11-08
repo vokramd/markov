@@ -286,6 +286,12 @@ It parses every template and expression a step holds (params, `when`, `that`, `u
 error: workflow "main", step "label": "{{ desc | truncate:50 }}" does not parse: [Error (where: parser) in <string> | Line 1 Col 11 near 'truncate'] Filter 'truncate' does not exist.
 ```
 
+A plain `set_fact` string is a boolean expression, so one that ends in a filter producing data (`pluck`, `flatten`, `from_json`, `join` and the like) with no comparison is almost certainly a missing `{{ }}`, and gets a warning:
+
+```
+warning: workflow "walk", step "branch": leaves: "kids | pluck:'leaves' | flatten" is a boolean expression (a plain set_fact string), so it stores true or false; to store the value, write "{{ kids | pluck:'leaves' | flatten }}"
+```
+
 On success (warnings at most), prints `valid` and exits with code 0. On failure, prints the validation error, or the findings and their count, and exits with code 1. `markov run` logs the same findings as warnings and runs anyway.
 
 **Examples:**

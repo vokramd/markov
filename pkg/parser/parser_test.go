@@ -1163,3 +1163,31 @@ workflows:
 		}
 	}
 }
+
+func TestLintWarnsWhenASetFactValueWouldBeStoredAsABoolean(t *testing.T) {
+	got := lintMessages(t, `
+entrypoint: main
+vars:
+  kids: []
+  items: []
+workflows:
+  - name: main
+    steps:
+      - name: facts
+        type: set_fact
+        vars:
+          leaves: "kids | pluck:'leaves' | flatten"
+          names: "items | join:', '"
+          any: "items | length > 0"
+          some: "items | length"
+          kept: "{{ kids | pluck:'leaves' | flatten }}"
+          listed: "items | join:',' == 'a'"
+`)
+	want := []string{
+		`warning: workflow "main", step "facts": leaves: "kids | pluck:'leaves' | flatten" is a boolean expression (a plain set_fact string), so it stores true or false; to store the value, write "{{ kids | pluck:'leaves' | flatten }}"`,
+		`warning: workflow "main", step "facts": names: "items | join:', '" is a boolean expression (a plain set_fact string), so it stores true or false; to store the value, write "{{ items | join:', ' }}"`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("Lint:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
