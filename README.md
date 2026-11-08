@@ -16,7 +16,7 @@ A [Markov chain](https://en.wikipedia.org/wiki/Markov_chain) is a system that tr
 ## Features
 
 **Steps**
-- **Agent steps** — [`claude`](docs/reference/step-types.md#claude) runs a prompt or skill through the Claude Code CLI, with live transcripts, limits on turns, tokens, time and spend, and optional JSON-schema answers
+- **Agent steps** — [`claude`](docs/reference/step-types.md#claude) runs a prompt or skill through the Claude Code CLI, with live transcripts, limits on turns, tokens, time and spend, and optional JSON-schema answers; [`codex`](docs/reference/step-types.md#codex) does the same through the OpenAI Codex CLI
 - **Native steps** — `shell_exec`, `script_exec`, `write_file`, `http_request` (pagination, streamed SSE responses), `k8s_job`/`k8s_job_wait` (`batch/v1` Jobs directly, no Argo), `ansible`/`ansible_playbook`, `prompt` (interactive input), and [OpenShell sandboxes](docs/reference/step-types.md#openshell-sandboxes)
 - **User-defined step types** — compose reusable types from the primitives
 - **Data** — `set_fact`, `assert`, and [`load_artifact`](docs/reference/artifacts.md) for YAML, markdown and markdown tables from local files or K8s pods
@@ -99,7 +99,8 @@ sub-workflow until it reports the cache is warm (`repeat`), runs a step only if 
 report (`write_file`). Next:
 
 - **An agent step:** [`examples/claude.yaml`](examples/claude.yaml) asks Claude a question with enforced limits
-  (needs the [`claude` CLI](https://github.com/anthropics/claude-code)).
+  (needs the [`claude` CLI](https://github.com/anthropics/claude-code)); [`examples/codex.yaml`](examples/codex.yaml) does
+  the same with the [`codex` CLI](https://github.com/openai/codex).
 - **Codify:** [`markov codify`](docs/reference/cli.md#markov-codify) moves the work an agent step does that needs no
   judgment into native steps.
 - **Getting started:** [docs/getting-started.md](docs/getting-started.md).
@@ -180,7 +181,7 @@ Common `run` flags: `--var key=value`, `--workflow name`, `--forks N`, `--state-
 cmd/markov/          CLI entrypoint
 pkg/engine/          Workflow execution, gates, loops, debugger, reload, secrets
 pkg/parser/          YAML parsing, validation, lint
-pkg/executor/        Step executors (claude, shell_exec, script_exec, http_request, k8s_job, ...)
+pkg/executor/        Step executors (claude, codex, shell_exec, script_exec, http_request, k8s_job, ...)
 pkg/codify/          markov codify: recording proxy, retro agent, replay, judge
 pkg/state/           Checkpoint store (SQLite, Postgres)
 pkg/callback/        Event callbacks (jsonl, tty, http, grpc)

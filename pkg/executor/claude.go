@@ -149,7 +149,7 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 	var stdout io.Reader
 	var wait func() (int, error)
 	if sandbox != "" {
-		stdout, wait, err = e.startInSandbox(runCtx, cfg, openshell.ExecRequest{
+		stdout, wait, err = startInSandbox(runCtx, e.newTransport, cfg, openshell.ExecRequest{
 			Sandbox: sandbox,
 			Command: append([]string{binary}, args...),
 			Workdir: chdir,
@@ -196,7 +196,7 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 	}
 	failed := breach != "" || ctx.Err() != nil || s.result == nil || s.resultIsError() || waitErr != nil
 	if sandbox != "" && failed {
-		if problems := e.sandboxNetwork(cfg, sandbox, output, time.Since(started)); len(problems) > 0 {
+		if problems := sandboxNetwork(e.newTransport, cfg, sandbox, output, time.Since(started)); len(problems) > 0 {
 			why = append(why, "sandbox network:\n  "+strings.Join(problems, "\n  "))
 		}
 	}
@@ -225,8 +225,8 @@ func (e *Claude) Execute(ctx context.Context, params map[string]any) (*Result, e
 
 // sandboxNetwork reads the sandbox's network denials and failures since the step started into
 // output["sandbox_network"]. It has its own deadline: the step's context may already be over.
-func (e *Claude) sandboxNetwork(cfg openshell.Config, sandbox string, output map[string]any, since time.Duration) []string {
-	tr, err := e.newTransport(cfg)
+func sandboxNetwork(newTransport func(openshell.Config) (openshell.Transport, error), cfg openshell.Config, sandbox string, output map[string]any, since time.Duration) []string {
+	tr, err := newTransport(cfg)
 	if err != nil {
 		return nil
 	}
@@ -278,8 +278,8 @@ func startLocal(ctx context.Context, binary string, args []string, chdir string,
 
 // startInSandbox runs the CLI in an OpenShell sandbox. Ending ctx ends the exec stream, which
 // stops the CLI there too, so limits are enforced the same way as on the runner.
-func (e *Claude) startInSandbox(ctx context.Context, cfg openshell.Config, req openshell.ExecRequest, stderr io.Writer) (io.Reader, func() (int, error), error) {
-	tr, err := e.newTransport(cfg)
+func startInSandbox(ctx context.Context, newTransport func(openshell.Config) (openshell.Transport, error), cfg openshell.Config, req openshell.ExecRequest, stderr io.Writer) (io.Reader, func() (int, error), error) {
+	tr, err := newTransport(cfg)
 	if err != nil {
 		return nil, nil, err
 	}

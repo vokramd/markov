@@ -21,6 +21,7 @@ Every step has a `type` that determines what it does. Markov provides these prim
 | `script_exec` | Run an inline or repository script through an interpreter |
 | `write_file` | Write content to a file on the runner |
 | `claude` | Run Claude Code with a prompt or skill and enforced limits |
+| `codex` | Run the Codex CLI with a prompt and enforced limits |
 | `ansible_playbook` | Run `ansible-playbook` |
 | `ansible` | Run an ad-hoc Ansible module |
 | `prompt` | Read local interactive terminal input |

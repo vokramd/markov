@@ -13,7 +13,7 @@ When a step references a custom type, the engine resolves it to its base primiti
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `base` | string | yes | Must be a primitive type: `k8s_job`, `k8s_job_wait`, `http_request`, `shell_exec`, `script_exec`, `ansible_playbook`, `ansible`, `claude`, `prompt`, `gate`, `load_artifact`, `set_fact`, `assert`, or `llm_invoke` |
+| `base` | string | yes | Must be a primitive type: `k8s_job`, `k8s_job_wait`, `http_request`, `shell_exec`, `script_exec`, `ansible_playbook`, `ansible`, `claude`, `codex`, `prompt`, `gate`, `load_artifact`, `set_fact`, `assert`, or `llm_invoke` |
 | `description` | string | no | Human-readable description of the step type |
 | `job` | map[string]any | no | Base parameters, typically the core spec (image, command for `k8s_job`; base_url for `http_request`) |
 | `defaults` | map[string]any | no | Default parameter values that override `job` fields |

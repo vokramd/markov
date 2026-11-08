@@ -113,6 +113,16 @@ func stepTypes() []StepType {
 			p("sandbox", "Run in this OpenShell sandbox"), p("transport", "With sandbox: cli or sdk"),
 			p("json_schema", "JSON Schema the answer must follow; the parsed answer is the structured_output output"),
 		}},
+		StepType{Name: "codex", Inputs: "params", Summary: "Run the Codex CLI with a prompt, streaming its output, with limits enforced by Markov.", Params: []Param{
+			req("prompt", "The prompt text"), p("chdir", "Directory to run in"), p("model", ""), p("effort", "model_reasoning_effort"), p("profile", ""),
+			p("sandbox_mode", "read-only, workspace-write, or danger-full-access"), p("dangerously_bypass_approvals_and_sandbox", "Run commands with no sandbox and no approvals"),
+			p("add_dirs", "Extra writable directories"), p("images", "Images attached to the prompt"), p("config", "Config overrides, passed as -c key=value"),
+			p("enable", "Features to enable"), p("disable", "Features to disable"), p("ephemeral", "Don't persist the session"), p("ignore_user_config", ""), p("ignore_rules", ""),
+			p("git_repo_check", "Require a Git repository (default false)"), p("resume", "Resume a session"),
+			p("limits", "max_tool_calls, max_tokens, max_duration"), p("events_limit", "Maximum events kept in the output"), p("env", ""), p("extra_args", ""), p("binary", ""),
+			p("sandbox", "Run in this OpenShell sandbox"), p("transport", "With sandbox: cli or sdk"),
+			p("json_schema", "JSON Schema the answer must follow; the parsed answer is the structured_output output"),
+		}},
 		StepType{Name: "ansible_playbook", Inputs: "params", Summary: "Run ansible-playbook.", Params: []Param{
 			req("playbook", "Playbook path(s)"), p("chdir", ""), p("inventory", "Path, inline host list, list, or inline inventory map"), p("limit", ""), p("tags", ""), p("skip_tags", ""),
 			p("start_at_task", ""), p("extra_vars", "Map (written to a private temp file) or string"), p("extra_vars_files", ""), p("check", ""), p("diff", ""), p("become", ""),

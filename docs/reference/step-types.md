@@ -1,7 +1,7 @@
 {% raw %}
 # Built-in Step Types
 
-Markov ships with twenty-five primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
+Markov ships with twenty-six primitive step types. Every step in a workflow must resolve to one of these primitives, either directly or through a [custom step type](custom-step-types.md).
 
 All step types support these common fields:
 
@@ -307,6 +307,116 @@ On resume, a completed `claude` step is skipped like any other step; an interrup
   when: "not review.is_error"
   params:
     command: echo "{{ review.result }}"
+```
+
+---
+
+## codex
+
+Runs the OpenAI Codex CLI non-interactively (`codex exec --json`) and processes its JSONL event stream live. Use it like [`claude`](#claude): to run a prompt in an execution directory, with limits that Markov enforces while the run is in progress.
+
+The step runs on the Markov runner host and needs the `codex` CLI installed there, unless `sandbox` names an [OpenShell sandbox](#openshell-sandboxes) to run it in. In a sandbox it works as `claude` does there: the image needs the `codex` CLI, `chdir` and `add_dirs` are sandbox paths, only the step's `env` is passed in, and the sandbox's network policy must allow the API endpoint.
+
+**Authentication.** The step never requires or sets `OPENAI_API_KEY`. It starts `codex` with the runner's environment, so an existing ChatGPT login under `CODEX_HOME` (`~/.codex`) is used. To use a key instead, pass it through `env`.
+
+**Two sandboxes.** Codex runs the commands its model asks for in its own sandbox, set by `sandbox_mode` (or its config; `codex exec` defaults to `read-only`). That is separate from `sandbox`, the OpenShell sandbox the whole CLI runs in. `codex exec` never asks for approval: a command its sandbox does not allow fails, and the model sees the failure.
+
+The prompt is written to the process's stdin, so it does not appear in the process list. The step passes `--skip-git-repo-check`, since workflow directories are often not Git repositories; set `git_repo_check: true` to keep Codex's check.
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prompt` | string | yes | The prompt text. |
+| `chdir` | string | no | Directory to run in. Must exist. Defaults to the Markov process working directory. |
+| `model` | string | no | `--model`. |
+| `effort` | string | no | Reasoning effort (`-c model_reasoning_effort=...`), such as `low`, `medium` or `high`. |
+| `profile` | string | no | `--profile`. Not with `resume`. |
+| `sandbox_mode` | string | no | `read-only`, `workspace-write`, or `danger-full-access` (`-c sandbox_mode=...`). |
+| `dangerously_bypass_approvals_and_sandbox` | bool | no | `--dangerously-bypass-approvals-and-sandbox`. **Commands run with no sandbox at all; only enable it where the whole CLI is already isolated, such as an OpenShell sandbox.** |
+| `add_dirs` | string[] | no | Extra writable directories (`--add-dir`). Not with `resume`. |
+| `images` | string[] | no | Images attached to the prompt (`--image`). |
+| `config` | map | no | Config overrides, each passed as `-c key=value`. Values are strings, numbers, booleans, or lists of them; use dotted keys for nested settings (`shell_environment_policy.inherit: all`). |
+| `enable` / `disable` | string[] | no | Features to turn on or off (`--enable` / `--disable`). |
+| `ephemeral` | bool | no | `--ephemeral`: don't write session files, so the run cannot be resumed. |
+| `ignore_user_config` / `ignore_rules` | bool | no | `--ignore-user-config` / `--ignore-rules`. |
+| `git_repo_check` | bool | no | Keep Codex's refusal to run outside a Git repository. Default false. |
+| `resume` | string | no | Session (thread) ID to continue, as `codex exec resume <id>`; the prompt is the next message. |
+| `limits` | map | no | Limits enforced by Markov; see below. |
+| `events_limit` | int | no | Maximum events kept in the `events` output. Default 200; `0` keeps none. Live callbacks are not capped. |
+| `env` | map[string]string | no | Extra environment variables. |
+| `extra_args` | string[] | no | Extra arguments, added before the prompt. |
+| `binary` | string | no | Executable to run instead of `codex`. |
+| `json_schema` | map or string | no | A JSON Schema the final answer must follow (`--output-schema`, through a temporary file). The parsed answer is the `structured_output` output. Not with `sandbox`. |
+| `sandbox` | string | no | Run in this OpenShell sandbox instead of on the runner. |
+| `transport` | string | no | With `sandbox`: `cli` or `sdk` (default from the workflow file's `openshell:` block). |
+
+### Limits
+
+| Limit | Meaning |
+|-------|---------|
+| `max_tool_calls` | Maximum tool calls: commands, file changes, MCP tool calls and web searches. Checked as each one starts. |
+| `max_tokens` | Maximum new tokens: input that was not a cache read, plus output. Codex reports usage only when the turn completes, so this fails the step afterwards rather than stopping the run. |
+| `max_duration` | Maximum wall-clock seconds for the run. |
+
+When `max_tool_calls` or `max_duration` is exceeded, Markov stops the process (and any commands it started), emits a `limit_exceeded` progress event, and fails the step with `codex: limit exceeded: <limit>`; `max_tokens` fails it the same way once the turn reports its usage. The step output is still returned, with `limit_exceeded` set.
+
+### Output Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `result` | string | The final agent message. |
+| `is_error` | bool | True if the turn failed or did not complete, or a limit was exceeded. |
+| `session_id` | string | Codex thread ID; pass it to `resume`. |
+| `model` | string | The `model` param, when given. |
+| `num_turns` | int | Completed turns (one per run). |
+| `tool_calls` | int | Tool calls counted against `max_tool_calls`. |
+| `tokens` | int | New tokens counted against `max_tokens`. |
+| `usage` | map | `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens`. |
+| `prompt_chars` | int | Length of the rendered prompt in characters. |
+| `limit_exceeded` | string | Name of the exceeded limit, or empty. |
+| `structured_output` | any | With `json_schema`: the answer, parsed. |
+| `errors` | string[] | Present only when the stream reported errors (some are transient, such as a reconnect). |
+| `events` | list | Compact events (`kind` plus fields), capped by `events_limit`. Long strings are truncated. |
+| `events_truncated` | bool | True if events were dropped by the cap. |
+| `exit_code`, `stderr` | | Process exit code and standard error. |
+| `sandbox_network` | string[] | With `sandbox`, only when the run failed: network denials and failures the sandbox recorded. |
+
+### Live progress
+
+Each stream event is also sent to callbacks as a [`step_progress`](callbacks.md#step-lifecycle-events) event, with the same kinds as `claude` where they apply: `init`, `text`, `tool_use` (`name` is `command_execution`, `file_change`, `web_search` or `mcp:<server>.<tool>`), `tool_result`, `usage`, `limit_exceeded` and `result`, plus `reasoning`, `todo` and `error`.
+
+### Failure Conditions
+
+The step fails if a limit is exceeded, the turn fails (`turn.failed`), the process ends without completing its turn, it exits non-zero, or with `json_schema` the answer is not JSON. A command that fails inside the run does not fail the step by itself; the model sees it.
+
+On resume, a completed `codex` step is skipped like any other step; an interrupted one starts over. Concurrent `for_each` iterations share one login and its rate limits, so use a low `concurrency`.
+
+### Example
+
+```yaml
+- name: triage
+  type: codex
+  register: triage
+  params:
+    prompt: "Read the failing test output in ci.log and say which package is at fault."
+    chdir: ./repo
+    sandbox_mode: read-only
+    json_schema:
+      type: object
+      properties:
+        package: {type: string}
+        reason: {type: string}
+      required: [package, reason]
+      additionalProperties: false
+    limits:
+      max_tool_calls: 40
+      max_duration: 600
+
+- name: report
+  type: shell_exec
+  params:
+    command: echo "{{ triage.structured_output.package }}"
 ```
 
 ---

@@ -7,6 +7,7 @@ Get from zero to a running workflow in under 5 minutes.
 
 - **Nothing**, with a release binary. **Go 1.25+** to build from source.
 - **The [`claude` CLI](https://github.com/anthropics/claude-code)** (optional) — only needed for `claude` steps
+- **The [`codex` CLI](https://github.com/openai/codex)** (optional) — only needed for `codex` steps
 - **A Kubernetes cluster** (optional) — only needed for `k8s_job` steps
 
 ## Installation

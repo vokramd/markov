@@ -24,7 +24,7 @@ New to markov? Start here:
 Complete, field-by-field documentation for the markov YAML DSL:
 
 - [Workflow File Schema](reference/workflow-file.md) — top-level fields, workflow, step, rule, artifact, and step_type schemas
-- [Step Types](reference/step-types.md) — all 25 built-in types: `shell_exec`, `script_exec`, `write_file`, `claude`, `ansible_playbook`, `ansible`, `prompt`, `k8s_job`, `k8s_job_wait`, `http_request`, `jev`, `gate`, `set_fact`, `load_artifact`, `assert`, `reload_workflow`, `codify`, the `openshell_*` family (`openshell_build`, `openshell_create`, `openshell_upload`, `openshell_exec`, `openshell_download`, `openshell_delete`, `openshell_provider`), and the reserved `llm_invoke`
+- [Step Types](reference/step-types.md) — all 26 built-in types: `shell_exec`, `script_exec`, `write_file`, `claude`, `codex`, `ansible_playbook`, `ansible`, `prompt`, `k8s_job`, `k8s_job_wait`, `http_request`, `jev`, `gate`, `set_fact`, `load_artifact`, `assert`, `reload_workflow`, `codify`, the `openshell_*` family (`openshell_build`, `openshell_create`, `openshell_upload`, `openshell_exec`, `openshell_download`, `openshell_delete`, `openshell_provider`), and the reserved `llm_invoke`
 - [Custom Step Types](reference/custom-step-types.md) — defining reusable step types with base/job/defaults/params
 - [Template Engine](reference/template-engine.md) — Pongo2 templates, filters, expressions, and type coercion
 - [Rule Engine](reference/rule-engine.md) — rules, gates, condition syntax, FactStore, and Grule evaluation

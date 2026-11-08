@@ -134,6 +134,7 @@ var executorFiles = map[string][]string{
 	"../executor/script_exec.go":  {"script_exec"},
 	"../executor/write_file.go":   {"write_file"},
 	"../executor/claude.go":       {"claude"},
+	"../executor/codex.go":        {"codex"},
 	"../executor/ansible.go":      {"ansible", "ansible_playbook"},
 	"../executor/http_request.go": {"http_request"},
 	"../executor/k8s_job.go":      {"k8s_job", "k8s_job_wait"},

@@ -1,0 +1,31 @@
+# Example: codex step
+#
+# Requires the codex CLI on the runner, logged in (ChatGPT) or with credentials
+# provided through env. Run with a callback to watch progress live:
+#   markov run examples/codex.yaml --callback jsonl:///tmp/codex-progress.jsonl
+
+entrypoint: codex-demo
+
+vars:
+  topic: directory workflows
+
+workflows:
+  - name: codex-demo
+    description: Ask Codex a question in a read-only sandbox with enforced limits, then print the answer.
+    steps:
+      - name: summarize
+        type: codex
+        register: summary
+        params:
+          prompt: "In two sentences, explain {{ topic }} in this repository. Read files if needed."
+          sandbox_mode: read-only
+          limits:
+            max_tool_calls: 20
+            max_tokens: 200000
+            max_duration: 300
+
+      - name: show
+        type: shell_exec
+        params:
+          command: |
+            echo "tool_calls={{ summary.tool_calls }} tokens={{ summary.tokens }}"

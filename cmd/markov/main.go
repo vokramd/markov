@@ -823,6 +823,7 @@ func buildExecutors(wf *parser.WorkflowFile) (map[string]executor.Executor, erro
 		"script_exec":      executor.NewScriptExec(),
 		"write_file":       executor.NewWriteFile(),
 		"claude":           executor.NewClaude().WithOpenShell(openShellConfig(wf)),
+		"codex":            executor.NewCodex().WithOpenShell(openShellConfig(wf)),
 		"ansible":          executor.NewAnsible(),
 		"ansible_playbook": executor.NewAnsiblePlaybook(),
 		"prompt":           executor.NewPrompt(),

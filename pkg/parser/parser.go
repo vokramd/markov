@@ -522,6 +522,7 @@ var primitives = map[string]bool{
 	"script_exec":        true,
 	"write_file":         true,
 	"claude":             true,
+	"codex":              true,
 	"ansible":            true,
 	"ansible_playbook":   true,
 	"prompt":             true,

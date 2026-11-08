@@ -474,6 +474,7 @@ These are the built-in step types available in every workflow file.
 | `script_exec` | Run an inline script or a script from the workflow `scripts/` directory on the local machine. |
 | `write_file` | Write content to a file on the runner, creating parent directories. |
 | `claude` | Run the Claude Code CLI with a prompt or skill, streaming its output with enforced turn, token, and duration limits. |
+| `codex` | Run the Codex CLI with a prompt, streaming its output with enforced tool-call, token, and duration limits. |
 | `ansible_playbook` | Run `ansible-playbook` with an inventory, extra vars, and CLI options. |
 | `ansible` | Run an ad-hoc `ansible` module against a host pattern. |
 | `prompt` | Read a response from an interactive terminal on the local machine. |
