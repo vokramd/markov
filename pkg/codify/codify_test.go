@@ -54,6 +54,12 @@ func write(t *testing.T, root, rel, text string) {
 // project writes a directory workflow: main calls target, target is one claude step.
 func project(t *testing.T, base string) string {
 	t.Helper()
+	return projectOf(t, base, "claude")
+}
+
+// projectOf is project with the agent step of the given type.
+func projectOf(t *testing.T, base, agentType string) string {
+	t.Helper()
 	root := filepath.Join(t.TempDir(), "proj")
 	write(t, root, "meta.yaml", "entrypoint: main\n")
 	write(t, root, "vars.yaml", "base: "+base+"\n")
@@ -63,7 +69,7 @@ func project(t *testing.T, base string) string {
 	write(t, root, "workflows/target.yaml", `name: target
 steps:
   - name: agent
-    type: claude
+    type: `+agentType+`
     params:
       prompt: "ROLE=task list the stories at {{ base }}/stories.json into stories.txt"
 `)
@@ -443,6 +449,57 @@ func cycleProject(t *testing.T, base string) string {
 	write(t, root, "workflows/snap.yaml", "name: snap\nsteps:\n  - name: s\n    type: shell_exec\n    params:\n      command: echo snapshot\n")
 	write(t, root, "workflows/cycle.yaml", "name: cycle\nsteps:\n  - name: run-agent\n    workflow: target\n  - name: take-snapshot\n    workflow: snap\n")
 	return root
+}
+
+// fakeCodex plays a codex agent step: it does the task, saves a rollout under CODEX_HOME as the
+// CLI does, and emits the exec --json events the codex executor reads.
+func fakeCodex(t *testing.T, dir string) {
+	t.Helper()
+	script := `#!/bin/sh
+prompt=$(cat)
+case "$prompt" in
+*ROLE=task*)
+  url=$(printf '%s' "$prompt" | grep -o 'http[^ ]*stories.json')
+  curl -sS --fail "$url" | tr -d '[]"' | tr ',' '\n' | sed 's/^/* /' > stories.txt || exit 1
+  mkdir -p "$CODEX_HOME/sessions/2026/11/07"
+  echo '{"type":"session_meta"}' > "$CODEX_HOME/sessions/2026/11/07/rollout-2026-11-07T10-00-00-thread-9.jsonl"
+  printf '%s\n' '{"type":"thread.started","thread_id":"thread-9"}' \
+    '{"type":"item.completed","item":{"id":"i0","type":"agent_message","text":"done"}}' \
+    '{"type":"turn.completed","usage":{"input_tokens":900,"cached_input_tokens":600,"output_tokens":20}}' ;;
+*) echo "unexpected prompt: $prompt" >&2; exit 1 ;;
+esac
+`
+	write(t, dir, "codex", script)
+	if err := os.Chmod(filepath.Join(dir, "codex"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCodifyReplacesACodexStep(t *testing.T) {
+	base, _, hook := server(t)
+	root := projectOf(t, base, "codex")
+	fakeDir, fake := fakeClaude(t, codifyAll)
+	fakeCodex(t, fakeDir)
+	t.Setenv("PATH", fakeDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("CODEX_HOME", filepath.Join(t.TempDir(), "codex-home"))
+
+	rows, err := Run(context.Background(), config(t, root, fake, hook))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows = %+v, want two iterations", rows)
+	}
+	first := rows[0]
+	if first.Task.AgentSteps != 1 || first.Task.Tokens != 320 || first.Validation.Status != "passed" || first.Promoted == nil {
+		t.Fatalf("first iteration = %+v", first)
+	}
+	if got, _ := os.ReadFile(filepath.Join(root, "workflows/target.yaml")); string(got) != nativeTarget {
+		t.Fatalf("target.yaml = %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(root+".codify", "iter-0001", "evidence", "transcripts", "thread-9.jsonl")); err != nil {
+		t.Fatalf("the codex rollout was not kept as a transcript: %v", err)
+	}
 }
 
 func TestFixedWorkflowsAreNotEditable(t *testing.T) {

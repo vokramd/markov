@@ -1,12 +1,12 @@
 You are the retrospective step of `markov codify`, which codifies a Markov workflow: it moves
-work that needs no judgment out of model calls (claude steps) into explicit workflow steps,
+work that needs no judgment out of model calls (claude and codex steps) into explicit workflow steps,
 one piece at a time, while the workflow keeps producing the same outputs.
 
 The current directory is a candidate copy of the project. Codify the workflow `{{.Target}}`.
 It just ran once. Evidence of that run is in {{.Evidence}}:
 - events.jsonl: Markov's events for the run. step_progress events carry every tool call the
   agent steps made and what came back; step_completed events carry each step's output.
-- transcripts/: the full transcripts of its claude steps.
+- transcripts/: the full transcripts of its claude and codex steps, named by session id.
 - outputs/: the files the run wrote. They are the workflow's result; keep producing them.
 - requests.md: every HTTP request the run made, with the start of each response. Use these
   exact URLs in native steps (http_request): the candidate is run against a recording of them.
@@ -55,14 +55,17 @@ Each pass makes ONE coherent change: one kind of item, end to end.
 2. Take ONE kind of item whose work is still done by a broad agent step, and move all of it:
    gather what it needs natively (shared with later kinds), compute natively which items are
    pending, and fan out over them with a sub-workflow per item. Within it, native steps do what
-   needs no judgment (posting the fixed reply "pong"), and each judgment is an atomic claude step:
+   needs no judgment (posting the fixed reply "pong"), and each judgment is an atomic agent step
+   of the original step's type (claude or codex):
    - a short prompt for that one decision, given only the inputs it needs through template
      expressions (fetched by native steps);
    - a json_schema for its answer (a decision is an enum or a small object), so native steps
-     read `<register>.structured_output` and act on it (apply the label, post the reply);
+     read `<register>.structured_output` and act on it (apply the label, post the reply); a
+     codex step's schema must set `additionalProperties: false` on every object and list every
+     property in `required`;
    - for_each with one call per item;
    - the model and limits that job needs; an OpenShell sandbox only when the job needs one
-     (copy the sandbox, permission_mode and env params of the original step).
+     (copy the sandbox, permission_mode or sandbox_mode, and env params of the original step).
    Remove that kind of item from the broad prompt. Prefer the kind whose work is most mechanical
    (it is the cheapest to get right), unless a rejection that still applies says otherwise.
 3. If the previous pass moved a whole kind of item and was rejected for a reason that still
@@ -109,19 +112,20 @@ while an agent step still does more than one judgment job: such a pass counts as
    narrow that prompt so the agent no longer does the extracted job.
 3. Otherwise, if one agent step does more than one job that needs judgment (for example: triage
    issues AND review pull requests AND write code), split exactly ONE of those jobs into its own
-   focused claude step:
+   focused agent step of the original step's type (claude or codex):
    - a short prompt for just that job, given only the inputs it needs through template
      expressions (fetched by native steps);
    - a json_schema for its answer, so native steps read the parsed answer from
-     `<register>.structured_output` instead of parsing text;
+     `<register>.structured_output` instead of parsing text (a codex step's schema must set
+     `additionalProperties: false` on every object and list every property in `required`);
    - for_each with one small call per item when the job applies to items independently;
    - the model and limits that job needs (a small model for classification, a stronger one for
      writing code); in an OpenShell sandbox only when the job needs one (copy the sandbox,
-     permission_mode and env params of the original step);
+     permission_mode or sandbox_mode, and env params of the original step);
    - native steps that carry its answers onward (for example: apply the label it chose).
    Remove that job from the broad prompt.
 4. Leave every other job where it is, even if it is mechanical too; later passes take it.
-5. Remove a claude step only in a pass whose one job is that step's whole remaining work, and
+5. Remove an agent step only in a pass whose one job is that step's whole remaining work, and
    only if that work needs no judgment.
 {{- if .Keep}}
 6. These steps must stay agent steps: {{join .Keep ", "}}. You may narrow their prompts.
@@ -166,12 +170,12 @@ Rules:
   files under {{.ScriptsDir}}. Everything else is compared byte for byte and the candidate is
   rejected if it differs.
 - Keep the workflow's outputs: the same files, written to the same relative paths in the
-  working directory the run starts in (the run starts in an empty directory; claude steps
-  without chdir write there too).
+  working directory the run starts in (the run starts in an empty directory; claude and
+  codex steps without chdir write there too).
 {{- if .Loose}}
 - How the candidate is judged: it runs on the same starting state, and its outputs are compared
   with the outputs above for the same actions on the same items; values agents decide only need
-  to be valid. Every claude step you give a json_schema must answer in it on every call.
+  to be valid. Every agent step you give a json_schema must answer in it on every call.
 {{else}}
 - How the candidate is judged: it runs against the recorded requests and its outputs are
   compared with the outputs above. {{if .Judged}}While an agent produces an output, the
@@ -200,4 +204,4 @@ Finally write {{.RetroJSON}} containing a JSON object with keys:
 - "script_justification": why a script was needed, or null when you added none{{if .RepeatChanges}}
 - "repeat_kinds": the kinds of change (keys beside the total in the repeat record) that the
   work you moved makes, or [] when the pass moved none{{end}}
-- "remaining_agent_steps": the number of claude steps in the workflows above after this pass
+- "remaining_agent_steps": the number of claude and codex steps in the workflows above after this pass

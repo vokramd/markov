@@ -178,15 +178,24 @@ func num(v any) float64 {
 	return 0
 }
 
-// Transcripts copies the Claude Code transcripts of the given sessions into dir.
+// Transcripts copies the transcripts of the given sessions into dir: Claude Code's, and Codex's
+// rollouts (under CODEX_HOME, default ~/.codex), whose names end in the thread id.
 func Transcripts(sessions []string, dir string) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return
 	}
+	codexHome := os.Getenv("CODEX_HOME")
+	if codexHome == "" {
+		codexHome = filepath.Join(home, ".codex")
+	}
 	for _, sid := range sessions {
+		if strings.ContainsAny(sid, `*?[/\`) {
+			continue
+		}
 		matches, _ := filepath.Glob(filepath.Join(home, ".claude", "projects", "*", sid+".jsonl"))
-		for _, m := range matches {
+		rollouts, _ := filepath.Glob(filepath.Join(codexHome, "sessions", "*", "*", "*", "rollout-*-"+sid+".jsonl"))
+		for _, m := range append(matches, rollouts...) {
 			if data, err := os.ReadFile(m); err == nil {
 				_ = os.MkdirAll(dir, 0o755)
 				_ = os.WriteFile(filepath.Join(dir, sid+".jsonl"), data, 0o644)

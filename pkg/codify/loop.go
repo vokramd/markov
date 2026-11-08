@@ -239,7 +239,7 @@ func Run(ctx context.Context, c Config) (rows []Row, err error) {
 	c.em.runStarted(c.Workflow, map[string]any{"codify": c.Workflow, "codify_dir": c.CodifyDir, "model": c.Model, "retro_model": c.modelFor("retro"), "max_iterations": c.MaxIterations, "budget_usd": c.BudgetUSD})
 	defer func() { c.em.runFinished(c.Workflow, start, err) }()
 	if len(agents) == 0 {
-		c.printf("%s has no agent steps (claude, llm_invoke) in reach: nothing to codify\n", c.Workflow)
+		c.printf("%s has no agent steps (claude, codex, llm_invoke) in reach: nothing to codify\n", c.Workflow)
 		return nil, nil
 	}
 
@@ -386,7 +386,7 @@ func (c *Config) iterate(ctx context.Context, proxy *Proxy, docsDir string) (Row
 	if liveFailure == "" && len(live.Outputs) == 0 {
 		// Candidates are judged by their outputs; with none, any change would "match".
 		row.Validation = Validation{Status: "live_failed", Reasons: []string{"the current version wrote no files in its working directory"}}
-		return row, spent, c.Workflow + " wrote no files in the directory it runs in, so there is nothing to keep equal; make it write its result there (relative paths; claude steps need tools such as Write, and permission_mode acceptEdits)", nil
+		return row, spent, c.Workflow + " wrote no files in the directory it runs in, so there is nothing to keep equal; make it write its result there (relative paths; claude steps need tools such as Write, and permission_mode acceptEdits; codex steps need sandbox_mode workspace-write)", nil
 	}
 	if c.RepeatChanges != "" && liveFailure == "" {
 		path, key := c.repeatSpec()

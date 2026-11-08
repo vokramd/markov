@@ -15,7 +15,7 @@ import (
 )
 
 // agentTypes are the step types that run a model.
-var agentTypes = map[string]bool{"claude": true, "llm_invoke": true}
+var agentTypes = map[string]bool{"claude": true, "codex": true, "llm_invoke": true}
 
 // Project is a directory workflow and the target being codified in it.
 type Project struct {

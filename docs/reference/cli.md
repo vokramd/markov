@@ -310,7 +310,7 @@ fi
 
 ### markov codify
 
-Codify a workflow: move the work its agent steps (`claude`, `llm_invoke`) do that needs no judgment into native steps, one validated change at a time, while the workflow keeps producing the same outputs. Nothing needs adding to the project.
+Codify a workflow: move the work its agent steps (`claude`, `codex`, `llm_invoke`) do that needs no judgment into native steps, one validated change at a time, while the workflow keeps producing the same outputs. Nothing needs adding to the project.
 
 ```
 markov codify <directory> --workflow <name> [flags]
@@ -333,12 +333,12 @@ markov codify <directory> --workflow <name> [flags]
 | `--prompt-file path` | built in | Replace the retro agent's strategy prompt, a Go template with the same fields as the built-in one (`pkg/codify/retro.md`). |
 | `--callback url` and the other callback flags | -- | As for `markov run`: receive codify's events (below). |
 
-**Events.** Codify is one run (`run_started` … `run_completed`, named after the workflow). Its phases are steps of a virtual workflow named `codify`: `live`, `retro`, `candidate`, `judge` and `promote`, with their results as step output; the retro agent's and the judge's claude streams arrive as `step_progress` of `codify.retro` and `codify.judge`. Every event of the target workflow's runs (live and candidate) is passed on unchanged, including its claude steps' `step_progress`, except that each child run's own start and end arrive as `sub_run_started`/`sub_run_completed`/`sub_run_failed` with `parent_step` `live` or `candidate`. A one-line progress report per phase also goes to standard output.
+**Events.** Codify is one run (`run_started` … `run_completed`, named after the workflow). Its phases are steps of a virtual workflow named `codify`: `live`, `retro`, `candidate`, `judge` and `promote`, with their results as step output; the retro agent's and the judge's claude streams arrive as `step_progress` of `codify.retro` and `codify.judge`. Every event of the target workflow's runs (live and candidate) is passed on unchanged, including its claude and codex steps' `step_progress`, except that each child run's own start and end arrive as `sub_run_started`/`sub_run_completed`/`sub_run_failed` with `parent_step` `live` or `candidate`. A one-line progress report per phase also goes to standard output.
 
 Each iteration:
 
-1. **Runs the current version** as `markov run <directory> --workflow <name>`, started in an empty directory, through a recording HTTP(S) proxy. The files it writes in that directory are its outputs; what it fetched is recorded. The proxy has its own certificate authority, which the run trusts through `HTTPS_PROXY`, `SSL_CERT_FILE`, `CURL_CA_BUNDLE`, `REQUESTS_CA_BUNDLE` and `NODE_EXTRA_CA_CERTS`; the claude CLI's own API traffic is tunnelled untouched.
-2. **Collects evidence**: the run's events, its claude transcripts, its outputs, the recorded requests (with the start of each response), every agent call's rendered prompt size and input tokens (`agent_calls.md`, from the claude steps' `prompt_chars` and `usage`), how much each step produced and which went over its `max_output` (`output_sizes.md`), and the earlier passes' results.
+1. **Runs the current version** as `markov run <directory> --workflow <name>`, started in an empty directory, through a recording HTTP(S) proxy. The files it writes in that directory are its outputs; what it fetched is recorded. The proxy has its own certificate authority, which the run trusts through `HTTPS_PROXY`, `SSL_CERT_FILE`, `CURL_CA_BUNDLE`, `REQUESTS_CA_BUNDLE` and `NODE_EXTRA_CA_CERTS`; the claude and codex CLIs' own API traffic (Anthropic, OpenAI and ChatGPT hosts) is tunnelled untouched.
+2. **Collects evidence**: the run's events, its claude and codex transcripts (Codex rollouts from `CODEX_HOME`, default `~/.codex`), its outputs, the recorded requests (with the start of each response), every agent call's rendered prompt size and input tokens (`agent_calls.md`, from the agent steps' `prompt_chars` and `usage`), how much each step produced and which went over its `max_output` (`output_sizes.md`), and the earlier passes' results.
 3. **Lets the retro agent edit a copy of the project**, moving one job out of the agent steps (in loose mode, one kind of item end to end; native steps before scripts). It may change the files defining the workflow and the workflows it calls, add `workflows/<name>_*.yaml` helpers and files under `scripts/<name>/`.
 4. **Checks the copy**: no other file changed, scripts come with a justification, `markov validate` passes, `--keep` steps are still agent steps. After it runs: in loose mode every `json_schema` call answered in its schema, and with `--repeat-changes` it did not redo more work on a second run than the current version.
 5. **Runs the copy against the recording.** A request that was not recorded, or is not a GET or HEAD, fails.
@@ -353,7 +353,7 @@ A runaway candidate should cost one rejected iteration, not the machine. Each ru
 
 History in the codify directory: `versions/vNNNN/` (the codified files of each version, `v0000` the original), `metrics.jsonl` (one row per iteration, which the IDE's Codification tab charts), and `iter-NNNN/` (the live and candidate runs, recording, evidence, `retro.json`, `validation.json`).
 
-Requires a directory workflow and the `claude` CLI. The workflow's outputs must be files it writes relative to where it starts (a `claude` step without `chdir` writes there).
+Requires a directory workflow and the `claude` CLI, which runs the retro agent and the judge; a workflow with `codex` steps also needs the `codex` CLI. The workflow's outputs must be files it writes relative to where it starts (a `claude` or `codex` step without `chdir` writes there; a `codex` step needs `sandbox_mode: workspace-write` to write). A retro agent splitting work out of a `codex` step makes the new focused steps `codex` steps too.
 
 #### Modes
 
@@ -366,7 +366,7 @@ Requires a directory workflow and the `claude` CLI. The workflow's outputs must 
   Agent-decided values differ from run to run even for the same version, so a candidate passes
   when it takes the same actions on the same items with valid agent-decided values (a label from
   the allowed set, a reply that answers the command), and everything not decided by an agent
-  matches. Every claude step with a `json_schema` must answer in it on every call, or the
+  matches. Every agent step with a `json_schema` must answer in it on every call, or the
   candidate is rejected. It stops when every agent step is atomic. Each pass moves one kind of
   item end to end (the issues to triage, the `/mk-ping` comments, ...): native gathering, a
   native pending check, and a per-item sub-workflow with an atomic agent step for each judgment.

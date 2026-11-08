@@ -52,8 +52,8 @@ const (
 const maxBody = 64 << 20
 
 // DefaultPassthrough are host suffixes tunnelled without interception or recording: the
-// services the claude CLI itself talks to.
-var DefaultPassthrough = []string{"anthropic.com", "claude.ai", "claude.com", "statsig.com", "sentry.io", "datadoghq.com"}
+// services the claude and codex CLIs themselves talk to.
+var DefaultPassthrough = []string{"anthropic.com", "claude.ai", "claude.com", "statsig.com", "sentry.io", "datadoghq.com", "openai.com", "chatgpt.com"}
 
 // Exchange is one recorded response.
 type Exchange struct {

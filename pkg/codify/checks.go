@@ -197,6 +197,8 @@ func agentCalls(events []map[string]any) []agentCall {
 		if !ok {
 			continue // a for_each step's closing event; each item's call had its own
 		}
+		// The whole input: claude's input_tokens leaves out the cache, codex's includes it (and it
+		// has no cache_creation or cache_read fields).
 		u, _ := o["usage"].(map[string]any)
 		out = append(out, agentCall{
 			Step:        str(ev["workflow_name"]) + "." + str(ev["step_name"]),

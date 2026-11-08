@@ -178,7 +178,7 @@ func main() {
 	codifyCmd := &cobra.Command{
 		Use:   "codify <directory>",
 		Short: "Codify a workflow: move work that needs no model out of its agent steps, one validated step at a time",
-		Long: `Codify runs the workflow, lets a retro agent move one job out of its agent (claude) steps
+		Long: `Codify runs the workflow, lets a retro agent move one job out of its agent (claude, codex) steps
 into native steps in a copy of the project, runs the copy against a recording of what the
 workflow fetched, and installs it when its outputs match. It repeats until no agent work that
 can be codified is left. History (versions, metrics, recordings) goes to <directory>.codify.`,

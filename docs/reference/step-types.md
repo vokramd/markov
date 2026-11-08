@@ -347,7 +347,7 @@ The prompt is written to the process's stdin, so it does not appear in the proce
 | `env` | map[string]string | no | Extra environment variables. |
 | `extra_args` | string[] | no | Extra arguments, added before the prompt. |
 | `binary` | string | no | Executable to run instead of `codex`. |
-| `json_schema` | map or string | no | A JSON Schema the final answer must follow (`--output-schema`, through a temporary file). The parsed answer is the `structured_output` output. Not with `sandbox`. |
+| `json_schema` | map or string | no | A JSON Schema the final answer must follow (`--output-schema`, through a temporary file). The parsed answer is the `structured_output` output. OpenAI's structured outputs are strict: every object needs `additionalProperties: false` and every property listed in `required`. Not with `sandbox`. |
 | `sandbox` | string | no | Run in this OpenShell sandbox instead of on the runner. |
 | `transport` | string | no | With `sandbox`: `cli` or `sdk` (default from the workflow file's `openshell:` block). |
 
@@ -373,7 +373,7 @@ When `max_tool_calls` or `max_duration` is exceeded, Markov stops the process (a
 | `tool_calls` | int | Tool calls counted against `max_tool_calls`. |
 | `tokens` | int | New tokens counted against `max_tokens`. |
 | `usage` | map | `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens`. |
-| `prompt_chars` | int | Length of the rendered prompt in characters. |
+| `prompt_chars` | int | Length of the rendered prompt in characters (codify compares it across calls). Codex reports no cost, so there is no `total_cost_usd`. |
 | `limit_exceeded` | string | Name of the exceeded limit, or empty. |
 | `structured_output` | any | With `json_schema`: the answer, parsed. |
 | `errors` | string[] | Present only when the stream reported errors (some are transient, such as a reconnect). |
