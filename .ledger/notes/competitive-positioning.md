@@ -81,6 +81,35 @@ durable resume, scheduling, vendor neutrality. Live transcripts and human gates 
 - **Rule-engine gates, and the IDE's breakpoints and step-through.**
 - **The format can express the agent loop itself** (markov-harness, below).
 
+## Breadth, shown as a lifecycle (2026-11-08)
+
+Each competitor covers one slice: running agent jobs (Archon, gh-aw, Claude Code scheduled tasks),
+evaluating agents (Inspect, `claude plugin eval`, Harbor), orchestrating infrastructure (Argo,
+Ansible, Kestra), building agent loops (LangGraph, the Vercel AI SDK), and shrinking agent work into
+code (nobody found). Markov does all five in one format: ops pipelines with k8s_job and ansible
+steps, eval matrices, a whole agent harness (markov-harness), recursion, and codify.
+
+Breadth is hard to pitch: "it does everything" reads as "it's for nobody in particular", and generic
+orchestrators scored about 30 on HN. People adopt a tool for one sharp reason and stay for the
+breadth. So present it as one lifecycle of the same workflow file, not a feature list:
+
+1. **Build**: chain agents with native steps; debug in the IDE.
+2. **Evaluate**: run the workflow, or the skill, prompt or harness inside it, over cases × variants ×
+   models × repetitions.
+3. **Run**: on a schedule, with kill limits, per-item resume, markovd on your cluster.
+4. **Shrink**: codify moves the no-judgment work into native steps, gated by replay.
+5. **Re-evaluate**: the same eval workflow proves the shrunk version scores the same.
+
+Steps 4 and 5 together are what no one else can offer, because no one else has evals and codify on
+one engine. "Codify cut the cost by 80% and the eval shows the pass rate didn't move" is stronger
+than either half; it also answers codify's weakest point (its oracle covers only the recorded run).
+
+How to use it: each launch post leads with one sharp story (the eval write-up or the codify one); the
+README and site frame Markov as one engine for the whole life of an agent workflow; an examples
+gallery shows the range (an ops job, an eval suite, markov-harness, a recursive walk, a codify run).
+The breadth only persuades if it is visible, and today most of it lives in the maintainer's own use
+and in this ledger, not in public examples.
+
 What codify needs is what we built first: native steps for work to land in, an engine that runs
 the same workflow live and against a recording, and per-step limits and token counts to measure the
 saving. "Before codify" was the foundation, not wasted.

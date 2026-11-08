@@ -68,6 +68,11 @@ resume; record and replay of all HTTP; the IDE to step through one failing trial
 2. **A measured eval story**: e.g. two versions of a Claude Code skill (or markov-harness against
    Claude Code) on 20 tasks, with test-based graders and a judge, repeated, with pass rates, spread
    and cost. Written up as "what I found", not as a product pitch.
+2a. **Codify, then re-evaluate**: run the eval suite from (2) against a workflow before and after
+   codify. Cost down, pass rate unchanged (or not, and say so) is the one proof no competitor can
+   produce, since none has evals and codify on one engine. It also covers codify's blind spot: the
+   eval exercises branches the recorded run never took. See "Breadth, shown as a lifecycle" in
+   [notes/competitive-positioning.md](../notes/competitive-positioning.md).
 
 ### B. Trust for unattended runs
 
@@ -108,7 +113,8 @@ resume; record and replay of all HTTP; the IDE to step through one failing trial
 
 ## Phases
 
-1. **Proof and trust**: the two measured stories (1, 2), the run budget and cost report (3).
+1. **Proof and trust**: the two measured stories (1, 2), codify then re-evaluate (2a), the run
+   budget and cost report (3).
 2. **Evals core**: results summary, comparison, statistics, fresh workspaces (6–9).
 3. **The feature nobody has**: fallback to the agent (4), and record/replay as a feature (11).
 4. **Authoring**: strict validate, JSON Schema, MCP or plugin, session to workflow (13, 14), with
@@ -122,4 +128,6 @@ resume; record and replay of all HTTP; the IDE to step through one failing trial
 - How much of the results view belongs in markov (JSON and HTML report) and how much in the IDE or
   markovd (charts, run history)?
 - Whether the eval story or the codify story leads the launch; the eval one is what the maintainer
-  does every day.
+  does every day. Either way, the README and site frame both as stages of one lifecycle (build,
+  evaluate, run, shrink, re-evaluate), and 15's starter pack doubles as the gallery that shows the
+  range.
