@@ -101,6 +101,15 @@ report (`write_file`). Next:
 - **An agent step:** [`examples/claude.yaml`](examples/claude.yaml) asks Claude a question with enforced limits
   (needs the [`claude` CLI](https://github.com/anthropics/claude-code)); [`examples/codex.yaml`](examples/codex.yaml) does
   the same with the [`codex` CLI](https://github.com/openai/codex).
+- **What it is for** (each needs the `claude` CLI and runs in a few minutes):
+  - [`examples/issue-triage.yaml`](examples/issue-triage.yaml), a repeated agent job: fetch a repo's newest
+    issues, one tool-less, schema-bound judgment per issue (resumable per issue), labels and a report from native
+    steps.
+  - [`examples/eval-claude-md.yaml`](examples/eval-claude-md.yaml), an eval: cases × arms × repetitions, each trial
+    in a fresh workspace with the real CLI, deterministic graders, pass rates, pass@k, tokens and cost per arm.
+  - [`examples/split-until-small.yaml`](examples/split-until-small.yaml), recursion: summarize a codebase of any
+    size by splitting it with a rule until each piece fits one focused agent call.
+  - [`examples/recursion.yaml`](examples/recursion.yaml) walks a tree with no agent at all.
 - **Codify:** [`markov codify`](docs/reference/cli.md#markov-codify) moves the work an agent step does that needs no
   judgment into native steps.
 - **Getting started:** [docs/getting-started.md](docs/getting-started.md).

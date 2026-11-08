@@ -1,0 +1,201 @@
+# Eval: does an instruction in CLAUDE.md change what Claude Code does? Every case runs with and
+# without it, several times, each trial in a fresh workspace with the real claude CLI and your
+# own config. Deterministic graders score each answer; a native step reports pass rates,
+# pass@k, tokens and cost per arm.
+#
+#   markov run examples/eval-claude-md.yaml --callback tty://
+#   markov run examples/eval-claude-md.yaml --var reps=5 --var model=claude-sonnet-5-5 --callback tty://
+#
+# Needs the claude CLI, logged in. 4 cases x 2 arms x 3 reps = 24 short calls.
+#
+# To evaluate your own instruction, skill or prompt, change cases and arms: an arm is the
+# CLAUDE.md a trial's workspace gets, so it can hold anything Claude Code reads from a project.
+# To compare models instead, make model a field of the arm.
+#
+# What the format gives an eval:
+#   - The matrix is data. A script builds it, so each trial has a stable id: a run that dies on
+#     a rate limit resumes with the trials it didn't finish, not from the start.
+#   - Every trial has limits that stop it, so one runaway case can't eat the budget.
+#   - Graders are native steps: free, and the same every time. An LLM judge would be one more
+#     claude step with a json_schema.
+#   - The IDE can stop at one failing trial and show its prompt, transcript and grade.
+
+entrypoint: main
+
+vars:
+  model: claude-haiku-5-5
+  reps: 3
+  workspaces: /tmp/markov-examples/eval
+
+  # A trial passes when its whole answer, trimmed, matches expect; it is correct when expect
+  # matches anywhere in the answer (right, but maybe wordy).
+  cases:
+    - id: version
+      prompt: "What version is in this changelog line? 'Released markov v0.4.2 on 2026-10-30 with codify fixes.'"
+      expect: 'v?0\.4\.2'
+    - id: count
+      prompt: "How many times does the letter r appear in 'strawberry'?"
+      expect: '3'
+    - id: weekday
+      prompt: "What day of the week was 2026-11-08?"
+      expect: 'Sunday'
+    - id: port
+      prompt: "Which port does this listen on? 'server: {host: 0.0.0.0, port: 8443, tls: true}'"
+      expect: '8443'
+
+  arms:
+    - id: baseline
+      claude_md: ""
+    - id: terse
+      claude_md: |
+        When asked for a value, reply with only the value: no sentence, no punctuation,
+        no explanation.
+
+workflows:
+  - name: main
+    steps:
+      - name: matrix
+        type: script_exec
+        register: matrix
+        params:
+          interpreter: python3
+          stdin:
+            cases: "{{ cases }}"
+            arms: "{{ arms }}"
+            reps: "{{ reps }}"
+          content: |
+            import json, sys
+            m = json.load(sys.stdin)
+            print(json.dumps([
+                {"id": f"{c['id']}.{a['id']}.{r}", "case": c, "arm": a, "rep": r}
+                for c in m["cases"] for a in m["arms"] for r in range(1, int(m["reps"]) + 1)
+            ]))
+
+      - name: trials
+        type: set_fact
+        vars:
+          trials: "{{ matrix.stdout | from_json }}"
+
+      - name: run_trials
+        for_each: trials
+        as: trial
+        for_each_key: id
+        concurrency: 4
+        ignore_errors: true
+        workflow: trial
+        register: results
+
+      - name: summarize
+        type: script_exec
+        register: summary
+        params:
+          interpreter: python3
+          stdin: "{{ results }}"
+          content: |
+            import json, sys
+            from collections import defaultdict
+            from math import comb
+
+            def pass_at_k(n, c, k):
+                # Unbiased pass@k (Chen et al. 2021): the chance that at least one of k trials
+                # drawn from the n run passes.
+                return 1.0 if n - c < k else 1 - comb(n - c, k) / comb(n, k)
+
+            by_arm, by_cell = defaultdict(list), defaultdict(list)
+            for r in json.load(sys.stdin):
+                t = r["trial"]
+                ok = not r.get("failed") and r["grade"]["passed"]
+                answer = r.get("answer", {})
+                correct = not r.get("failed") and r["grade"]["correct"]
+                row = {"ok": ok, "correct": correct, "tokens": answer.get("tokens", 0),
+                       "cost": answer.get("total_cost_usd", 0), "ms": answer.get("duration_ms", 0)}
+                by_arm[t["arm"]["id"]].append(row)
+                by_cell[(t["case"]["id"], t["arm"]["id"])].append(ok)
+
+            arms = {}
+            for arm, rows in by_arm.items():
+                n = len(rows)
+                cells = [v for (c, a), v in by_cell.items() if a == arm]
+                arms[arm] = {
+                    "trials": n,
+                    "pass_rate": sum(r["ok"] for r in rows) / n,
+                    "correct_rate": sum(r["correct"] for r in rows) / n,
+                    "pass_at_1": sum(pass_at_k(len(v), sum(v), 1) for v in cells) / len(cells),
+                    "pass_all": sum(all(v) for v in cells) / len(cells),
+                    "mean_tokens": sum(r["tokens"] for r in rows) / n,
+                    "cost_usd": sum(r["cost"] for r in rows),
+                    "mean_seconds": sum(r["ms"] for r in rows) / n / 1000,
+                }
+            flaky = sorted(f"{c}.{a}" for (c, a), v in by_cell.items() if 0 < sum(v) < len(v))
+            print(json.dumps({"arms": arms, "cells": {f"{c}.{a}": v for (c, a), v in by_cell.items()},
+                              "flaky": flaky}))
+
+      - name: save
+        type: write_file
+        params:
+          path: "{{ workspaces }}/{{ markov_run_id }}/results.json"
+          content: "{{ summary.stdout | from_json }}"
+
+      - name: show
+        type: script_exec
+        params:
+          interpreter: python3
+          stdin: "{{ summary.stdout }}"
+          args: ["{{ workspaces }}/{{ markov_run_id }}/results.json"]
+          live_output: true
+          content: |
+            import json, sys
+            s = json.load(sys.stdin)
+            print(f"{'arm':<10} {'pass':>6} {'correct':>8} {'pass@1':>7} {'all k':>6} {'tokens':>8} {'cost $':>8} {'secs':>6}")
+            for arm, a in s["arms"].items():
+                print(f"{arm:<10} {a['pass_rate']:>6.0%} {a['correct_rate']:>8.0%} {a['pass_at_1']:>7.2f} {a['pass_all']:>6.0%}"
+                      f" {a['mean_tokens']:>8.0f} {a['cost_usd']:>8.4f} {a['mean_seconds']:>6.1f}")
+            print("\nflaky (passed some reps, not all):", ", ".join(s["flaky"]) or "none")
+            print("results:", sys.argv[1])
+
+  - name: trial
+    description: One case, one arm, one repetition, in a fresh workspace.
+    vars:
+      trial: ~
+    steps:
+      - name: workspace
+        type: write_file
+        params:
+          path: "{{ workspaces }}/{{ markov_run_id }}/{{ trial.id }}/CLAUDE.md"
+          content: "{{ trial.arm.claude_md }}"
+
+      - name: answer
+        type: claude
+        register: answer
+        params:
+          model: "{{ model }}"
+          chdir: "{{ workspaces }}/{{ markov_run_id }}/{{ trial.id }}"
+          extra_args: ["--tools", ""]
+          events_limit: 0
+          prompt: "{{ trial.case.prompt }}"
+          limits:
+            max_turns: 3
+            max_tokens: 50000
+            max_duration: 120
+
+      - name: grade
+        type: script_exec
+        register: grader
+        params:
+          interpreter: python3
+          stdin:
+            answer: "{{ answer.result }}"
+            expect: "{{ trial.case.expect }}"
+          content: |
+            import json, re, sys
+            g = json.load(sys.stdin)
+            answer = g["answer"].strip()
+            print(json.dumps({
+                "passed": re.fullmatch(g["expect"], answer, re.IGNORECASE) is not None,
+                "correct": re.search(rf"\b(?:{g['expect']})\b", answer, re.IGNORECASE) is not None,
+            }))
+
+      - name: graded
+        type: set_fact
+        vars:
+          grade: "{{ grader.stdout | from_json }}"

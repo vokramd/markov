@@ -1,0 +1,237 @@
+# Split until small enough: summarize a codebase of any size with focused agent calls. A native
+# step splits each part of the tree into pieces of at most budget_lines; the workflow calls
+# itself on any piece still too big; each small piece gets one agent call that reads it, and
+# each split gets one call that combines its pieces' summaries.
+#
+#   markov run examples/split-until-small.yaml --callback tty://      # from the repository root
+#   markov run examples/split-until-small.yaml --var repo=~/src/app --var root=lib \
+#     --var include='*.py' --var exclude='test_*.py' --callback tty://
+#
+# Needs the claude CLI, logged in. On this repository's pkg/ (about 20,000 lines of Go) it makes
+# about a dozen calls.
+#
+# The split is a rule, not a judgment: count lines, group by directory, pack small neighbours
+# together, cut a directory that is still too big into runs of files. So it costs nothing, and
+# the same tree splits the same way every time. Only reading code and writing summaries needs an
+# agent, and each call sees one piece, so no call has to hold the whole codebase. (A split that
+# needs judgment, such as "is this diff one change or three?", would be a claude step with a
+# json_schema in place of plan; codify could later turn it back into a rule.)
+#
+# Every call of summarize is a sub-run: a resumed run skips the pieces it already summarized.
+
+entrypoint: main
+
+vars:
+  repo: "."              # the repository; relative to the working directory
+  root: pkg              # the directory to summarize, relative to repo
+  include: "*.go"
+  exclude: "*_test.go"
+  budget_lines: 3000     # the most lines one agent call reads
+  model: claude-haiku-5-5
+  out_dir: /tmp/markov-examples/summaries
+
+workflows:
+  - name: main
+    steps:
+      - name: inventory
+        type: script_exec
+        register: inventory
+        params:
+          interpreter: python3
+          args: ["{{ repo }}", "{{ root }}", "{{ include }}", "{{ exclude }}"]
+          content: |
+            import fnmatch, json, os, sys
+            repo, root, include, exclude = sys.argv[1:]
+            base = os.path.abspath(os.path.expanduser(repo))
+            files = []
+            for d, dirs, names in os.walk(os.path.join(base, root)):
+                dirs[:] = sorted(x for x in dirs if not x.startswith("."))
+                for n in sorted(names):
+                    if fnmatch.fnmatch(n, include) and not fnmatch.fnmatch(n, exclude):
+                        p = os.path.join(d, n)
+                        with open(p, errors="replace") as f:
+                            files.append({"path": os.path.relpath(p, base), "lines": sum(1 for _ in f)})
+            print(json.dumps({"base": base, "files": files}))
+
+      - name: tree
+        type: set_fact
+        vars:
+          tree: "{{ inventory.stdout | from_json }}"
+
+      - name: found_files
+        type: assert
+        that:
+          - "tree.files"
+        msg: "no files match include and exclude under repo/root; set repo (and root) to a directory with code"
+
+      - name: walk
+        workflow: summarize
+        register: walked
+        vars:
+          base: "{{ tree.base }}"
+          node:
+            name: "{{ root }}"
+            prefix: "{{ root }}/"
+            files: "{{ tree.files }}"
+
+      - name: report
+        type: script_exec
+        register: report
+        params:
+          interpreter: python3
+          stdin:
+            root: "{{ root }}"
+            summary: "{{ walked.summary }}"
+            pieces: "{{ walked.pieces }}"
+          content: |
+            import json, sys
+            r = json.load(sys.stdin)
+            lines = sum(p["lines"] for p in r["pieces"])
+            print(f"# {r['root']}\n\n{r['summary']}\n")
+            print(f"_{lines} lines in {len(r['pieces'])} pieces of at most the line budget._\n")
+            for p in r["pieces"]:
+                print(f"## {p['name']} ({p['lines']} lines)\n\n{p['summary']}\n")
+
+      - name: save
+        type: write_file
+        params:
+          path: "{{ out_dir }}/{{ markov_run_id }}.md"
+          content: "{{ report.stdout }}"
+
+      - name: show
+        type: shell_exec
+        params:
+          command: "cat '{{ out_dir }}/{{ markov_run_id }}.md'"
+          live_output: true
+
+  - name: summarize
+    description: Summarize one piece of the tree, splitting it first if it is too big.
+    vars:
+      base: ~
+      node: ~
+    steps:
+      # A piece within budget, or a single file, is small enough. Otherwise group its files by
+      # the next directory down (a file directly in it is a group of its own), pack neighbouring
+      # groups into parts of at most budget_lines, and give a part that is one directory that
+      # directory as its prefix, so splitting it again goes one level deeper. Every part is
+      # smaller than the piece, so the recursion ends.
+      - name: plan
+        type: script_exec
+        register: planned
+        params:
+          interpreter: python3
+          stdin:
+            node: "{{ node }}"
+            budget: "{{ budget_lines }}"
+          content: |
+            import json, sys
+            d = json.load(sys.stdin)
+            node, budget = d["node"], int(d["budget"])
+            total = sum(f["lines"] for f in node["files"])
+            if total <= budget or len(node["files"]) == 1:
+                print(json.dumps({"leaf": True, "lines": total, "parts": []}))
+                sys.exit()
+
+            groups = {}
+            for f in node["files"]:
+                rest = f["path"][len(node["prefix"]):]
+                key = rest.split("/")[0]
+                groups.setdefault(key, {"key": key, "dir": "/" in rest, "files": []})["files"].append(f)
+
+            bins, current = [], []
+            for g in groups.values():
+                g["lines"] = sum(f["lines"] for f in g["files"])
+                if current and sum(x["lines"] for x in current) + g["lines"] > budget:
+                    bins.append(current)
+                    current = []
+                current.append(g)
+            bins.append(current)
+
+            parts = []
+            for b in bins:
+                files = [f for g in b for f in g["files"]]
+                if len(b) == 1 and b[0]["dir"]:
+                    name = prefix = node["prefix"] + b[0]["key"] + "/"
+                else:
+                    prefix = node["prefix"]
+                    keys = [g["key"] for g in b]
+                    name = prefix + (keys[0] if len(keys) == 1 else f"{keys[0]} … {keys[-1]}")
+                parts.append({"name": name.rstrip("/"), "prefix": prefix, "files": files})
+            print(json.dumps({"leaf": False, "lines": total, "parts": parts}))
+
+      - name: plan_fact
+        type: set_fact
+        vars:
+          plan: "{{ planned.stdout | from_json }}"
+
+      # The base case: one agent call reads the piece.
+      - name: read
+        when: "plan.leaf"
+        type: claude
+        register: read
+        params:
+          model: "{{ model }}"
+          chdir: "{{ base }}"
+          allowed_tools: [Read, Grep, Glob]
+          events_limit: 0
+          prompt: |
+            Read these files and summarize what this part of the codebase does, for a developer
+            new to it: its responsibilities, main types and functions, and how it is used. Under
+            150 words, plain prose, no headings. Read only these files.
+
+            {% for f in node.files %}- {{ f.path }}
+            {% endfor %}
+          limits:
+            max_turns: 30
+            max_tokens: 300000
+            max_duration: 300
+
+      - name: leaf
+        when: "plan.leaf"
+        type: set_fact
+        vars:
+          summary: "{{ read.result }}"
+          pieces:
+            - name: "{{ node.name }}"
+              lines: "{{ plan.lines }}"
+              summary: "{{ read.result }}"
+
+      # The recursive case: summarize each part, then combine.
+      - name: parts
+        when: "not plan.leaf"
+        for_each: plan.parts
+        as: part
+        workflow: summarize
+        register: kids
+        vars:
+          base: "{{ base }}"
+          node: "{{ part }}"
+
+      - name: combine
+        when: "not plan.leaf"
+        type: claude
+        register: combined
+        params:
+          model: "{{ model }}"
+          extra_args: ["--tools", ""]
+          events_limit: 0
+          prompt: |
+            These are summaries of the parts of {{ node.name }}. Combine them into one summary of
+            {{ node.name }} as a whole: what it does and how the parts fit together. Under 200
+            words, plain prose, no headings.
+
+            {% for k in kids %}## {{ k.node.name }}
+            {{ k.summary }}
+
+            {% endfor %}
+          limits:
+            max_turns: 3
+            max_tokens: 60000
+            max_duration: 120
+
+      - name: branch
+        when: "not plan.leaf"
+        type: set_fact
+        vars:
+          summary: "{{ combined.result }}"
+          pieces: "{{ kids | pluck:'pieces' | flatten }}"
