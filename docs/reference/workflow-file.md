@@ -12,6 +12,7 @@ Markov accepts either a single workflow YAML file or a workflow directory. Both 
 | Entrypoint | `entrypoint` | string | yes | -- | Name of the workflow to execute first. Must match a workflow defined in `workflows`. |
 | Namespace | `namespace` | string | no | `"default"` | Kubernetes namespace used for `k8s_job` steps. Can be overridden by CLI flag or in-cluster ServiceAccount namespace. |
 | Forks | `forks` | int | no | `5` | Default maximum concurrency for `for_each` fan-outs. Set to 0 or omit to use the default. |
+| MaxCallDepth | `max_call_depth` | int | no | `64` | How deep sub-workflow calls may nest, counting `for_each` and `repeat` calls. Deeper fails with the call chain. In a directory workflow this goes in `meta.yaml`. See [Recursion](#recursion). |
 | Vars | `vars` | map[string]any | no | `{}` | The run's globals: visible in every workflow, overridden by CLI `--var` flags, and read-only (no `register`, `set_fact` or `as` may name one). A call may shadow one for the workflow it calls by passing the name. See [Variable Scoping](variables-and-context.md#variable-scoping). |
 | MaxOutput | `max_output` | size | no | `64MB` | The output limit of every step that sets none and whose step type sets none. In a directory workflow this goes in `meta.yaml`. See [Output limits](#output-limits). |
 | Secrets | `secrets` | string[] | no | `[]` | Names of vars whose values are secret: masked as `<secret:NAME>` in events and log lines. Vars named like secrets (`GITHUB_TOKEN`, `db_password`) are masked without being listed. In a directory workflow this goes in `meta.yaml`. See [Secrets](variables-and-context.md#secrets). |
@@ -83,7 +84,7 @@ The files map directly to the single-file schema:
 
 | File | YAML Shape | Description |
 |------|------------|-------------|
-| `meta.yaml` | map | `entrypoint`, `namespace`, `forks`, and `openshell` |
+| `meta.yaml` | map | `entrypoint`, `namespace`, `forks`, `max_call_depth`, `max_output`, `secrets` and `openshell` |
 | `vars.yaml` | map | Top-level variables, without a wrapping `vars:` key |
 | `vars/*.yaml` | map | Optional. More variables, merged in filename order after `vars.yaml`; a variable may be defined only once |
 | `rules.yaml` | list | Rule definitions, without a wrapping `rules:` key |
@@ -209,6 +210,50 @@ workflows:
         type: shell_exec
         params:
           command: "make clean"
+```
+
+### Recursion
+
+A workflow may call itself, directly or through a templated `workflow` name, so a recursive walk
+(a directory tree, a dependency graph, an issue and its sub-issues, a task split until each part
+is small enough for one agent call) is a workflow that calls itself for each child, with `when`
+as its base case. Each call is its own sub-run, so a resumed run skips the subtrees it finished.
+[`examples/recursion.yaml`](../../examples/recursion.yaml) walks a tree and collects its leaves:
+
+```yaml
+  - name: walk
+    vars:
+      node: ~
+      path: ~
+    steps:
+      - name: children                # the recursive case
+        when: "node.children"
+        for_each: node.children
+        as: child
+        workflow: walk
+        register: kids
+        vars:
+          node: "{{ child }}"
+          path: "{{ path }}/{{ child.name }}"
+      - name: branch
+        when: "node.children"
+        type: set_fact
+        vars:
+          leaves: "{{ kids | pluck:'leaves' | flatten }}"
+      - name: leaf                    # the base case
+        when: "not node.children"
+        type: set_fact
+        vars:
+          leaves: ["{{ path }}"]
+```
+
+Calls nest at most `max_call_depth` deep (64 by default; plain calls, `for_each` and `repeat`
+all count). A deeper call fails the step with the chain that led there, a run of the same call
+collapsed into a count, so a missing base case stops at once instead of recursing until memory
+runs out:
+
+```
+sub-workflow calls nest deeper than max_call_depth 64: main.start → walk, walk.children → walk (×64); check the base case of a workflow that calls itself, or raise max_call_depth
 ```
 
 ### Failure handling and teardown

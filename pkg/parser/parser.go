@@ -38,6 +38,7 @@ func ParseDir(path string) (*WorkflowFile, error) {
 		Entrypoint string           `yaml:"entrypoint"`
 		Namespace  string           `yaml:"namespace"`
 		Forks      int              `yaml:"forks"`
+		MaxDepth   int              `yaml:"max_call_depth"`
 		OpenShell  *OpenShell       `yaml:"openshell"`
 		Secrets    []string         `yaml:"secrets"`
 		MaxOutput  outputlimit.Size `yaml:"max_output"`
@@ -48,6 +49,7 @@ func ParseDir(path string) (*WorkflowFile, error) {
 	wf.Entrypoint = meta.Entrypoint
 	wf.Namespace = meta.Namespace
 	wf.Forks = meta.Forks
+	wf.MaxCallDepth = meta.MaxDepth
 	wf.OpenShell = meta.OpenShell
 	wf.Secrets = meta.Secrets
 	wf.MaxOutput = meta.MaxOutput
@@ -310,12 +312,23 @@ func mergeStepTypesFile(path string, stepTypes map[string]StepType) error {
 	return nil
 }
 
+// DefaultMaxCallDepth bounds how deep sub-workflow calls nest when a file sets no max_call_depth:
+// deep enough for a recursive walk of a real tree, shallow enough that a missing base case fails
+// quickly with the call chain rather than exhausting memory.
+const DefaultMaxCallDepth = 64
+
 func validate(wf *WorkflowFile) error {
 	if err := validateJev(wf); err != nil {
 		return err
 	}
 	if wf.Forks <= 0 {
 		wf.Forks = 5
+	}
+	if wf.MaxCallDepth < 0 {
+		return fmt.Errorf("max_call_depth must not be negative")
+	}
+	if wf.MaxCallDepth == 0 {
+		wf.MaxCallDepth = DefaultMaxCallDepth
 	}
 	if wf.OpenShell != nil {
 		switch wf.OpenShell.Transport {

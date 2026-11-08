@@ -2,7 +2,8 @@
 # for_each
 
 Iterates over a list, running a step or sub-workflow per item with concurrency control. To run a
-sub-workflow again and again until a condition holds, see [Repeat](repeat.md).
+sub-workflow again and again until a condition holds, see [Repeat](repeat.md). For a sub-workflow that
+calls itself for each item (a recursive walk), see [Recursion](workflow-file.md#recursion).
 
 ## Fields
 

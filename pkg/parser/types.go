@@ -15,7 +15,10 @@ type WorkflowFile struct {
 	Entrypoint  string                    `yaml:"entrypoint"`
 	Namespace   string                    `yaml:"namespace"`
 	Forks       int                       `yaml:"forks"`
-	Vars        map[string]any            `yaml:"vars"`
+	// MaxCallDepth is how deep sub-workflow calls may nest (a workflow may call itself); 0 is the
+	// default, DefaultMaxCallDepth.
+	MaxCallDepth int            `yaml:"max_call_depth"`
+	Vars         map[string]any `yaml:"vars"`
 	// Secrets names vars whose values are masked in events and logs.
 	Secrets []string `yaml:"secrets"`
 	// MaxOutput is the output limit of every step that sets none (and whose step type sets none).

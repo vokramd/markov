@@ -1240,7 +1240,7 @@ func (e *Engine) executeStepCore(ctx context.Context, runID string, workflowName
 }
 
 func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowName string, step parser.Step, runCtx map[string]any) error {
-	wf, wfFile, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, runCtx)
+	wf, subCtx, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, runCtx)
 	if err != nil {
 		return err
 	}
@@ -1284,7 +1284,7 @@ func (e *Engine) executeSubWorkflow(ctx context.Context, runID string, workflowN
 
 	log.Printf("[run:%s] starting sub-workflow %q as %s", runID, wf.Name, subRunID)
 
-	err = e.executeWorkflow(withFile(ctx, wfFile), subRunID, wf, subVars)
+	err = e.executeWorkflow(subCtx, subRunID, wf, subVars)
 
 	subNow := time.Now()
 	duration := subNow.Sub(subRun.StartedAt).Seconds()
@@ -1447,7 +1447,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 			itemCtx[step.As] = itemVal
 
 			if step.Workflow != "" {
-				wf, wfFile, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, itemCtx)
+				wf, subCtx, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, itemCtx)
 				if err != nil {
 					errOnce.Do(func() { failed.Store(true); firstErr = err })
 					return
@@ -1499,7 +1499,7 @@ func (e *Engine) executeForEach(ctx context.Context, runID string, workflowName 
 					})
 				})
 
-				itemCtx := withLoopFrame(withFile(ctx, wfFile), loopFrame{Kind: "for_each", Workflow: workflowName, Step: step.Name, Iteration: forEachKey})
+				itemCtx := withLoopFrame(subCtx, loopFrame{Kind: "for_each", Workflow: workflowName, Step: step.Name, Iteration: forEachKey})
 				err = e.executeWorkflow(itemCtx, subRunID, wf, subVars)
 
 				feNow := time.Now()
@@ -1660,7 +1660,10 @@ func (e *Engine) eventLogs() []any {
 // resolveSubWorkflow looks the called workflow up in the current definition, which is where a
 // reload takes effect (a requested one is applied first); the caller runs the sub-workflow pinned
 // to the returned file. at is the calling step.
-func (e *Engine) resolveSubWorkflow(runCtx context.Context, at stepInfo, step parser.Step, ctx map[string]any) (*parser.Workflow, *parser.WorkflowFile, error) {
+//
+// It also enters the call: the returned context is pinned to that file and carries the call chain
+// one deeper, and a call deeper than the file's max_call_depth fails with the chain.
+func (e *Engine) resolveSubWorkflow(runCtx context.Context, at stepInfo, step parser.Step, ctx map[string]any) (*parser.Workflow, context.Context, error) {
 	e.applyRequestedReload(runCtx, at)
 	file := e.current()
 	name := step.Workflow
@@ -1682,7 +1685,15 @@ func (e *Engine) resolveSubWorkflow(runCtx context.Context, at stepInfo, step pa
 		}
 		return nil, nil, fmt.Errorf("sub-workflow %q not found", name)
 	}
-	return wf, file, nil
+	maxDepth := file.MaxCallDepth
+	if maxDepth <= 0 {
+		maxDepth = parser.DefaultMaxCallDepth
+	}
+	subCtx, err := enterCall(withFile(runCtx, file), at, wf.Name, maxDepth)
+	if err != nil {
+		return nil, nil, err
+	}
+	return wf, subCtx, nil
 }
 
 // decodeState reads JSON saved in the state store back into workflow values. Whole numbers come

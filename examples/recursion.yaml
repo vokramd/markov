@@ -1,0 +1,79 @@
+# Recursion: a workflow that calls itself. walk visits one node of a tree, calls itself once per
+# child (for_each), and returns the paths of the leaves under it; a node with no children is the
+# base case. No cluster and no agent:
+#
+#   markov run examples/recursion.yaml --callback tty://
+#
+# Each call is a sub-run, so a resumed run skips the subtrees it already finished. Calls may nest
+# max_call_depth deep (64 by default); deeper fails with the call chain, so a missing base case
+# stops at once instead of recursing until memory runs out.
+
+entrypoint: main
+
+vars:
+  tree:
+    name: docs
+    children:
+      - name: guides
+        children:
+          - {name: install.md, children: []}
+          - {name: codify.md, children: []}
+      - name: reference
+        children:
+          - name: steps
+            children:
+              - {name: claude.md, children: []}
+              - {name: codex.md, children: []}
+          - {name: cli.md, children: []}
+      - {name: README.md, children: []}
+
+workflows:
+  - name: main
+    steps:
+      - name: walk_tree
+        workflow: walk
+        register: walked
+        vars:
+          node: "{{ tree }}"
+          path: "{{ tree.name }}"
+
+      - name: report
+        type: shell_exec
+        params:
+          command: "printf '%s\\n' {% for leaf in walked.leaves %}'{{ leaf }}' {% endfor %}"
+          live_output: true
+
+  - name: walk
+    description: Visit one node; recurse into its children and collect the leaves under it.
+    vars:
+      node: ~
+      path: ~
+    steps:
+      - name: visit
+        type: shell_exec
+        params:
+          command: "echo 'visiting {{ path }}'"
+
+      # The recursive case: one call of walk per child.
+      - name: children
+        when: "node.children"
+        for_each: node.children
+        as: child
+        workflow: walk
+        register: kids
+        vars:
+          node: "{{ child }}"
+          path: "{{ path }}/{{ child.name }}"
+
+      - name: branch
+        when: "node.children"
+        type: set_fact
+        vars:
+          leaves: "{{ kids | pluck:'leaves' | flatten }}"
+
+      # The base case.
+      - name: leaf
+        when: "not node.children"
+        type: set_fact
+        vars:
+          leaves: ["{{ path }}"]

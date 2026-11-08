@@ -190,7 +190,7 @@ func currentGenerations(children []*state.Run) []*state.Run {
 // runRepeatIteration runs iteration i of generation gen as its own sub-run and returns its
 // results (what the workflow was passed and what its steps set), also when it failed.
 func (e *Engine) runRepeatIteration(ctx context.Context, runID, workflowName string, step parser.Step, caller map[string]any, gen, i int) (map[string]any, error) {
-	wf, wfFile, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, caller)
+	wf, subCtx, err := e.resolveSubWorkflow(ctx, stepInfo{runID: runID, workflow: workflowName, step: step.Name}, step, caller)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (e *Engine) runRepeatIteration(ctx context.Context, runID, workflowName str
 	})
 	log.Printf("[run:%s] repeat %q: iteration %d of workflow %q as %s", runID, step.Name, i, wf.Name, subRunID)
 
-	err = e.executeWorkflow(withFile(ctx, wfFile), subRunID, wf, subVars)
+	err = e.executeWorkflow(subCtx, subRunID, wf, subVars)
 	if paused, ok := pauseError(err); ok {
 		// Gates inside repeat fail instead of pausing (see the gate step), so this is a pause
 		// from somewhere else; it can't be waited on either.
