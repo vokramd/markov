@@ -123,6 +123,13 @@ feature grid.
 8. **Lead local-first**: `markov run` on a laptop first, markovd and Kubernetes second (an HN
    commenter called a Kubernetes requirement a "non-starter").
 
+## Evals
+
+Markov is already used for evals (Breadboard's strat-workflow benchmark, markov-harness), and that
+is a second audience: see [plan 011](../plans/011-ops-jobs-and-evals.md) for the eval landscape
+(`claude plugin eval`, Inspect + inspect_swe, Harbor, @vercel/agent-eval, Promptfoo, the SaaS
+platforms). Hermetic agent evals by recording HTTP were not found for unmodified CLI agents.
+
 ## Rough edges first users will hit
 
 - **No list literals** in expressions: `[path]` does not parse; use a YAML list (`["{{ path }}"]`).

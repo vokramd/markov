@@ -30,6 +30,12 @@ Checked on GitHub, 2026-11-06:
 
 ## Who first
 
+**Revised 2026-11-07** (plan 011): the laptop skill-chainers below are now well served by Archon and
+Claude Code workflows. First users are (1) engineers running the same agent job over many items on
+their own infrastructure, platform and ops engineers who know Ansible above all, and (2) people
+evaluating coding agents (skills, CLAUDE.md, harnesses, models), which is how Markov is used today.
+Both start local-first; markovd comes when a job proves itself. The original reasoning:
+
 People already chaining Claude Code skills or agent calls by hand or in scripts, who feel it is
 fragile: no state, no resume, no way to tell which part needed the model. They have Claude Code,
 not a Kubernetes cluster. markov answers them with workflows that resume, loop and debug, and
