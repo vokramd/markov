@@ -128,6 +128,7 @@ func main() {
 		Short:   "Workflow engine for chaining agents with code",
 		Version: versionString(),
 	}
+	quietUsageOnceArgsParse(root)
 
 	runCmd := &cobra.Command{
 		Use:   "run <file.yaml|directory>",
@@ -252,8 +253,6 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 		Short: "Validate a workflow file or directory, and check what each workflow can see of its variables",
 		Args:  cobra.ExactArgs(1),
 		RunE:  validateWorkflow,
-		// A workflow error is not a usage error.
-		SilenceUsage: true,
 	}
 
 	diagramCmd := &cobra.Command{
@@ -279,6 +278,15 @@ can be codified is left. History (versions, metrics, recordings) goes to <direct
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
+	}
+}
+
+// quietUsageOnceArgsParse keeps the flag list for usage errors (a wrong flag or argument count,
+// which cobra reports before any hook runs) and leaves it off every other error: a failed run,
+// resume or validation is not a usage mistake, and the list would bury the error above it.
+func quietUsageOnceArgsParse(root *cobra.Command) {
+	root.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
+		cmd.SilenceUsage = true
 	}
 }
 

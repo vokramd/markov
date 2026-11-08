@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -84,6 +87,35 @@ func TestDefaultStateStorePath_EnvironmentOverride(t *testing.T) {
 	want := "postgres://markov:secret@postgres:5432/markov?sslmode=disable"
 	if got != want {
 		t.Errorf("defaultStateStorePath() = %q, want %q", got, want)
+	}
+}
+
+func TestAFailedCommandPrintsNoUsageButAWrongArgumentDoes(t *testing.T) {
+	run := func(args ...string) string {
+		root := &cobra.Command{Use: "markov"}
+		quietUsageOnceArgsParse(root)
+		root.AddCommand(&cobra.Command{
+			Use:  "run <file>",
+			Args: cobra.ExactArgs(1),
+			RunE: func(*cobra.Command, []string) error { return errors.New("step \"x\" failed") },
+		})
+		var out bytes.Buffer
+		root.SetOut(&out)
+		root.SetErr(&out)
+		root.SetArgs(args)
+		if root.Execute() == nil {
+			t.Fatalf("%v should fail", args)
+		}
+		return out.String()
+	}
+	if out := run("run", "wf.yaml"); strings.Contains(out, "Usage:") || !strings.Contains(out, `step "x" failed`) {
+		t.Errorf("a failed run should print its error without the usage:\n%s", out)
+	}
+	if out := run("run"); !strings.Contains(out, "Usage:") {
+		t.Errorf("a missing argument should print the usage:\n%s", out)
+	}
+	if out := run("run", "wf.yaml", "--no-such-flag"); !strings.Contains(out, "Usage:") {
+		t.Errorf("an unknown flag should print the usage:\n%s", out)
 	}
 }
 
