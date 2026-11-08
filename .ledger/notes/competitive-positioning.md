@@ -50,6 +50,34 @@ durable resume, scheduling, vendor neutrality. Live transcripts and human gates 
   Workflows has recursive templates with a `when` guard; code frameworks recurse natively
   (LangGraph caps it with `recursion_limit`). Not yet checked for Archon, Conductor, gh-aw or Claude
   Code workflows.
+- **A format an agent can check before it runs.** Templating itself is table stakes (Actions
+  `${{ }}`, Argo, Kestra's Pebble, Conductor and Ansible Jinja2, n8n JavaScript). What may be ours is
+  `markov validate`: strict YAML, every template and expression parsed (unknown filters included),
+  variables a workflow cannot see (plan 008 scoping), unknown workflows and `workflow_names`, and
+  `set_fact` values that would be stored as booleans, all before a run. Agents write and rewrite
+  these workflows (codify's retro agent, the planned Claude Code plugin), so checking them up front
+  matters twice. Also: templated workflow names (dispatch by name, what markov-harness needs) and
+  exact `{{ expr }}` values kept as data, with `pluck`/`flatten` to collect nested fan-out results.
+  Compared with the competitors' validators (research 2026-11-07, notes in
+  `research_notes/Markov competitive landscape/templating_and_validation.md`):
+  - **Stronger**: parsing every template and expression (Argo's lint skips `{{= }}` expressions;
+    Kestra, Windmill and n8n parse none before a run; Archon only `when:`); scope-aware variable
+    checks (only Conductor and actionlint do comparable reference checks); a templated sub-workflow
+    name checked against `workflow_names` (Archon, Conductor, Actions and Argo need literal names;
+    Ansible, n8n and probably Kestra compute names and check nothing). Native types from an exact
+    `{{ }}` like Ansible 2.19 and the JavaScript tools; Argo, Actions, Kestra and Archon produce strings.
+  - **Weaker**: no type checking (actionlint type-checks expressions; Conductor and Archon check
+    output fields against declared schemas); findings don't block `markov run` (Conductor exits 2,
+    gh-aw's compile is a gate); `markov schema` is a custom format, not a JSON Schema editors use;
+    no MCP or language-server surface (gh-aw ships `gh aw mcp-server` and an authoring skill); no
+    expression security checks (gh-aw allowlists expressions); no stubbed dry run (Archon's
+    `--dry-run --stubs`).
+  - Claude Code dynamic workflows are plain JavaScript with no validate command.
+  - Comparable to Conductor overall, behind actionlint and gh-aw on types, security and agent
+    tooling. Say "checks templates, scopes and dispatch before a run", not "the best validation".
+- **Guards for unattended agents**: `max_output` (a runaway agent can't produce gigabytes into the
+  run), secret masking in events and logs, `rescue`/`always`. Individually table stakes; together an
+  answer to the "unattended agents scare me" objections.
 - **Rule-engine gates, and the IDE's breakpoints and step-through.**
 - **The format can express the agent loop itself** (markov-harness, below).
 
@@ -89,8 +117,22 @@ feature grid.
 6. **A "split until small enough" example**: an agent decides whether a task (a large diff, a
    directory, an epic) needs splitting; the workflow recurses on the parts and gives each leaf one
    focused agent call. Shows recursion, fan-out and "one judgment per call" together.
-7. **Lead local-first**: `markov run` on a laptop first, markovd and Kubernetes second (an HN
+7. **Close the validation gaps** (from the research): publish a JSON Schema for the workflow
+   format; a strict mode where validate findings stop `markov run`; validate over MCP or in the
+   Claude Code plugin; check reads of a step's `structured_output` fields against its `json_schema`.
+8. **Lead local-first**: `markov run` on a laptop first, markovd and Kubernetes second (an HN
    commenter called a Kubernetes requirement a "non-starter").
+
+## Rough edges first users will hit
+
+- **No list literals** in expressions: `[path]` does not parse; use a YAML list (`["{{ path }}"]`).
+- **A plain `set_fact` string is a boolean expression**: `leaves: "kids | pluck:'leaves'"` stores
+  true or false. `markov validate` now warns when such a string ends in a data filter
+  (2026-11-07; no false positives over the examples, 12 directory workflows and 124 YAML files with
+  set_fact in the workspace).
+- **YAML turning into a bad language**: the usual critique of templated YAML. The answer is
+  Ansible's and Actions': keep the YAML declarative, put logic in script steps, and check it all
+  before running.
 
 ## Risks to answer before launch
 
