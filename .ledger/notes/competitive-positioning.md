@@ -110,6 +110,40 @@ gallery shows the range (an ops job, an eval suite, markov-harness, a recursive 
 The breadth only persuades if it is visible, and today most of it lives in the maintainer's own use
 and in this ledger, not in public examples.
 
+## Ecosystem: the IDE and markovd (2026-11-08)
+
+Others have ecosystems, shaped differently:
+
+- **Server-first with a web editor**: Windmill (visual flow editor, step preview, workers, app
+  builder; the closest overall, and it already runs Claude Code and Codex), Kestra (YAML editor in
+  the UI, 1,000+ plugins). Multi-user, polished, no breakpoints or step-through.
+- **Code plus a replay debugger**: Temporal (a web UI, and, as far as we recall, a VS Code debugger
+  that replays a finished run's history with breakpoints; not checked in the research).
+- **Run history UIs**: Argo, Prefect, Dagster, Airflow. Mature, no agent features, no debugger.
+- **Agent tools**: Archon (CLI, web console, chat and forge adapters, an experimental visual
+  builder), Conductor (`--web` DAG dashboard with replay), Claude Code workflows (`/workflows` TUI).
+  Watch, not step.
+
+What is ours:
+
+1. **A live debugger for workflows with agent steps**: breakpoints (conditional, logpoints, run to
+   here), step, variables and watches, reload while running. Pause before an agent step, see what
+   it will get, continue.
+2. **The same file from laptop to cluster**: debug in markov-ide, run and schedule it unchanged on
+   markovd (React UI with run graph, Gantt, step table, schedules, auth; `markovd-cli`). The others
+   are server-first (edit in the server) or local-only.
+3. **Codify inside the IDE** (Codification tab; iterations are ordinary runs).
+4. **An IDE agents can drive** (`ide-ctl`: open, run, select, stop, follow, screenshot), so an agent
+   that writes a workflow can run it under the debugger and inspect the paused state.
+
+Where they are ahead: team features (multi-user editing, RBAC, run history at scale), years of
+polish, communities. Ours is the better tool for one developer building and debugging agent
+workflows; theirs for a team operating workflows that already exist.
+
+The missing link is IDE → markovd: today a workflow gets to markovd by upload or git import, not
+from the IDE. Planned in markov-ide plan 003 ("Run on markovd": send the open workflow, follow the
+remote run in the IDE, pull a failed run back to debug).
+
 What codify needs is what we built first: native steps for work to land in, an engine that runs
 the same workflow live and against a recording, and per-step limits and token counts to measure the
 saving. "Before codify" was the foundation, not wasted.
