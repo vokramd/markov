@@ -12,6 +12,10 @@ Quick Start that need no cluster (`TestQuickstartExampleRuns`); descriptions and
 markov-harness, Discussions on markov; Apache-2.0 in markov-harness. On the way, the GitHub Pages build of docs/,
 broken since 2026-10-10, was fixed. Phase 2, the Codify tutorial, is next.
 
+**2026-11-07, after the competitive research** ([notes/competitive-positioning.md](../notes/competitive-positioning.md)):
+the "agents plus deterministic steps in YAML" pitch is taken (Archon, Claude Code workflows, gh-aw), so
+the launch leads with a measured codify result, not the engine, and phase 2 grows a comparison and an FAQ.
+
 ## Where we are
 
 Checked on GitHub, 2026-11-06:
@@ -60,13 +64,28 @@ job move from the agent into native steps. Use a task people have (GitHub issue 
 summarizing a changelog, a release note), with the repo's GitHub emulator or a public repo so
 it runs without anyone's credentials. A short recording of it, like markov-harness's.
 
+Measure it: tokens, cost and wall time per run for each promoted version, from all-agent to the
+end. Run the same task as a Claude Code dynamic workflow too, where every mechanical action is an
+agent call, so the comparison is on the page.
+
+Alongside it:
+- **Honest comparisons**: a docs page (and a README section) answering "why not X?" for scripts,
+  GitHub Agentic Workflows, Claude Code workflows, Archon, n8n and Temporal/LangGraph, conceding
+  where they are better.
+- **"Is this allowed?"**: an FAQ on running `claude` and `codex` from a subscription login in
+  automation, steering scheduled and markovd runs to API keys.
+- **Codify's limits**: what the replay oracle cannot see (branches the recorded run never took,
+  no fallback to the agent).
+
 ### 3. Launch with the story, spaced out
 
 The headline is the story, not the product. In order, a few days apart, fixing what each wave runs
 into before the next:
 
-1. **Show HN**: "I rebuilt a minimal Claude Code as a YAML workflow" → markov-harness, GIF first.
-   Stay in the comments for the first hours.
+1. **Show HN**: the measured codify story first ("our agent pipeline's cost per run fell from X to
+   Y, one replay-checked change at a time"), then markov-harness ("I rebuilt Claude Code as a YAML
+   workflow you can step through in a debugger") as proof of what the format can express. Stay in
+   the comments for the first hours, with the honest-comparisons page ready.
 2. **Claude Code communities**: r/ClaudeAI, Claude Code Discords, r/LocalLLaMA, where people hit
    the fragile-chain problem.
 3. **An essay on the idea**: progressive crystallization; agents make one judgment per item, the
@@ -89,7 +108,8 @@ they get stuck. Ten people who rely on it teach more than a thousand stars.
 ## Phases
 
 1. **Ready**: releases, laptop Quick Start, GitHub metadata and Discussions, markov-harness license.
-2. **First win**: the Codify tutorial and its recording.
+2. **First win**: the Codify tutorial and its recording, measured; the Claude Code workflow
+   comparison; the honest-comparisons page, the "Is this allowed?" FAQ and codify's limits.
 3. **Launch**: Show HN, communities, the essay, a few days apart.
 4. **In the tools**: the Claude Code plugin or skill.
 5. **Ten users**: by hand, alongside 3 and 4, and continuing.
@@ -108,4 +128,7 @@ Not stars. Count:
   first release?~~ Done 2026-11-07, for markov and markovd.
 - Which task the tutorial codifies: one that shows a real Codify win on a recorded run, and also
   runs on a reader's machine without credentials.
-- Whether markovd and Markov IDE appear in launch posts at all, or only on the site.
+- Whether markovd and Markov IDE appear in launch posts at all, or only on the site. The research
+  says local-first: Kubernetes second.
+- Whether codify needs a fallback to the agent for codified steps that meet something the recording
+  never had, before we invite people to codify workflows that act on live services.
