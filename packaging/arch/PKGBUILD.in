@@ -1,0 +1,18 @@
+# First-party binary package; not an AUR/official distro submission.
+pkgname=markov
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='Declarative workflow engine for agents and native steps'
+arch=('x86_64')
+url='https://markovd.com'
+license=('Apache-2.0')
+depends=('ca-certificates' 'bash')
+options=('!strip' '!debug')
+source=('markov.tar.gz')
+sha256sums=('@SHA256@')
+package() {
+  install -Dm755 markov "$pkgdir/usr/bin/markov"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/markov/LICENSE"
+  install -Dm644 examples/quickstart.yaml "$pkgdir/usr/share/markov/examples/quickstart.yaml"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/markov/README.md"
+}

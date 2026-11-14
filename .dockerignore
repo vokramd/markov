@@ -1,0 +1,12 @@
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!pkg/
+!pkg/**
+!docs/
+!docs/**
+!third_party/
+!third_party/**
+!LICENSE
