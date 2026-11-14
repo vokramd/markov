@@ -10,3 +10,6 @@
 !third_party/
 !third_party/**
 !LICENSE
+!scripts/
+!scripts/release/
+!scripts/release/license-report.py

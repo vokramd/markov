@@ -2,6 +2,10 @@
 version: 2
 project_name: markov
 
+before:
+  hooks:
+    - python3 scripts/release/license-report.py --output .release-licenses
+
 builds:
   - id: markov
     main: ./cmd/markov
@@ -15,7 +19,13 @@ builds:
 archives:
   - formats: [tar.gz]
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-    files: [LICENSE, README.md, examples/quickstart.yaml]
+    files:
+      - LICENSE
+      - README.md
+      - examples/quickstart.yaml
+      - src: .release-licenses/*
+        dst: .
+        strip_parent: true
 
 nfpms:
   - id: native
@@ -31,6 +41,10 @@ nfpms:
     bindir: /usr/bin
     dependencies: [ca-certificates, bash]
     contents:
+      - src: .release-licenses/THIRD_PARTY_LICENSES.txt
+        dst: /usr/share/licenses/markov/THIRD_PARTY_LICENSES.txt
+      - src: .release-licenses/license-inventory.json
+        dst: /usr/share/licenses/markov/license-inventory.json
       - src: LICENSE
         dst: /usr/share/licenses/markov/LICENSE
       - src: examples/quickstart.yaml

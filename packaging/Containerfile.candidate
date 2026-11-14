@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash coreutils curl git jq ca-certificates procps python3 python3-yaml \
   && rm -rf /var/lib/apt/lists/*
 COPY binaries/${TARGETARCH}/markov /usr/local/bin/markov
-COPY LICENSE /usr/share/licenses/markov/LICENSE
+COPY LICENSE THIRD_PARTY_LICENSES.txt /usr/share/licenses/markov/
 COPY quickstart.yaml /usr/share/markov/examples/quickstart.yaml
 WORKDIR /work
 ENTRYPOINT ["markov"]

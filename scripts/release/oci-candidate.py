@@ -27,6 +27,7 @@ with tempfile.TemporaryDirectory(prefix='cc71-oci-context-') as tmp:
         shutil.copyfile(candidates[0], target)
         target.chmod(0o755)
     shutil.copyfile(repo / 'LICENSE', root / 'LICENSE')
+    shutil.copyfile(repo / '.release-licenses/THIRD_PARTY_LICENSES.txt', root / 'THIRD_PARTY_LICENSES.txt')
     shutil.copyfile(repo / 'examples/quickstart.yaml', root / 'quickstart.yaml')
     args = ['--platform=linux/amd64,linux/arm64', '--build-arg', f'VERSION={a.version}',
             '--build-arg', f'REVISION={revision}', '-f', str(repo / 'packaging/Containerfile.candidate')]
