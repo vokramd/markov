@@ -1,0 +1,199 @@
+{
+  "date": "2026-11-14",
+  "machine": "p15",
+  "core_candidate_commit": "b1cfa43fd623f5e8a4c315733baa90dccd24da8d",
+  "site_tooling_commit": "8e98a84",
+  "fixture_root": "/tmp/cc71-fixture-v2",
+  "scope": "Functional matrix uses current engine source with fixture version overrides 0.1.0/0.1.1; not historical-tag migration evidence. Final candidate adds notices/buildvcs=false and gets focused payload/OCI validation.",
+  "container_rows": [
+    {
+      "row": {
+        "id": "debian-13-amd64",
+        "distro": "debian",
+        "version": "13",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/debian-13-amd64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "debian-13-arm64",
+        "distro": "debian",
+        "version": "13",
+        "arch": "arm64",
+        "family": "apt",
+        "image": "docker.io/library/debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/debian-13-arm64.log",
+      "platform": "linux/arm64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "ubuntu-24.04-amd64",
+        "distro": "ubuntu",
+        "version": "24.04",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/ubuntu:24.04@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/ubuntu-24.04-amd64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "ubuntu-24.04-arm64",
+        "distro": "ubuntu",
+        "version": "24.04",
+        "arch": "arm64",
+        "family": "apt",
+        "image": "docker.io/library/ubuntu:24.04@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/ubuntu-24.04-arm64.log",
+      "platform": "linux/arm64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "ubuntu-26.04-amd64",
+        "distro": "ubuntu",
+        "version": "26.04",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/ubuntu-26.04-amd64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "ubuntu-26.04-arm64",
+        "distro": "ubuntu",
+        "version": "26.04",
+        "arch": "arm64",
+        "family": "apt",
+        "image": "docker.io/library/ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/ubuntu-26.04-arm64.log",
+      "platform": "linux/arm64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "fedora-44-x86_64",
+        "distro": "fedora",
+        "version": "44",
+        "arch": "x86_64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:44@sha256:8d2d82ab11e614324c42bc1e17322ea7829a8f48faea97645d2fa80d5f56f658"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/fedora-44-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "fedora-44-aarch64",
+        "distro": "fedora",
+        "version": "44",
+        "arch": "aarch64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:44@sha256:8d2d82ab11e614324c42bc1e17322ea7829a8f48faea97645d2fa80d5f56f658"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/fedora-44-aarch64.log",
+      "platform": "linux/arm64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "fedora-45-x86_64",
+        "distro": "fedora",
+        "version": "45",
+        "arch": "x86_64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:45@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/fedora-45-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "fedora-45-aarch64",
+        "distro": "fedora",
+        "version": "45",
+        "arch": "aarch64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:45@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/fedora-45-aarch64.log",
+      "platform": "linux/arm64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    },
+    {
+      "row": {
+        "id": "arch-rolling-x86_64",
+        "distro": "arch",
+        "version": "rolling",
+        "arch": "x86_64",
+        "family": "pacman",
+        "image": "docker.io/library/archlinux:base@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"
+      },
+      "status": "passed",
+      "log": "/tmp/cc71-fixture-v2/arch-rolling-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "05EF3E566A60F26E2B6AD837C65353B43D288296",
+      "old": "0.1.0",
+      "new": "0.1.1"
+    }
+  ],
+  "negative_clients": {
+    "apt": "pass signature and hash rejection",
+    "rpm": "pass signature and hash rejection",
+    "pacman": "pass signature and hash rejection"
+  },
+  "promotion_tests": 12,
+  "deploy_script_tests": 5,
+  "real_key_used": false,
+  "remote_writes": false,
+  "published": false,
+  "dependency_notice_modules": 86,
+  "final_oci_index_digest": "sha256:ee448894ed21203487ba4a8e1dbe428a7498fa07434bfb8f1194134c344c5aff",
+  "final_candidate_manifest_sha256": "0a0952c6939f9ebeb70314f77a2cd16b822f0a2dcf554c6127cd555e9e8ee688"
+}

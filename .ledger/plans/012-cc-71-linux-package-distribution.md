@@ -1,6 +1,6 @@
 # CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories
 
-Status: plan recorded; phase-0 and phase-1 local implementation authorized by the subsequent human instruction. Publication and production changes remain gated.
+Status: authorized phase-0/local pilot implemented; Omarchy VM and production/publication acceptance remain gated. See [pilot evidence](../notes/cc-71-phase0-and-pilot.md).
 Research: 2026-11-14 on p15.lab.net, umbrella workspace `/home/jtanner/workspace/github/vokramd`.
 
 ## Requirements and recommended first slice
@@ -340,3 +340,5 @@ Deploy-key reconciliation: two dedicated restricted Ed25519 keys planned, siblin
 Human authorized feature branches/local commits in core/site, candidate-only release/package/image definitions, repo tooling, local p15 HTTP fixtures and serial Podman smoke tests using throwaway temp signing keys, an install-page draft and identity-configurable site deploy script. Commit this plan/index first. Read-only public HTTPS and SSH from p15 via the existing desktop agent are authorized, using existing pinned host trust only. Earlier planning-only statements describe prior assignments; this paragraph records the new boundary.
 
 Still gated: DreamHost writes/authorized_keys (including staging), generating deploy keys, touching m720q, real-key use/export/backup/copy, push/tags/PRs/Releases/GHCR publication, VM creation and system package installs. Ask with the concrete required action at a gate; do not run multiple heavy matrix tests concurrently. Preserve unrelated quickstart-report.md. Report phase-0 findings and first green local install.
+
+Implementation checkpoint: first plan/index commit was `4588789`; current core candidate tooling `b1cfa43`, site tooling `8e98a84`, both local on cc-71-packaging-pilot. Read-only p15 DreamHost check completed under subsequent authorization; sibling-root/restricted-key design still requires approved staging writes. Eleven container rows and native rejection tests passed; final candidate/OCI evidence and limits are linked above. No Omarchy VM, deployment, real-key use/copy or publication.

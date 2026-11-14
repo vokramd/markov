@@ -27,9 +27,13 @@
 
 ## Pending Tasks
 
+- [CC-71 Omarchy VM validation](tasks/pending/cc-71-omarchy-vm.md) — requires human VM approval; no production publication implied.
+
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 local packaging pilot](tasks/done/cc-71-packaging-pilot.md) — local candidates, 11 container rows, native negatives, OCI checks and site draft; [evidence](notes/cc-71-phase0-and-pilot.md).
 
 - [Workflow subdirectories with qualified names](tasks/done/workflow-subdirectories.md)
 - [`repeat`: bounded do-while loops for sub-workflow calls](tasks/done/repeat-sub-workflow-calls.md)
