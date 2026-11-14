@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix='cc71-oci-context-') as tmp:
     elif engine == 'podman':
         name = 'localhost/cc71-markov-candidate:' + revision[:12]
         subprocess.run(['podman', 'build', *args, '--manifest', name, str(root)], check=True)
-        subprocess.run(['skopeo', 'copy', '--all', 'containers-storage:' + name,
+        subprocess.run(['skopeo', 'copy', '--all', '--preserve-digests', 'containers-storage:' + name,
                         'oci-archive:' + str(a.output.resolve())], check=True)
     else:
         p.error('CONTAINER_ENGINE must be docker or podman')
