@@ -32,11 +32,14 @@ with tempfile.TemporaryDirectory(prefix='cc71-oci-context-') as tmp:
     args = ['--platform=linux/amd64,linux/arm64', '--build-arg', f'VERSION={a.version}',
             '--build-arg', f'REVISION={revision}', '-f', str(repo / 'packaging/Containerfile.candidate')]
     if engine == 'docker':
-        subprocess.run(['docker', 'buildx', 'build', *args, '--output', f'type=oci,dest={a.output.resolve()}', str(root)], check=True)
+        subprocess.run(['docker', 'buildx', 'build', *args, '--provenance=false', '--output', f'type=oci,dest={a.output.resolve()}', str(root)], check=True)
     elif engine == 'podman':
         name = 'localhost/cc71-markov-candidate:' + revision[:12]
         subprocess.run(['podman', 'build', *args, '--manifest', name, str(root)], check=True)
-        subprocess.run(['skopeo', 'copy', '--all', '--preserve-digests', 'containers-storage:' + name,
+        # Podman resolves child images in its local manifest storage; skopeo may not.
+        # Destination is a local filesystem archive, never docker:// or a registry.
+        subprocess.run(['podman', 'manifest', 'push', '--all', '--format', 'oci',
+                        '--digestfile', str(a.output.resolve()) + '.digest', name,
                         'oci-archive:' + str(a.output.resolve())], check=True)
     else:
         p.error('CONTAINER_ENGINE must be docker or podman')

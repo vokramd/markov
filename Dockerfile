@@ -12,7 +12,7 @@ COPY scripts/release/license-report.py /license-report.py
 RUN apt-get update && apt-get install -y --no-install-recommends python3=3.13.5-1 \
   && rm -rf /var/lib/apt/lists/*
 RUN python3 /license-report.py --output /notices
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /markov ./cmd/markov
+RUN CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags="-s -w -X main.version=${VERSION}" -o /markov ./cmd/markov
 
 FROM docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 RUN apt-get update && apt-get install -y --no-install-recommends \
