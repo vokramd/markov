@@ -13,16 +13,18 @@ from pathlib import Path
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--output', type=Path, required=True)
 a = p.parse_args()
-text = subprocess.check_output(['go', 'list', '-deps', '-json', './cmd/markov'],
-                               env=dict(os.environ, CGO_ENABLED='0'), text=True)
 decoder = json.JSONDecoder()
 modules = {}
-while text.strip():
-    item, end = decoder.raw_decode(text.lstrip())
-    text = text.lstrip()[end:]
-    module = item.get('Module')
-    if module and not module.get('Main'):
-        modules[module['Path']] = module
+# Match all existing GoReleaser binary targets, not just the build host's imports.
+for goos, goarch in [('linux', 'amd64'), ('linux', 'arm64'), ('darwin', 'amd64'), ('darwin', 'arm64')]:
+    text = subprocess.check_output(['go', 'list', '-deps', '-json', './cmd/markov'],
+                                   env=dict(os.environ, CGO_ENABLED='0', GOOS=goos, GOARCH=goarch), text=True)
+    while text.strip():
+        item, end = decoder.raw_decode(text.lstrip())
+        text = text.lstrip()[end:]
+        module = item.get('Module')
+        if module and not module.get('Main'):
+            modules[module['Path']] = module
 records, notices, unresolved = [], [], []
 for module in sorted(modules.values(), key=lambda m: m['Path']):
     effective = module.get('Replace', module)
