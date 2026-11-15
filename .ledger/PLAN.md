@@ -103,4 +103,4 @@
 - [ADR-0005: In-memory debugger with a stdin control protocol](decisions/ADR-0005-in-memory-debugger-and-control-protocol.md)
 - [ADR-0006: Workflow hot reload with an explicit reload_workflow step](decisions/ADR-0006-workflow-hot-reload.md)
 
-- [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; awaiting real-key signing approval.
+- [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; approved real signing and native-client verification complete; public publication gated.

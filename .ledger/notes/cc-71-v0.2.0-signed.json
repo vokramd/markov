@@ -1,0 +1,48 @@
+{
+  "stage": "signed-and-verified",
+  "fixture": false,
+  "version": "0.2.0",
+  "primary": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+  "subkey": "B0BEFAA736416BC0118E5EC33CF4648EB2925C50",
+  "candidate_manifest_sha256": "8a46dc582059d825e23c7e0e6e675e649b360a68f85944a7ada7dc03edd52ef0",
+  "signed_manifest_sha256": "9666cd83a8f480b46af502ce230532050c28aa6bb412ed455959df682162b7c5",
+  "signed_oci_index_digest": "sha256:af3d39587ab56c367f8366e7e50ae37ee893f0cb76d9266d6ceb2a0076f79b51",
+  "public_files": 106,
+  "tools_image": "sha256:ccba524bc3a9322c582e5c465d74870e075c958615ff1ff8ba5f472037a70476",
+  "real_signing_authorized": true,
+  "passphrase_input": "explicit existing mode-600 file read by GPG via inherited descriptor; never logged/copied/mounted",
+  "public_only_final_verification": true,
+  "final_checksum_files": 23,
+  "native_clients": [
+    {
+      "row": "debian-13-amd64",
+      "family": "apt",
+      "exit": 0
+    },
+    {
+      "row": "fedora-45-x86_64",
+      "family": "rpm",
+      "exit": 0
+    },
+    {
+      "row": "arch-rolling-x86_64",
+      "family": "pacman",
+      "exit": 0
+    }
+  ],
+  "promotion_pass_counts": {
+    "history": 108,
+    "payloads": 62,
+    "indexes": 41,
+    "commit": 3
+  },
+  "published": false,
+  "repo_tool_tests": 65,
+  "signed_native_sha256": {
+    "markov_0.2.0_amd64.deb": "eb8afecfc50b6d16456d7bf0517e6154738f9b82dd6cfb3665d1b44e865af11d",
+    "markov_0.2.0_arm64.deb": "9e6ed1fb7151d467f5325e314dd835f7746cdbc52e1c00f58da73c591a54d457",
+    "markov-0.2.0-1-x86_64.pkg.tar.zst": "36670fed1ec6f0cf7ef1cc50b686e258d366852b0c716db4637e1708625298e9",
+    "markov_0.2.0_amd64.rpm": "29f739a4369f00876f3f681078412c1c4e859c1765d18d1c6ab00d2e59a36cd7",
+    "markov_0.2.0_arm64.rpm": "a1f9f4e103a53cd02b2d8ff7c4bf748ee6aca8b4b40fa9833b4f2ab754a99a76"
+  }
+}

@@ -1,6 +1,6 @@
 # CC-71 production readiness
 
-Status: current. Both PRs merged and approved v0.2.0 tag pushed; clean-tag candidate/native Arm CI and local unsigned preparation passed. Real-key release signing and public publication remain gated. See [v0.2.0 review](../../notes/cc-71-v0.2.0-candidate.md). Earlier chronological pending checkpoints below are superseded by that review.
+Status: current. Both PRs merged and approved v0.2.0 tag pushed; clean-tag candidate/native Arm CI and local unsigned preparation passed. Approved real-subkey signing and exact signed-bundle Debian/Fedora/Arch checks now passed. Public publication remains gated. See the latest signing checkpoint in that review. See [v0.2.0 review](../../notes/cc-71-v0.2.0-candidate.md). Earlier chronological pending checkpoints below are superseded by that review.
 
 Prepare reviewable production transfer tooling and operator runbook locally. Verify signed input, retained history, immutable conflicts, package-first/indexes-last ordering, pinned SSH trust, HTTP verification, interruption/retry and publication locking. Tests use disposable keys and mocked transport; no external writes.
 
