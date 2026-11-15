@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "version": "0.2.0",
+  "tag": "v0.2.0",
+  "commit": "3cf7f1f99c5c5588c66851c32efa0051f592b2ae",
+  "ci_run": "43755325769",
+  "artifact_id": 14178535993,
+  "archive_sha256": "ef03b6d8d9b58f115318bf3772a2e17015ab5c307f2e20f4ba90a888975f0daa",
+  "candidate_manifest_sha256": "8a46dc582059d825e23c7e0e6e675e649b360a68f85944a7ada7dc03edd52ef0",
+  "candidate_files": 27,
+  "oci_index_digest": "sha256:af3d39587ab56c367f8366e7e50ae37ee893f0cb76d9266d6ceb2a0076f79b51",
+  "license_modules": 86,
+  "unresolved_license_sources": [],
+  "native_arm64_ci": "success",
+  "real_signing": false,
+  "publication": false,
+  "preparation_stage": "prepared",
+  "rpm_header_requests": {
+    "markov_0.2.0_amd64.rpm": "407f3cabeaa4a4e88dd086fc065fa13351f3616da09b73e66dea8ce1ac907ab3",
+    "markov_0.2.0_arm64.rpm": "28a9faec768518e6ca3379ccb18a2e300cd1b80aed684da4f064d007bd4141e1"
+  },
+  "metadata_image": "sha256:ccba524bc3a9322c582e5c465d74870e075c958615ff1ff8ba5f472037a70476"
+}

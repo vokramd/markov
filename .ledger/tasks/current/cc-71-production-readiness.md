@@ -1,6 +1,6 @@
 # CC-71 production readiness
 
-Status: current production readiness; authorized replacement acceptance completed and stopped for human review. Archive/deploy backups verified; public publication and clean-release readiness remain gated.
+Status: current. Both PRs merged and approved v0.2.0 tag pushed; clean-tag candidate/native Arm CI and local unsigned preparation passed. Real-key release signing and public publication remain gated. See [v0.2.0 review](../../notes/cc-71-v0.2.0-candidate.md). Earlier chronological pending checkpoints below are superseded by that review.
 
 Prepare reviewable production transfer tooling and operator runbook locally. Verify signed input, retained history, immutable conflicts, package-first/indexes-last ordering, pinned SSH trust, HTTP verification, interruption/retry and publication locking. Tests use disposable keys and mocked transport; no external writes.
 

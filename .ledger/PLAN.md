@@ -102,3 +102,5 @@
 - [ADR-0004: Native claude step with Markov-enforced limits](decisions/ADR-0004-claude-step-type.md)
 - [ADR-0005: In-memory debugger with a stdin control protocol](decisions/ADR-0005-in-memory-debugger-and-control-protocol.md)
 - [ADR-0006: Workflow hot reload with an explicit reload_workflow step](decisions/ADR-0006-workflow-hot-reload.md)
+
+- [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; awaiting real-key signing approval.
