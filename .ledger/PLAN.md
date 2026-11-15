@@ -23,7 +23,7 @@
 
 ## Active Tasks
 
-- None
+- [CC-71 production readiness](tasks/current/cc-71-production-readiness.md) — continuation authorized; local transfer tooling/runbook before credential and staging gates.
 
 ## Pending Tasks
 
