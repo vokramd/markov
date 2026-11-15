@@ -104,3 +104,5 @@
 - [ADR-0006: Workflow hot reload with an explicit reload_workflow step](decisions/ADR-0006-workflow-hot-reload.md)
 
 - [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; approved real signing and native-client verification complete; public publication gated.
+
+- [Archive passphrase change and refreshed recovery](notes/cc-71-signing-passphrase-change.md) — private GUI confirmation/visibility, uncached typed unlock, refreshed off-machine restore and live signing verified; identity unchanged.
