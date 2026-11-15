@@ -28,13 +28,15 @@ with tempfile.TemporaryDirectory(prefix='markov-arch-') as tmp:
     (root / 'PKGBUILD').write_text(recipe)
     engine = os.environ.get('CONTAINER_ENGINE', 'podman')
     mount = ['-v', f'{root}:/build:Z']
+    # Rootless Podman maps container root to the caller; hosted Docker runs as real root.
+    owner = '0:0' if Path(engine).name == 'podman' else f'{os.getuid()}:{os.getgid()}'
     try:
         subprocess.run([engine, 'run', '--rm', '--network=none', '--user', '65534:65534',
                         *mount, '-w', '/build', IMAGE, 'makepkg', '--nodeps', '--noconfirm'], check=True)
     finally:
-        # Restore host ownership so tempfile cleanup works with rootless subuid mappings.
+        # Restore the caller ownership before Python cleans up the temporary tree.
         subprocess.run([engine, 'run', '--rm', '--network=none', *mount, IMAGE,
-                        'chown', '-R', '0:0', '/build'], check=True)
+                        'chown', '-R', owner, '/build'], check=True)
     for package in root.glob('*.pkg.tar.zst'):
         (a.output / package.name).write_bytes(package.read_bytes())
     (a.output / 'PKGBUILD').write_text(recipe)
