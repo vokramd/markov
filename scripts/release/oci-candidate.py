@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build an unsigned local multi-platform OCI archive, never push to a registry."""
 import argparse
+from oci_digest import write_digest
 import os
 from pathlib import Path
 import shutil
@@ -43,3 +44,6 @@ with tempfile.TemporaryDirectory(prefix='cc71-oci-context-') as tmp:
                         'oci-archive:' + str(a.output.resolve())], check=True)
     else:
         p.error('CONTAINER_ENGINE must be docker or podman')
+
+# Both backends produce the same verifiable digest sidecar. No registry write.
+write_digest(a.output.resolve())

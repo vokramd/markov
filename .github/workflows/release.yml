@@ -1,8 +1,9 @@
-# Tags create reviewable unsigned artifacts, never a Release, registry push or repository upload.
+# Tags and PRs create reviewable unsigned artifacts; no Release, registry or repository upload.
 name: release-candidate
 on:
   push:
     tags: ['v*']
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
@@ -86,6 +87,7 @@ jobs:
           path: candidate
       - name: Verify candidate and run exact arm64 binary on native CPU
         run: |
+          test "$(uname -m)" = aarch64
           (cd candidate && sha256sum --check checksums.txt)
           binary="$GITHUB_WORKSPACE/candidate/markov_linux_arm64_v8.0/markov"
           chmod +x "$binary"

@@ -23,6 +23,8 @@
 
 ## Active Tasks
 
+- [CC-71 host-only signing preparation](tasks/done/cc-71-host-signing.md) — local implementation and disposable-key verification complete; production signing gated.
+
 - [CC-71 production readiness](tasks/current/cc-71-production-readiness.md) — archive/deploy backups and replacement inbox acceptance complete; stopped for review, production publication gated.
 
 ## Pending Tasks

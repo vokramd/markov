@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "stage": "signed-and-verified",
+  "fixture": true,
+  "version": "0.1.1",
+  "candidate_manifest_sha256": "0a0952c6939f9ebeb70314f77a2cd16b822f0a2dcf554c6127cd555e9e8ee688",
+  "tools_image": "sha256:ccba524bc3a9322c582e5c465d74870e075c958615ff1ff8ba5f472037a70476",
+  "arch_image": "docker.io/library/archlinux:base-devel@sha256:fa2d4ce3310ddd90a4208e5168be8ad367da5129af1245f38fd2d803bcbe3239",
+  "primary": "016D38A7E0A60E496B39965A887619F9DCA00A05",
+  "subkey": "59446065D89D8177B8759BB4D9E51E44425F1E77",
+  "public_files": 106,
+  "signed_manifest_sha256": "9c221fde4bcd0a6938b59f9b867b8bd9d1406e2194682ae8c56d401e47b9b53b",
+  "signed_oci_index_digest": "sha256:ee448894ed21203487ba4a8e1dbe428a7498fa07434bfb8f1194134c344c5aff",
+  "publication": false,
+  "repo_tool_tests": 62,
+  "deploy_tests": 5,
+  "oci_layout_tests": 5,
+  "focused_native_clients": [
+    "Debian 13 amd64",
+    "Fedora 45 x86_64",
+    "Arch rolling x86_64"
+  ],
+  "real_key_used": false,
+  "production_local_snapshot_rejected": true
+}
