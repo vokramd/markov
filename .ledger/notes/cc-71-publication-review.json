@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "version": "0.2.0",
+  "site": {
+    "commit": "29eab6307dbe162462d66de6260d559d5397ac95",
+    "manifest_sha256": "a32d452ae204d737a9819039485424615085ff7cab1c4134b90c859b60732a13",
+    "files": {
+      "install/index.html": "a57c371e517cf0a75c73662240a9c627d0643bfc935a35f3f1ce079204a76984",
+      "index.html": "56c6a90b50e36130af73b12acce41958b3a57a99d31480a58a15ceb44c8d7fd9",
+      "sitemap.xml": "6a3b917e8d7cc278c455582f110b5f5131828d245be8979f65ebda51a228622b"
+    },
+    "snapshot": "/home/jtanner/.cache/cc71/v0.2.0/launch-site-snapshot",
+    "published": false
+  },
+  "baseline_http": [
+    {
+      "path": "index.html",
+      "status": 200,
+      "final_url": "https://markovd.com/index.html",
+      "content_type": "text/html",
+      "sha256": "20deee6ab768861f8727901be27f8c2d98fb1dd566f67d7583453cae9a3663b3",
+      "matches_merged_baseline": true
+    },
+    {
+      "path": "sitemap.xml",
+      "status": 200,
+      "final_url": "https://markovd.com/sitemap.xml",
+      "content_type": "application/xml",
+      "sha256": "d67eec4aa87087ea51f294b0a86e7b558fdd091e21dfbff3610688308caf4299",
+      "matches_merged_baseline": true
+    },
+    {
+      "path": "install/",
+      "status": 404,
+      "final_url": "https://markovd.com/install/",
+      "content_type": "text/html; charset=iso-8859-1",
+      "sha256": "d5a89e26beae0bc03ad18a0b0d1d3d75f87c32047879d25da11970cb5c4662a3"
+    }
+  ],
+  "checks": {
+    "bash_snippets": 12,
+    "fingerprint_real_accepted": true,
+    "wrong_additional_malformed_certificates_rejected": true,
+    "deploy_script_tests": 5,
+    "rootless_container_quickstart": true,
+    "host_owned_report_and_state": true,
+    "all_platform_oci_copy_preserved_digest": true,
+    "sitemap_and_navigation_valid": true
+  },
+  "credential_write_packages_declared": true,
+  "registry_namespace_access_verified": false,
+  "publication_authorized": false,
+  "published": false
+}

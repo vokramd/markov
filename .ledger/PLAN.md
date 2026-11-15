@@ -106,3 +106,5 @@
 - [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; approved real signing and native-client verification complete; public publication gated.
 
 - [Archive passphrase change and refreshed recovery](notes/cc-71-signing-passphrase-change.md) — private GUI confirmation/visibility, uncached typed unlock, refreshed off-machine restore and live signing verified; identity unchanged.
+
+- [CC-71 v0.2.0 publication review](tasks/current/cc-71-publication-review.md) — final install page, release notes and exact publication checklist prepared; local checks passed, outward launch approval pending.
