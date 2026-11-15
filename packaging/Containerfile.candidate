@@ -1,0 +1,17 @@
+# Reuse the exact static package binary; no compiler or source tree in this context.
+FROM docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
+ARG TARGETARCH
+ARG VERSION
+ARG REVISION
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash coreutils curl git jq ca-certificates procps python3 python3-yaml \
+  && rm -rf /var/lib/apt/lists/*
+LABEL org.opencontainers.image.source="https://github.com/vokramd/markov" \
+      org.opencontainers.image.version="$VERSION" \
+      org.opencontainers.image.revision="$REVISION" \
+      org.opencontainers.image.licenses="Apache-2.0"
+COPY binaries/${TARGETARCH}/markov /usr/local/bin/markov
+COPY LICENSE THIRD_PARTY_LICENSES.txt /usr/share/licenses/markov/
+COPY quickstart.yaml /usr/share/markov/examples/quickstart.yaml
+WORKDIR /work
+ENTRYPOINT ["markov"]

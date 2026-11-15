@@ -4,7 +4,7 @@ MODULE  := github.com/vokramd/markov
 CMDDIR  := ./cmd/markov
 
 IMAGE   ?= ghcr.io/vokramd/markov
-TAG     ?= latest
+TAG     ?= dev
 GOFLAGS ?=
 
 .PHONY: all build build-static clean test lint fmt vet docker-build

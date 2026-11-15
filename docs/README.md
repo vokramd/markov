@@ -7,6 +7,7 @@ Markov is a Go workflow engine for chaining agents with code. Declarative YAML w
 ## Quick Links
 
 - [Getting Started](getting-started.md) — install, validate, run your first workflow
+- [Linux package/release pilot](../packaging/README.md) — unsigned candidates and local fixture workflow; repositories not yet published
 - [Core Concepts](concepts.md) — understand the execution model
 - [Workflow File Reference](reference/workflow-file.md) — complete YAML schema
 - [CLI Reference](reference/cli.md) — all commands and flags

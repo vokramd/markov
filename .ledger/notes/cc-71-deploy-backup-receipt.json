@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "status": "verified",
+  "date_utc": "2026-11-15T035803Z",
+  "destination": "/mnt/seagate_8tb/BACKUPS/markov-deploy/p15-m720q-2026-11-15T035803Z",
+  "references": [
+    "CC-71",
+    "CC-70",
+    "CC-48"
+  ],
+  "archive_signing_key_exported": false,
+  "site_fingerprint": "SHA256:EcUTEH9SVBM3SS91esnTQk/t1JHO9rD3rDid83763kY",
+  "package_fingerprint": "SHA256:2WXUDAJKv6BW4lOJmU36kmWoan6l/rHor1UwpMlJcMc",
+  "ciphertext_sha256": "46079021b9366dda788295319c2402cf006a371bde02bf8541d8038e4d21b7d4",
+  "retrieval_sha256": "46079021b9366dda788295319c2402cf006a371bde02bf8541d8038e4d21b7d4",
+  "restored_private_public_bytes_identical": true,
+  "restored_package_public_key_derived": true,
+  "site_key_protected": true,
+  "package_live_key_copied_to_p15_disk": false
+}

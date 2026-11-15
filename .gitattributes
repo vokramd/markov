@@ -1,0 +1,3 @@
+# Operational ledgers/research are not build inputs or public source-release payloads.
+.ledger export-ignore
+references export-ignore

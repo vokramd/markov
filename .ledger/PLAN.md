@@ -19,15 +19,25 @@
 - [Two audiences: repeated agent jobs, and evals](plans/011-ops-jobs-and-evals.md) — proposed (2026-11-07): who Markov is for after the competitive research, and what would make it compelling: measured codify and eval stories, a run budget, fallback to the agent for codified steps, evals as a first-class use (results, comparison, pass@k, fresh workspaces, graders, record/replay), and agent-written workflows.
 - [First users](plans/010-first-users.md) — phase 1 done (2026-11-07, v0.1.0 released); phase 2, the Codify tutorial (measured, with a Claude Code workflow comparison, honest comparisons and an auth FAQ), next; positioning in [notes/competitive-positioning.md](notes/competitive-positioning.md): make the first five minutes work (releases, a laptop Quick Start, GitHub metadata), a Codify tutorial, launch with the markov-harness story, a Claude Code plugin, and the first ten users by hand.
 
+- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — local pilot and Omarchy VM completed; engine only; production staging, credentials and publication remain gated.
+
 ## Active Tasks
 
-- None
+- [CC-71 host-only signing preparation](tasks/done/cc-71-host-signing.md) — local implementation and disposable-key verification complete; production signing gated.
+
+- [CC-71 production readiness](tasks/current/cc-71-production-readiness.md) — archive/deploy backups and replacement inbox acceptance complete; stopped for review, production publication gated.
 
 ## Pending Tasks
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 non-web inbox/p15 acceptance](tasks/done/cc-71-nonweb-inbox-acceptance.md) — cleanup, 2 restricted keys/backups, real isolation tests and local promotion/rollback passed; [evidence](notes/cc-71-nonweb-inbox-acceptance.md).
+
+- [CC-71 Omarchy VM validation](tasks/done/cc-71-omarchy-vm.md) — install/updater/reboot/upgrade/removal/native recovery passed; [evidence and console warning](notes/cc-71-omarchy-vm.md).
+
+- [CC-71 local packaging pilot](tasks/done/cc-71-packaging-pilot.md) — local candidates, 11 container rows, native negatives, OCI checks and site draft; [evidence](notes/cc-71-phase0-and-pilot.md).
 
 - [Workflow subdirectories with qualified names](tasks/done/workflow-subdirectories.md)
 - [`repeat`: bounded do-while loops for sub-workflow calls](tasks/done/repeat-sub-workflow-calls.md)

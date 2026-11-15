@@ -1,35 +1,78 @@
-# Release builds: push a tag (git tag v0.1.0 && git push origin v0.1.0) and
-# .github/workflows/release.yml runs goreleaser, which builds these binaries and publishes the
-# GitHub release with them. Check this file locally with `goreleaser check`, and try a build
-# without publishing with `goreleaser release --snapshot --clean`.
+# Build unsigned candidates only. Publishing is a separate, approved p15/m720q runbook.
 version: 2
-
 project_name: markov
 
+before:
+  hooks:
+    - python3 scripts/release/license-report.py --output .release-licenses
+
 builds:
-  - main: ./cmd/markov
+  - id: markov
+    main: ./cmd/markov
     binary: markov
-    env:
-      - CGO_ENABLED=0   # static, like make build-static: runs in any container or sandbox
+    env: [CGO_ENABLED=0, GOAMD64=v1, GOARM64=v8.0]
     goos: [linux, darwin]
     goarch: [amd64, arm64]
-    flags: [-trimpath]
-    ldflags:
-      - -s -w -X main.version={{ .Tag }}
+    flags: [-trimpath, -buildvcs=false]
+    ldflags: ['-s -w -X main.version={{ .Version }}']
 
 archives:
   - formats: [tar.gz]
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     files:
       - LICENSE
       - README.md
+      - examples/quickstart.yaml
+      - src: .release-licenses/*
+        dst: .
+        strip_parent: true
+
+nfpms:
+  - id: native
+    ids: [markov]
+    package_name: markov
+    file_name_template: '{{ .PackageName }}_{{ .Version }}_{{ .Arch }}'
+    vendor: Markov
+    homepage: https://markovd.com
+    maintainer: Markov <info@markovd.com>
+    description: Declarative workflow engine for agents and native steps
+    license: Apache-2.0
+    formats: [deb, rpm]
+    bindir: /usr/bin
+    dependencies: [ca-certificates, bash]
+    contents:
+      - src: .release-licenses/THIRD_PARTY_LICENSES.txt
+        dst: /usr/share/licenses/markov/THIRD_PARTY_LICENSES.txt
+      - src: .release-licenses/license-inventory.json
+        dst: /usr/share/licenses/markov/license-inventory.json
+      - src: LICENSE
+        dst: /usr/share/licenses/markov/LICENSE
+      - src: examples/quickstart.yaml
+        dst: /usr/share/markov/examples/quickstart.yaml
+      - src: README.md
+        dst: /usr/share/doc/markov/README.md
+
+source:
+  enabled: true
+  format: tar.gz
+
+sboms:
+  - artifacts: archive
+    documents: ['{{ .ArtifactName }}.spdx.json']
+    cmd: syft
+    args: ['scan', '$artifact', '--output', 'spdx-json=$document']
 
 checksum:
   name_template: checksums.txt
 
+snapshot:
+  version_template: '{{ if index .Env "MARKOV_CANDIDATE_VERSION" }}{{ index .Env "MARKOV_CANDIDATE_VERSION" }}{{ else }}{{ incpatch .Version }}-dev{{ end }}'
+
+release:
+  disable: true
+
 changelog:
-  use: github
+  use: git
   sort: asc
   filters:
-    exclude:
-      - "^Ledger:"
+    exclude: ['^Ledger:']

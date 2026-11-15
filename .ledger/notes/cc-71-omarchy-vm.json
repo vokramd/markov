@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-14",
+  "machine": "p15",
+  "status": "passed_with_warning",
+  "scope": "Omarchy CLI/updater/native-recovery validation; local throwaway-signed snapshots only",
+  "iso": {
+    "version": "4.5.0",
+    "url": "https://iso.omarchy.org/omarchy-4.5.0-x86.iso",
+    "sha256": "5d6288bc57f96f6231719830457582c846a2291985201c36a9a7d1216978b00f",
+    "publisher_fingerprint": "40DFB630FF42BCFFB047046CF0134EE680CAC571",
+    "checksum_verified": true,
+    "signature_verified": true
+  },
+  "vm": {
+    "hypervisor": "QEMU 10.2.2/KVM",
+    "vcpu": 4,
+    "ram_gib": 8,
+    "disk_gib": 64,
+    "network": "user-mode NAT; no forwards",
+    "power_state": "off",
+    "host_packages_installed": false
+  },
+  "guest": {
+    "id": "omarchy",
+    "version": "4.5.0",
+    "arch": "x86_64",
+    "omarchy_package": "4.5.0-3",
+    "kernel": "7.2.15-1-omarchy",
+    "pacman": "7.1.0.r9.g54d9411-3"
+  },
+  "fixture": {
+    "root": "/tmp/cc71-omarchy-fixture",
+    "server": "http://10.0.2.2:8765/repos/omarchy/rolling/stable/$arch/",
+    "fingerprint": "46C05CD8EE2C93945BC0F70B96978235082139D8",
+    "old": "0.1.0-1",
+    "new": "0.1.1-1",
+    "versions_are_overrides": true
+  },
+  "checks": {
+    "install": "passed",
+    "version": "passed",
+    "unprivileged_quickstart": "passed",
+    "supported_system_update": "passed",
+    "installed_disk_reboot": "passed",
+    "repository_persistence": "passed",
+    "upgrade_via_omarchy_updater": "passed",
+    "third_party_notices": "passed",
+    "final_candidate_binary_hash": "passed",
+    "remove": "passed",
+    "user_data_preserved": "passed",
+    "native_snapshot_boot": "passed",
+    "native_restore": "passed",
+    "normal_boot_after_native_restore": "passed",
+    "quickstart_after_native_restore": "passed"
+  },
+  "warning": "Both console updater runs returned 0 but reported Omarchy shell did not become ready after restart; graphical session readiness not validated.",
+  "pacman_conf_sha256": "3a3af85c59a2acdd4ca62f443953af3a484c1c5ed2b951bf4b2f35588441f306",
+  "candidate_binary_sha256": "800da4a3d96bafcb96a155d1cd73e7efcfa885d2915195ea39703826f74fd1b2",
+  "log_directory": "/home/jtanner/workspace/github/vokramd/.cc71-vms",
+  "production_ready": false
+}

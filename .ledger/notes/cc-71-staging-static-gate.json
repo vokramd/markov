@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-14 local / 2026-11-15 UTC",
+  "status": "failed_static_only_gate",
+  "scope": "approved isolated staging; no deploy key provisioning",
+  "method": "Actual installed rrsync -wo -no-del -munge invoked through existing administrative SSH with SSH_ORIGINAL_COMMAND matching the client command; not authentication/confinement proof for newly installed keys.",
+  "baseline": {
+    "repos": {
+      "status": 403
+    },
+    "site-content": {
+      "status": 403
+    },
+    "canaries": {
+      "status": 403
+    }
+  },
+  "after_child_htaccess": {
+    "repos": {
+      "status": 200,
+      "body": "CC71_HARMLESS_PARENT_DENY_TEST_repos\n",
+      "child_override_header": "child-upload"
+    },
+    "site-content": {
+      "status": 200,
+      "body": "CC71_HARMLESS_PARENT_DENY_TEST_site-content\n",
+      "child_override_header": "child-upload"
+    },
+    "canaries": {
+      "status": 403
+    }
+  },
+  "verification": {
+    "live_files_unchanged": true,
+    "authorized_keys_unchanged": true,
+    "inventory": [
+      {
+        "path": "cc71-staging/.htaccess",
+        "sha256": "6f9e5e664be8531bbc3c7c4e1e80c3e8660c11e5b70cdc7436a75e8b4ec67878",
+        "mode": "0o644"
+      },
+      {
+        "path": "cc71-staging/canaries/baseline.json",
+        "sha256": "fe34e92b59f2d5cc78c27d0ec13d306c1789947e1e627ce6f76f084d34885168",
+        "mode": "0o600"
+      },
+      {
+        "path": "cc71-staging/canaries/override-canary.txt",
+        "sha256": "f28ce4d427fe8ac7d5e386b46eca3672307985af624281a09c3d309afb6dfb1a",
+        "mode": "0o644"
+      },
+      {
+        "path": "cc71-staging/repos/.htaccess",
+        "sha256": "de158d30c11ed5b257f3f48f0058ed2d6f1ce0982357451969e0680859c0dd5b",
+        "mode": "0o644"
+      },
+      {
+        "path": "cc71-staging/repos/override-canary.txt",
+        "sha256": "89a62754345b8a7a9c05af113912ab40c9f4f8eeed87c9c95976cae3897a30ad",
+        "mode": "0o644"
+      },
+      {
+        "path": "cc71-staging/site-content/.htaccess",
+        "sha256": "de158d30c11ed5b257f3f48f0058ed2d6f1ce0982357451969e0680859c0dd5b",
+        "mode": "0o644"
+      },
+      {
+        "path": "cc71-staging/site-content/override-canary.txt",
+        "sha256": "0704c551aa9f1bfceecb832f4a7a2dd447c5a3afd36870000b6e6bd8c02f51bb",
+        "mode": "0o644"
+      }
+    ]
+  },
+  "deploy_keys_generated": false,
+  "authorized_keys_entries_added": 0,
+  "php_or_other_script_execution_tested": false,
+  "notes": "Only inert text and Apache access/header directives used. Parent deny bypass confirmed; no arbitrary code executed or out-of-staging writes attempted. Keep staging inventory for review; cleanup not yet approved."
+}
