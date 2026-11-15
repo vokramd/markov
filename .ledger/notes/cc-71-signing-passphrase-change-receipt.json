@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "status": "verified",
+  "date_utc": "2026-11-15T214949Z",
+  "host": "p15",
+  "backup_host": "m720q.lab.net",
+  "primary": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+  "subkey": "B0BEFAA736416BC0118E5EC33CF4648EB2925C50",
+  "destination": "/mnt/seagate_8tb/BACKUPS/markov-signing/passphrase-change-p15-2026-11-15T214949Z",
+  "references": [
+    "CC-70",
+    "CC-48",
+    "CC-71"
+  ],
+  "live_passphrase_changed": true,
+  "ciphertext_sha256": "a6202eb165e595b4e5392a785cd8e5b8dd1667ce658f38840ea7833ccfa6d4d9",
+  "retrieval_sha256": "a6202eb165e595b4e5392a785cd8e5b8dd1667ce658f38840ea7833ccfa6d4d9",
+  "restore_primary_subkey_verified": true,
+  "revocation_verified": true,
+  "private_restored_subkey_sign_verify": true,
+  "encrypted_archive_includes_original_archive_passphrase": false,
+  "encrypted_archive_includes_current_archive_passphrase": true,
+  "public_certificate_unchanged": true,
+  "live_subkey_sign_verify": true,
+  "temporary_keyrings_removed": true
+}
