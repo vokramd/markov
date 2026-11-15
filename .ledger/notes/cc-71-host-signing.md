@@ -9,3 +9,9 @@ Final checks: 62 repository-tool tests, five deploy-script tests, five OCI flat/
 Production approval additionally requires independent private human review matching the actual tag, commit, CI run, candidate hash, native Arm execution, artifact download and license review. This is an operator verification gate, not a cryptographic CI attestation. Real release signing remains unperformed. The initial signer supports stable X.Y.Z/revision 1 only.
 
 Next: request approval to push both existing feature branches and open draft PRs for unsigned/native-Arm CI. No tags, merge, release, GHCR or live publication implied. Keep all versions, including unsigned source candidates and signed final artifacts; download CI artifacts before temporary expiry.
+
+## Shared scratch cleanup and PR follow-up
+
+Removed obsolete /tmp/cc71-fixture, cc71-fixture-v2 and cc71-omarchy-fixture. Moved Go cache, Go toolchain/module cache, tools and candidates to ~/.cache/cc71/{go-cache,go,tools,candidates}. Owned read-only module directories required writable directory permissions for removal after verifying the copied remaining files. Other agents' paths were untouched. Post-cleanup /tmp: 16G total, 476M used, 16G available, 3%. Future commands source ~/.cache/cc71/env.sh for GOCACHE, GOMODCACHE, TMPDIR and home-disk fixture outputs. Fixture tooling now permits only dedicated home scratch or legacy /tmp paths; marker and real-key refusal remain intact. 63 repository-tool tests passed with home-disk TMPDIR.
+
+Draft PRs: https://github.com/vokramd/markov/pull/1 and https://github.com/vokramd/markovd.com/pull/1. First candidate CI failed because the optional MARKOV_CANDIDATE_VERSION template used missing-map lookup. Changed to safe index lookup; pinned GoReleaser check and a no-build/no-publication snapshot run with the variable absent passed (0.1.1-dev). Native Arm was skipped behind this failure; follow-up CI must verify it.
