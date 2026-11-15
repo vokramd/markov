@@ -1,6 +1,6 @@
 # CC-71 production readiness
 
-Status: current; signing-key backup and recovery verified, deploy-key/staging changes await their specific approval. Human requested continuation after local pilot/Omarchy review.
+Status: current; signing-key backup/recovery verified; approved staging feasibility failed static-only gate before deploy-key provisioning. Safer hosting revision awaits review. Human requested continuation after local pilot/Omarchy review.
 
 Prepare reviewable production transfer tooling and operator runbook locally. Verify signed input, retained history, immutable conflicts, package-first/indexes-last ordering, pinned SSH trust, HTTP verification, interruption/retry and publication locking. Tests use disposable keys and mocked transport; no external writes.
 
@@ -33,3 +33,11 @@ Retrieved copy decrypted; exact primary/subkey and revocation certificate verifi
 This satisfies the signing-key backup/restore prerequisite, not deploy-key backups, production build/signing evidence, staging confinement or public publication. No deploy keys generated, DreamHost changes, release signing, push, release, package/image publication or website deployment in this backup batch.
 
 Next concrete gated batch is prepared in sibling site `repo-tools/STAGING-CHANGE.md`: exact identity custody/paths, encrypted deploy-key backups, isolated DreamHost `cc71-staging` tree, two append-only restricted authorized_keys entries, dummy-only public test content, canary confinement tests, abort/rollback and explicit exclusions. None of that batch executed. This is the next human approval point under the original ask-first instruction for deploy-key generation, DreamHost staging/authorized_keys writes and outward staging fixtures. Existing personal keys and live site remain untouched.
+
+## Approved deploy/staging batch: static-only gate failed
+
+Human approved the concrete staging batch. Reordered its harmless feasibility test ahead of credential creation to avoid provisioning known-unsafe access. Created ONLY `/home/tannerjc/markovd.com/cc71-staging/{repos,site-content,canaries}`, parent policy and inert text canaries on DreamHost. Existing pinned desktop-agent administrative SSH used. All canaries initially HTTP 403 under a parent deny rule. Actual installed `rrsync -wo -no-del -munge` (via administrative SSH + matching SSH_ORIGINAL_COMMAND, not new key authentication) accepted child .htaccess uploads into both proposed restricted roots. Both then returned HTTP 200 with expected text/header; untouched control stayed 403. This proves uploadable Apache configuration overrides the parent protection; PHP/code execution was not attempted or demonstrated. Server-level static-only isolation cannot be claimed from the proposed parent policy.
+
+Per the approved staging stop condition, stopped BEFORE generating any deploy identity or modifying authorized_keys. No entries existed to revoke. Live index/styles/app/robots/sitemap/root .htaccess hashes and authorized_keys hash unchanged; homepage 200. Exact non-secret inventory and before/after results: [staging evidence](../../notes/cc-71-staging-static-gate.json). Inert staging text/config retained for review, not deleted without cleanup approval.
+
+Disabled `publish.py --execute` unconditionally pending hosting revision; default network-free planning remains. 27 local safety tests passed including a regression that rejects execution before signature/network work. Site-owned `repo-tools/HOSTING-REVISION.md` proposes non-web inboxes and a separate trusted, initially manual promotion step with immutable quarantine, manifest/hash verification and strict non-executable output allowlists. No inbox/promoter installed. Separate DreamHost user reduces cross-domain risk but alone doesn't fix within-account writable configuration. Review that revised custody/promotion model before resuming credential/staging work. No live routing/hosting/DNS change or package publication.

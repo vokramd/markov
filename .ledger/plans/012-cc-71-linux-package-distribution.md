@@ -1,6 +1,6 @@
 # CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories
 
-Status: authorized local pilot and Omarchy VM validation completed; production/publication acceptance remains gated. See [pilot evidence](../notes/cc-71-phase0-and-pilot.md) and [Omarchy VM evidence/limits](../notes/cc-71-omarchy-vm.md).
+Status: local pilot/Omarchy VM and signing-key backup completed; approved hosting staging failed static-only gate, revised inbox/promotion design awaits review; production/publication remains gated. See [pilot evidence](../notes/cc-71-phase0-and-pilot.md) and [Omarchy VM evidence/limits](../notes/cc-71-omarchy-vm.md).
 Research: 2026-11-14 on p15.lab.net, umbrella workspace `/home/jtanner/workspace/github/vokramd`.
 
 ## Requirements and recommended first slice
@@ -352,3 +352,10 @@ After human review of the VM, the human requested the rest of the plan. [Current
 ## Signing-key backup verified (2026-11-14 local)
 
 Following explicit backup continuation and human desktop input, encrypted off-machine backup plus retrieval/restore/private nonce signing test passed. [Non-secret receipt](../notes/cc-71-signing-backup-receipt.json) records identities, ciphertext digest, m720q path and verification. The independent backup secret is human controlled; original archive passphrase is included only inside that independently encrypted backup. Directory/file modes 700/600 verified. CC-48 must migrate this backup and receipt with the 8 TB → 16 TB move; CC-70 inventory must retain the location. This supersedes earlier pending-backup checkpoints. Dedicated deploy identities/backups, staging/authorized_keys, real release-signing integration, native Arm clean-tag CI and all outward publication remain separate pending work/gates.
+
+
+## Hosting staging result supersedes direct-upload recommendation
+
+Human approved the dedicated-key/staging batch. Harmless feasibility testing before credential provisioning proved actual DreamHost rrsync accepts child .htaccess and Apache applies it over parent access controls: upload-root text canaries changed 403 → 200, untouched control remained 403. No script/code execution, cross-root/live modification or new credential installation. Live-site file and authorized_keys hashes unchanged. [Exact evidence/inventory](../notes/cc-71-staging-static-gate.json). Staging artifacts retained for review.
+
+The original sibling **public** roots plus rrsync-only credentials are therefore NOT accepted as static-only isolation. Direct `publish.py --execute` is disabled, with 27 safety tests passing. This overrides earlier proposed direct-upload instructions; they remain historical design context, not readiness evidence. [Revised design](../../../markovd.com/repo-tools/HOSTING-REVISION.md) recommends separately restricted non-web inboxes outside document roots and a trusted initially manual promoter that quarantines/verifies uploads, rejects configuration/executable/unsafe files and publishes known bytes in history/payload/index/commit order. This changes the unattended promotion model and needs human review before new roots/promoter deployment. No new deploy keys generated; no authorized_keys edits, inbox creation, live routing change or public package/image/release publication. Archive backup remains verified. A separate DreamHost login alone does not prove site/repo isolation; server-enforced static-only origin is another option requiring actual proof/access.
