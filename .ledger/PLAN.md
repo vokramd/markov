@@ -23,13 +23,15 @@
 
 ## Active Tasks
 
-- [CC-71 production readiness](tasks/current/cc-71-production-readiness.md) — archive backup verified; approved staging failed static-only gate; inbox/trusted-promotion revision awaits review.
+- [CC-71 production readiness](tasks/current/cc-71-production-readiness.md) — archive/deploy backups and replacement inbox acceptance complete; stopped for review, production publication gated.
 
 ## Pending Tasks
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 non-web inbox/p15 acceptance](tasks/done/cc-71-nonweb-inbox-acceptance.md) — cleanup, 2 restricted keys/backups, real isolation tests and local promotion/rollback passed; [evidence](notes/cc-71-nonweb-inbox-acceptance.md).
 
 - [CC-71 Omarchy VM validation](tasks/done/cc-71-omarchy-vm.md) — install/updater/reboot/upgrade/removal/native recovery passed; [evidence and console warning](notes/cc-71-omarchy-vm.md).
 

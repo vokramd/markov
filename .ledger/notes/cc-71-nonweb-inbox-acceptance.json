@@ -1,0 +1,468 @@
+{
+  "schema": 1,
+  "status": "passed_for_approved_replacement_acceptance",
+  "date_utc": "2026-11-15",
+  "hosts": [
+    "p15",
+    "m720q.lab.net",
+    "pdx1-shared-a1-46"
+  ],
+  "cleanup": {
+    "staging_removed": true,
+    "live_files_unchanged": true,
+    "authorized_keys_matches_original_baseline": true,
+    "http": {
+      "https://markovd.com/cc71-staging/repos/override-canary.txt": 404,
+      "https://markovd.com/cc71-staging/site-content/override-canary.txt": 404,
+      "https://markovd.com/cc71-staging/canaries/override-canary.txt": 404
+    }
+  },
+  "inbox_roots": {
+    "inboxes": {
+      "site": "/home/tannerjc/markov-uploads/site",
+      "packages": "/home/tannerjc/markov-uploads/packages"
+    },
+    "outside_checked_roots": true,
+    "checked_roots": [
+      "/home/tannerjc/markovd.com",
+      "/home/tannerjc/tannerjc.net",
+      "/home/tannerjc/svn",
+      "/var/www/html"
+    ]
+  },
+  "initial_visibility": [
+    {
+      "url": "https://markovd.com/markov-uploads/site/visibility-probe.txt",
+      "status": 404,
+      "location": null
+    },
+    {
+      "url": "http://markovd.com/markov-uploads/site/visibility-probe.txt",
+      "status": 301,
+      "location": "https://markovd.com/markov-uploads/site/visibility-probe.txt"
+    },
+    {
+      "url": "https://markovd.com/markov-uploads/packages/visibility-probe.txt",
+      "status": 404,
+      "location": null
+    },
+    {
+      "url": "http://markovd.com/markov-uploads/packages/visibility-probe.txt",
+      "status": 301,
+      "location": "https://markovd.com/markov-uploads/packages/visibility-probe.txt"
+    },
+    {
+      "url": "https://tannerjc.net/markov-uploads/site/visibility-probe.txt",
+      "status": 404,
+      "location": null
+    },
+    {
+      "url": "http://tannerjc.net/markov-uploads/site/visibility-probe.txt",
+      "status": 404,
+      "location": null
+    },
+    {
+      "url": "https://tannerjc.net/markov-uploads/packages/visibility-probe.txt",
+      "status": 404,
+      "location": null
+    },
+    {
+      "url": "http://tannerjc.net/markov-uploads/packages/visibility-probe.txt",
+      "status": 404,
+      "location": null
+    },
+    {
+      "url": "https://git.tannerjc.net/markov-uploads/site/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "http://git.tannerjc.net/markov-uploads/site/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "https://git.tannerjc.net/markov-uploads/packages/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "http://git.tannerjc.net/markov-uploads/packages/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "https://svn.tannerjc.net/markov-uploads/site/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "http://svn.tannerjc.net/markov-uploads/site/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "https://svn.tannerjc.net/markov-uploads/packages/visibility-probe.txt",
+      "error": "gaierror"
+    },
+    {
+      "url": "http://svn.tannerjc.net/markov-uploads/packages/visibility-probe.txt",
+      "error": "gaierror"
+    }
+  ],
+  "final_http": {
+    "https://markovd.com/cc71-staging/repos/override-canary.txt": 404,
+    "https://markovd.com/cc71-staging/site-content/override-canary.txt": 404,
+    "https://markovd.com/cc71-staging/canaries/override-canary.txt": 404,
+    "https://markovd.com/markov-uploads/site/visibility-probe.txt": 404,
+    "https://markovd.com/markov-uploads/site/acceptance-unsafe/payload.php": 404,
+    "https://markovd.com/markov-uploads/packages/visibility-probe.txt": 404,
+    "https://markovd.com/markov-uploads/packages/acceptance-unsafe/payload.php": 404,
+    "https://tannerjc.net/markov-uploads/site/visibility-probe.txt": 404,
+    "https://tannerjc.net/markov-uploads/site/acceptance-unsafe/payload.php": 404,
+    "https://tannerjc.net/markov-uploads/packages/visibility-probe.txt": 404,
+    "https://tannerjc.net/markov-uploads/packages/acceptance-unsafe/payload.php": 404,
+    "https://markovd.com/markov-uploads/site/acceptance-reviewed-site/index.html": 404
+  },
+  "custody": {
+    "site_private_mode": "0o600",
+    "site_directory_mode": "0o700",
+    "site_cipher": "aes256-ctr",
+    "site_kdf": "bcrypt",
+    "site_kdf_rounds": 100,
+    "only_temporary_site_agent_identity_removed": true
+  },
+  "backup_receipt": "cc-71-deploy-backup-receipt.json",
+  "ssh_acceptance": {
+    "packages": [
+      {
+        "test": "intended_upload",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "interactive_shell",
+        "exit": 1,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "arbitrary_command",
+        "exit": 1,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "pty_command",
+        "exit": 255,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "remote_download",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "delete_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "parent_escape_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "sibling_escape_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "public_root_escape_dryrun",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "rsync_path_command_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "remove_source_option_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "uploaded_symlink_munged",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "hardlink_fixture_upload",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "nonweb_unsafe_fixture_upload",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "preexisting_symlink_attempt",
+        "exit": 12,
+        "requires_admin_guard_check": true,
+        "passed": true
+      }
+    ],
+    "site": [
+      {
+        "test": "intended_upload",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "interactive_shell",
+        "exit": 1,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "arbitrary_command",
+        "exit": 1,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "pty_command",
+        "exit": 255,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "remote_download",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "delete_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "parent_escape_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "sibling_escape_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "public_root_escape_dryrun",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "rsync_path_command_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "remove_source_option_refused",
+        "exit": 12,
+        "expected": "refused",
+        "passed": true
+      },
+      {
+        "test": "uploaded_symlink_munged",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "hardlink_fixture_upload",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "nonweb_unsafe_fixture_upload",
+        "exit": 0,
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "test": "preexisting_symlink_attempt",
+        "exit": 12,
+        "requires_admin_guard_check": true,
+        "passed": true
+      }
+    ]
+  },
+  "verification": {
+    "live_files_match_original_baseline": true,
+    "old_staging_removed": true,
+    "public_repos_not_created": true,
+    "authorized_keys_original_bytes_preserved": true,
+    "authorized_keys_exactly_two_expected_appended_entries": true,
+    "authorized_keys_mode": "0o600",
+    "authorized_keys_sha256": "f738ab87cd4e950d056b01f3a5f9e4813ab24c4ce508ef4038eddacd1c3ebb7b",
+    "outside_inbox_guards_unchanged": true,
+    "roles": {
+      "packages": {
+        "inbox_mode": "700",
+        "uploaded_links_munged": true,
+        "hardlink_fixture_count": 2,
+        "delete_guard_preserved": true
+      },
+      "site": {
+        "inbox_mode": "700",
+        "uploaded_links_munged": true,
+        "hardlink_fixture_count": 2,
+        "delete_guard_preserved": true
+      }
+    }
+  },
+  "p15_integrity": {
+    "promoter_and_quarantine_unchanged": true,
+    "files_checked": 9
+  },
+  "rejected_inbox_inputs": {
+    "acceptance-hardlinks": {
+      "refused": true,
+      "reason": "empty file"
+    },
+    "acceptance-unsafe": {
+      "refused": true,
+      "reason": "empty file"
+    },
+    "acceptance-links": {
+      "refused": true,
+      "reason": "empty file"
+    }
+  },
+  "more_negative_cases": {
+    "acceptance-code": {
+      "refused": true,
+      "classification": "server-code filename"
+    },
+    "acceptance-signed-unlisted": {
+      "refused": true,
+      "classification": "unlisted signed tree"
+    },
+    "injected_remote_source_race": {
+      "refused": true,
+      "classification": "deterministic remote metadata-race injection"
+    }
+  },
+  "signed_package_pulls": {
+    "old": {
+      "verified_files": 5,
+      "quarantine": ".cc71-vms/inbox-acceptance/quarantine/signed-old",
+      "public": false
+    },
+    "new": {
+      "verified_files": 5,
+      "quarantine": ".cc71-vms/inbox-acceptance/quarantine/signed-new",
+      "public": false
+    },
+    "rollback": {
+      "verified_files": 5,
+      "quarantine": ".cc71-vms/inbox-acceptance/quarantine/signed-rollback",
+      "public": false
+    }
+  },
+  "reviewed_site_pull": {
+    "role": "site",
+    "reviewed_manifest_sha256": "bf28a10bc200a78614713d5b3bb81cec4ccc60c89735911a7248e74d3a157c24",
+    "verified_files": 2,
+    "private_plan_bytes_match": true,
+    "published": false
+  },
+  "local_promotion": {
+    "host": "p15",
+    "local_http_only": true,
+    "live_publication": false,
+    "fixture_fingerprint": "7B354AC311AF0FC1379877DE63CE59E965E3321C",
+    "results": [
+      {
+        "label": "old",
+        "phases": [
+          "history",
+          "payloads",
+          "indexes",
+          "commit"
+        ],
+        "verified_files": 12,
+        "result": "complete"
+      },
+      {
+        "label": "new",
+        "phases": [
+          "history",
+          "payloads"
+        ],
+        "result": "controlled interruption",
+        "error": "controlled interrupted indexes"
+      },
+      {
+        "label": "new",
+        "phases": [
+          "history",
+          "payloads",
+          "indexes",
+          "commit"
+        ],
+        "verified_files": 12,
+        "result": "complete"
+      },
+      {
+        "label": "rollback",
+        "phases": [
+          "history",
+          "payloads",
+          "indexes",
+          "commit"
+        ],
+        "verified_files": 12,
+        "result": "complete"
+      }
+    ],
+    "all_versions_retained": true,
+    "full_histories_verified": 3,
+    "rollback": "new fixture version restores known old dummy payload with fresh signed metadata",
+    "native_install_retested": false
+  },
+  "unit_tests": {
+    "count": 47,
+    "result": "passed",
+    "log": "/tmp/cc71-inbox-tests.log"
+  },
+  "phase1_recommendation": "manual p15 validates locally signed bundle directly; optional inbox for unattended producers",
+  "server_promoter_installed": false,
+  "new_host_software_installed": false,
+  "live_publication": false,
+  "public_archive_key_published": false,
+  "git_push_tag_pr_release_ghcr": false,
+  "evidence_limits": [
+    "Known/resolved root and named-domain checks; accessible Apache config is container default, not full provider vhost inventory.",
+    "Legacy git/svn DNS names do not resolve; these are not successful HTTP tests.",
+    "Ordered promotion/rollback uses dummy signed transport fixtures on p15 loopback only, not real package publication or a repeat native install matrix.",
+    "Deterministic race rejection was injected into the trusted reader against a private inbox fixture.",
+    "Site restore verified byte equality plus current-key operational authentication; no persistent package private-key copy on p15."
+  ]
+}
