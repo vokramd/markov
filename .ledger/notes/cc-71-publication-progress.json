@@ -245,15 +245,259 @@
     "filesystem_free_gb": 575,
     "free_inodes": 1206961169,
     "quota_tool_available": false,
-    "account_quota_confirmed": false,
+    "account_quota_confirmed": true,
     "planned_upload_bytes": 453721824,
-    "authorized_keys_sha256": "f738ab87cd4e950d056b01f3a5f9e4813ab24c4ce508ef4038eddacd1c3ebb7b"
+    "authorized_keys_sha256": "f738ab87cd4e950d056b01f3a5f9e4813ab24c4ce508ef4038eddacd1c3ebb7b",
+    "confirmation": "Human confirms DreamHost has ample disk quota; files must go to reviewed destination"
   },
-  "native_repository_published": false,
+  "native_repository_published": true,
   "site_published": false,
   "pending_user_actions": [
-    "Confirm DreamHost account has at least 1 GB available or no quota"
+    "Approve separately scoped cache-policy correction and its PR"
   ],
-  "public_matrix_started": false,
-  "status": "public_ghcr_verified_waiting_for_account_quota"
+  "public_matrix_started": true,
+  "status": "native_and_ghcr_live_all_clients_pass_cache_fix_approval_pending_release_site_held",
+  "native_promotion_manifest": "9666cd83a8f480b46af502ce230532050c28aa6bb412ed455959df682162b7c5",
+  "public_native_file_count": 214,
+  "public_native_results": [
+    {
+      "row": "debian-13-amd64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 14.0,
+      "platform": "linux/amd64",
+      "emulated_on_p15": false,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "debian-13-arm64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 144.1,
+      "platform": "linux/arm64",
+      "emulated_on_p15": true,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "ubuntu-24.04-amd64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 15.3,
+      "platform": "linux/amd64",
+      "emulated_on_p15": false,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "ubuntu-24.04-arm64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 176.8,
+      "platform": "linux/arm64",
+      "emulated_on_p15": true,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "ubuntu-26.04-amd64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 18.5,
+      "platform": "linux/amd64",
+      "emulated_on_p15": false,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "ubuntu-26.04-arm64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 156.7,
+      "platform": "linux/arm64",
+      "emulated_on_p15": true,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "fedora-44-x86_64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 12.9,
+      "platform": "linux/amd64",
+      "emulated_on_p15": false,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "fedora-44-aarch64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 120.2,
+      "platform": "linux/arm64",
+      "emulated_on_p15": true,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "fedora-45-x86_64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 14.4,
+      "platform": "linux/amd64",
+      "emulated_on_p15": false,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "fedora-45-aarch64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 95.6,
+      "platform": "linux/arm64",
+      "emulated_on_p15": true,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    },
+    {
+      "row": "arch-rolling-x86_64",
+      "status": "passed",
+      "exit": 0,
+      "seconds": 10.6,
+      "platform": "linux/amd64",
+      "emulated_on_p15": false,
+      "public_https": true,
+      "cross_version_public_upgrade": false
+    }
+  ],
+  "http_transport_checks": {
+    "files": [
+      {
+        "path": "repos/keys/markov-archive.asc",
+        "status": 200,
+        "type": "application/pgp-keys",
+        "length": "3902",
+        "cache_control": "max-age=172800",
+        "etag": "\"f3e-6605af05d58cc\"",
+        "encoding": null,
+        "range_status": 206,
+        "conditional_status": 304
+      },
+      {
+        "path": "repos/debian/13/dists/stable/InRelease",
+        "status": 200,
+        "type": null,
+        "length": "3811",
+        "cache_control": "max-age=172800",
+        "etag": "\"ee3-6605af05d5f11\"",
+        "encoding": null,
+        "range_status": 206,
+        "conditional_status": 304
+      },
+      {
+        "path": "repos/fedora/45/stable/x86_64/repodata/repomd.xml",
+        "status": 200,
+        "type": "application/xml",
+        "length": "1549",
+        "cache_control": "max-age=172800",
+        "etag": "\"60d-6605af05d5829\"",
+        "encoding": null,
+        "range_status": 206,
+        "conditional_status": 304
+      },
+      {
+        "path": "repos/arch/rolling/stable/x86_64/markov.db",
+        "status": 200,
+        "type": null,
+        "length": "1079",
+        "cache_control": "max-age=172800",
+        "etag": "\"437-6605af05d5226\"",
+        "encoding": null,
+        "range_status": 206,
+        "conditional_status": 304
+      },
+      {
+        "path": "repos/fedora/45/stable/x86_64/Packages/markov_0.2.0_amd64.rpm",
+        "status": 200,
+        "type": "application/x-redhat-package-manager",
+        "length": "20493202",
+        "cache_control": "max-age=172800",
+        "etag": "\"138b392-6605af05bbcd1\"",
+        "encoding": null,
+        "range_status": 206,
+        "conditional_status": 304
+      }
+    ],
+    "missing_status": 404,
+    "result": "cache_correction_approval_pending",
+    "transport_result": "passed",
+    "cache_policy_result": "failed: mutable metadata max-age=172800"
+  },
+  "http_cache_policy": "mismatch: max-age=172800 on mutable metadata; trusted correction prepared, approval pending",
+  "omarchy_public": {
+    "status": "passed",
+    "platform": "Omarchy 4.5.0 x86_64 existing VM",
+    "public_url": "https://markovd.com/repos/omarchy/rolling/stable/x86_64/",
+    "new_key_sha256_verified": true,
+    "native_signatures_required": true,
+    "supported_updater": true,
+    "upgrade_from_fixture_package_to_public_0_2_0": true,
+    "observed_package_versions": [
+      "markov 0.1.0-1",
+      "markov 0.2.0-1"
+    ],
+    "unprivileged_quickstart": true,
+    "install_and_removal": true,
+    "preserved_user_hashes": true,
+    "fresh_reboot_or_native_snapshot_test_in_this_run": false,
+    "shell_readiness_warning": true,
+    "vm_powered_off": true,
+    "guest_exit": 0
+  },
+  "cache_correction": {
+    "approved": false,
+    "source": "markovd.com/repo-tools/hosting/repos.htaccess",
+    "commit": "829ccb6",
+    "target": "/home/tannerjc/markovd.com/repos/.htaccess",
+    "sha256": "77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f",
+    "local_test": {
+      "config_sha256": "77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f",
+      "listen": "loopback only",
+      "parent_default": "2-day expiry",
+      "syntax": "passed",
+      "checks": [
+        {
+          "file": "InRelease",
+          "cache_control": [
+            "no-cache, max-age=0, must-revalidate"
+          ],
+          "content_type": "text/plain"
+        },
+        {
+          "file": "markov.db",
+          "cache_control": [
+            "no-cache, max-age=0, must-revalidate"
+          ],
+          "content_type": "application/octet-stream"
+        },
+        {
+          "file": "repomd.xml.asc",
+          "cache_control": [
+            "no-cache, max-age=0, must-revalidate"
+          ],
+          "content_type": "application/pgp-signature"
+        },
+        {
+          "file": "markov_0.2.0_amd64.rpm",
+          "cache_control": [
+            "no-cache, max-age=0, must-revalidate"
+          ],
+          "content_type": "application/x-rpm"
+        }
+      ],
+      "result": "passed"
+    },
+    "target_preflight": "absent; repo resolves to approved docroot; root config/authorized_keys unchanged"
+  }
 }

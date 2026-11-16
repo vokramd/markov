@@ -108,3 +108,5 @@
 - [Archive passphrase change and refreshed recovery](notes/cc-71-signing-passphrase-change.md) — private GUI confirmation/visibility, uncached typed unlock, refreshed off-machine restore and live signing verified; identity unchanged.
 
 - [CC-71 v0.2.0 publication review](tasks/current/cc-71-publication-review.md) — final install page, release notes and exact publication checklist prepared; launch approved; PRs merged, Release draft staged, GHCR uploaded privately; visibility/account-quota prerequisites pending.
+
+- [Repository metadata cache policy](bugs/open/cc-71-repository-metadata-cache.md) — live bytes and all clients pass; tested one-file operator correction awaits approval before Release/site launch.
