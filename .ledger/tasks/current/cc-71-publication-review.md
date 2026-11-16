@@ -9,3 +9,7 @@ Validation: 12 actual HTML Bash snippets parsed, real certificate accepted and w
 The designated GitHub API token declares write:packages; no registry authentication/write was attempted. GitHub currently requires classic PAT or repository workflow token for GHCR; package defaults private, so actual namespace authorization and explicit public visibility/anonymous pulls are publication prerequisites. Never persist the token or pass it in arguments. Use an on-demand private credential protocol/client and only the designated token file at call time.
 
 Pending human approval: push/open/merge the two launch-review PRs, then perform the explicitly listed outward Release/certificate/native repository/GHCR/site actions. Draft Release uploads also require approval. No publication, remote writes, new tags, re-signing, VM creation or official-distro submission in this preparation. Keep the exact signed v0.2.0 artifacts/tag, refreshed verified backup and all historical versions.
+
+## Approved execution checkpoint
+
+Launch approved; both PRs merged, Release staged with 26 verified assets, exact GHCR image uploaded privately. Public visibility and DreamHost account-quota confirmation need human action; native repositories/site not yet written. See [execution evidence](../../notes/cc-71-publication-progress.md). Earlier pending-approval text is historical.
