@@ -1,5 +1,7 @@
 # CC-71 v0.2.0 launch review
 
+Status: completed for approved phase 1. [Live evidence](../../notes/cc-71-phase1-live.md). Earlier chronological checkpoints below are superseded; phase 2/admission work stays deferred.
+
 Prepared locally after the human requested the final install page and publication checklist. Site branch cc-71-launch-review, commit 29eab6307dbe162462d66de6260d559d5397ac95. Launch-ready source describes the proposed published state; it is not deployed.
 
 Review sibling site files install/index.html, repo-tools/PUBLICATION-CHECKLIST-V0.2.0.md and repo-tools/RELEASE-NOTES-V0.2.0.md. Only three static files would deploy: install/index.html, index.html (one navigation link), sitemap.xml. Exact local snapshot manifest a32d452ae204d737a9819039485424615085ff7cab1c4134b90c859b60732a13. No .htaccess/routing/DNS/server code or unrelated site changes. Local plan at ~/.cache/cc71/v0.2.0/launch-site-plan, published=false.

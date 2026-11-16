@@ -7,3 +7,7 @@ Native repositories are live at the correct /home/tannerjc/markovd.com/repos tre
 Proposed site-local branch cc-71-repository-cache commit 829ccb6 contains repo-tools/hosting/repos.htaccess and scope/test documentation. Exact file hash 77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f, live target /home/tannerjc/markovd.com/repos/.htaccess (currently absent). Local Apache syntax/HTTP test against two-day inherited expiry passed: one no-cache/max-age=0/must-revalidate header, no Expires, expected MIME. No DreamHost config change made.
 
 Specific approval is pending because the reviewed publication checklist explicitly excluded .htaccess changes. Do not route this operator config through inbox/promotion manifests or relax dotfile rejection. Root .htaccess/authorized_keys/site remain at their baselines. After approval push/review/merge the small fix PR, upload only the reviewed file by pinned desktop admin SSH, verify live headers/body/ETag/Range and no errors, rollback only the new matching config if acceptance fails, and only then finish the already-approved Release/site publication.
+
+## Fixed
+
+Human approved the one-file exception; PR 4 merged and the exact operator file was installed at the reviewed target. All 106 signed file hashes and new revalidation/MIME headers verified; no Expires, conditional 304 and Range work, protected root/site/key hashes unchanged. Release/site launch completed. See ../../notes/cc-71-phase1-live.md.

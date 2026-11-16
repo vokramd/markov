@@ -23,194 +23,143 @@
   },
   "release": {
     "release_id": 446472201,
+    "url": "https://github.com/vokramd/markov/releases/tag/v0.2.0",
     "tag": "v0.2.0",
-    "draft": true,
-    "assets": [
+    "published": true,
+    "public_assets_verified": [
       {
-        "id": 752828006,
         "name": "markov.oci.tar.digest",
         "size": 72,
-        "digest": "sha256:6dd08117319a068598392cc31a15a11e9b3da2b7be59c46005af967643b9b24f",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov.oci.tar.digest"
+        "sha256": "6dd08117319a068598392cc31a15a11e9b3da2b7be59c46005af967643b9b24f"
       },
       {
-        "id": 752828026,
         "name": "oci-index-digest.txt",
         "size": 72,
-        "digest": "sha256:6dd08117319a068598392cc31a15a11e9b3da2b7be59c46005af967643b9b24f",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/oci-index-digest.txt"
+        "sha256": "6dd08117319a068598392cc31a15a11e9b3da2b7be59c46005af967643b9b24f"
       },
       {
-        "id": 752828046,
-        "name": "markov-0.2.0-1-x86_64.pkg.tar.zst.sig",
-        "size": 566,
-        "digest": "sha256:17318e5ddecc5072e288690f39550984bca8d5ddf42a905ba0c010fc5563b47f",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov-0.2.0-1-x86_64.pkg.tar.zst.sig"
-      },
-      {
-        "id": 752828068,
-        "name": "release-manifest.json.sig",
-        "size": 566,
-        "digest": "sha256:c7fe94822f1c2f19dde250820d6a556617b820f4699621e215d4db3bce2ae324",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/release-manifest.json.sig"
-      },
-      {
-        "id": 752828102,
         "name": "checksums.txt.sig",
         "size": 566,
-        "digest": "sha256:365e6287b41320e3903ca3aa4366f8444b88480cbce75c36cc5c4ec0fca9a0cb",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/checksums.txt.sig"
+        "sha256": "365e6287b41320e3903ca3aa4366f8444b88480cbce75c36cc5c4ec0fca9a0cb"
       },
       {
-        "id": 752828128,
+        "name": "markov-0.2.0-1-x86_64.pkg.tar.zst.sig",
+        "size": 566,
+        "sha256": "17318e5ddecc5072e288690f39550984bca8d5ddf42a905ba0c010fc5563b47f"
+      },
+      {
+        "name": "release-manifest.json.sig",
+        "size": 566,
+        "sha256": "c7fe94822f1c2f19dde250820d6a556617b820f4699621e215d4db3bce2ae324"
+      },
+      {
         "name": "PKGBUILD",
         "size": 901,
-        "digest": "sha256:fe90184d09418673b9efac2d9e07fa583d4dfe8491747262f16513ad016efa3c",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/PKGBUILD"
+        "sha256": "fe90184d09418673b9efac2d9e07fa583d4dfe8491747262f16513ad016efa3c"
       },
       {
-        "id": 752828171,
         "name": "checksums.txt",
         "size": 2171,
-        "digest": "sha256:68b6be66f99d409447af4cf322a3f53ca519bc9fdf758c879a0389adbdabd25e",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/checksums.txt"
+        "sha256": "68b6be66f99d409447af4cf322a3f53ca519bc9fdf758c879a0389adbdabd25e"
       },
       {
-        "id": 752828217,
         "name": "markov-archive.asc",
         "size": 3902,
-        "digest": "sha256:685da8f2ecde2a7d268574cd887667eec180ca29105d091297d41705467cfdd7",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov-archive.asc"
+        "sha256": "685da8f2ecde2a7d268574cd887667eec180ca29105d091297d41705467cfdd7"
       },
       {
-        "id": 752828250,
         "name": "release-manifest.json",
         "size": 27206,
-        "digest": "sha256:9666cd83a8f480b46af502ce230532050c28aa6bb412ed455959df682162b7c5",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/release-manifest.json"
+        "sha256": "9666cd83a8f480b46af502ce230532050c28aa6bb412ed455959df682162b7c5"
       },
       {
-        "id": 752828276,
         "name": "markov_0.2.0_linux_amd64.tar.gz.spdx.json",
         "size": 133388,
-        "digest": "sha256:8c53119015a8163be615fa1422ceb5770c9ca19bcdbdd53e85a0b0e4bc87c872",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_linux_amd64.tar.gz.spdx.json"
+        "sha256": "8c53119015a8163be615fa1422ceb5770c9ca19bcdbdd53e85a0b0e4bc87c872"
       },
       {
-        "id": 752828300,
         "name": "markov_0.2.0_linux_arm64.tar.gz.spdx.json",
         "size": 133388,
-        "digest": "sha256:02d5532c81b3935c7c5196c87a25e06c3102d63e87e4973b3414260b3029ef51",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_linux_arm64.tar.gz.spdx.json"
+        "sha256": "02d5532c81b3935c7c5196c87a25e06c3102d63e87e4973b3414260b3029ef51"
       },
       {
-        "id": 752828321,
         "name": "markov_0.2.0_darwin_amd64.tar.gz.spdx.json",
         "size": 135110,
-        "digest": "sha256:2b4825e9bb54fbec0cc724f154c1ba8f84c97c29db2109a18897e9814e80b30b",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_darwin_amd64.tar.gz.spdx.json"
+        "sha256": "2b4825e9bb54fbec0cc724f154c1ba8f84c97c29db2109a18897e9814e80b30b"
       },
       {
-        "id": 752828348,
         "name": "markov_0.2.0_darwin_arm64.tar.gz.spdx.json",
         "size": 135110,
-        "digest": "sha256:c5f6b578de364cef99e61108351bc7ae6e74235bf133d2fde69a8f6d4a382a9f",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_darwin_arm64.tar.gz.spdx.json"
+        "sha256": "c5f6b578de364cef99e61108351bc7ae6e74235bf133d2fde69a8f6d4a382a9f"
       },
       {
-        "id": 752828387,
         "name": "markov-0.2.0.tar.gz",
         "size": 561781,
-        "digest": "sha256:7568f5b89b36cd972fea8cc996e2b6ddd7ce57a90b539577c061fdc9c79ac4a4",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov-0.2.0.tar.gz"
+        "sha256": "7568f5b89b36cd972fea8cc996e2b6ddd7ce57a90b539577c061fdc9c79ac4a4"
       },
       {
-        "id": 752828422,
         "name": "markov.oci.amd64.spdx.json",
         "size": 4565654,
-        "digest": "sha256:2c1de37e8c8f006b8f4d56d3f2d15911e9c00355725064567fedf46a0415d4ee",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov.oci.amd64.spdx.json"
+        "sha256": "2c1de37e8c8f006b8f4d56d3f2d15911e9c00355725064567fedf46a0415d4ee"
       },
       {
-        "id": 752828466,
         "name": "markov.oci.arm64.spdx.json",
         "size": 4570522,
-        "digest": "sha256:de17dd0878c4aad891adb90ea0c36cb6e0a2d16334aef87e64247d8abb46d457",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov.oci.arm64.spdx.json"
+        "sha256": "de17dd0878c4aad891adb90ea0c36cb6e0a2d16334aef87e64247d8abb46d457"
       },
       {
-        "id": 752828542,
         "name": "markov_0.2.0_linux_arm64.tar.gz",
         "size": 17815865,
-        "digest": "sha256:d664091f7b184c5c44a0154492360bf4536a7f2d279275cb771d48851af9f539",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_linux_arm64.tar.gz"
+        "sha256": "d664091f7b184c5c44a0154492360bf4536a7f2d279275cb771d48851af9f539"
       },
       {
-        "id": 752828610,
         "name": "markov_0.2.0_arm64.deb",
         "size": 17817826,
-        "digest": "sha256:9e6ed1fb7151d467f5325e314dd835f7746cdbc52e1c00f58da73c591a54d457",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_arm64.deb"
+        "sha256": "9e6ed1fb7151d467f5325e314dd835f7746cdbc52e1c00f58da73c591a54d457"
       },
       {
-        "id": 752828673,
         "name": "markov-0.2.0-1-x86_64.pkg.tar.zst",
         "size": 18078188,
-        "digest": "sha256:36670fed1ec6f0cf7ef1cc50b686e258d366852b0c716db4637e1708625298e9",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov-0.2.0-1-x86_64.pkg.tar.zst"
+        "sha256": "36670fed1ec6f0cf7ef1cc50b686e258d366852b0c716db4637e1708625298e9"
       },
       {
-        "id": 752828716,
         "name": "markov_0.2.0_arm64.rpm",
         "size": 18347155,
-        "digest": "sha256:a1f9f4e103a53cd02b2d8ff7c4bf748ee6aca8b4b40fa9833b4f2ab754a99a76",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_arm64.rpm"
+        "sha256": "a1f9f4e103a53cd02b2d8ff7c4bf748ee6aca8b4b40fa9833b4f2ab754a99a76"
       },
       {
-        "id": 752828778,
         "name": "markov_0.2.0_darwin_arm64.tar.gz",
         "size": 18718150,
-        "digest": "sha256:ad6c276381761042fddf79ee1d8cd06d05d0480711c4ec76b28fa2aa30beca6e",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_darwin_arm64.tar.gz"
+        "sha256": "ad6c276381761042fddf79ee1d8cd06d05d0480711c4ec76b28fa2aa30beca6e"
       },
       {
-        "id": 752828846,
         "name": "markov_0.2.0_amd64.deb",
         "size": 19827876,
-        "digest": "sha256:eb8afecfc50b6d16456d7bf0517e6154738f9b82dd6cfb3665d1b44e865af11d",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_amd64.deb"
+        "sha256": "eb8afecfc50b6d16456d7bf0517e6154738f9b82dd6cfb3665d1b44e865af11d"
       },
       {
-        "id": 752828949,
         "name": "markov_0.2.0_linux_amd64.tar.gz",
         "size": 19829220,
-        "digest": "sha256:d88a8f63cc8682e52890a57fe90216c1ec28e277e1beadaae9df0bd0bf213a4e",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_linux_amd64.tar.gz"
+        "sha256": "d88a8f63cc8682e52890a57fe90216c1ec28e277e1beadaae9df0bd0bf213a4e"
       },
       {
-        "id": 752829101,
         "name": "markov_0.2.0_darwin_amd64.tar.gz",
         "size": 20259022,
-        "digest": "sha256:6202d13348fae257e5f0dc3e0e1ef66398a73128e4a1159a03f030f2f1507e9a",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_darwin_amd64.tar.gz"
+        "sha256": "6202d13348fae257e5f0dc3e0e1ef66398a73128e4a1159a03f030f2f1507e9a"
       },
       {
-        "id": 752829169,
         "name": "markov_0.2.0_amd64.rpm",
         "size": 20493202,
-        "digest": "sha256:29f739a4369f00876f3f681078412c1c4e859c1765d18d1c6ab00d2e59a36cd7",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov_0.2.0_amd64.rpm"
+        "sha256": "29f739a4369f00876f3f681078412c1c4e859c1765d18d1c6ab00d2e59a36cd7"
       },
       {
-        "id": 752829256,
         "name": "markov.oci.tar",
         "size": 196647936,
-        "digest": "sha256:168075ab600c8251c7012a1ccf339e5b727ecba5503bc095bb7b5b075a2fbc19",
-        "url": "https://github.com/vokramd/markov/releases/download/untagged-05fb3bf4ced9c89a026e/markov.oci.tar"
+        "sha256": "168075ab600c8251c7012a1ccf339e5b727ecba5503bc095bb7b5b075a2fbc19"
       }
     ],
-    "published": false,
-    "status": "all_26_assets_verified_release_still_draft"
+    "status": "published_all_26_downloads_and_public_signatures_verified",
+    "public_openpgp_verified": true
   },
   "registry": {
     "image": "ghcr.io/vokramd/markov:0.2.0",
@@ -251,12 +200,10 @@
     "confirmation": "Human confirms DreamHost has ample disk quota; files must go to reviewed destination"
   },
   "native_repository_published": true,
-  "site_published": false,
-  "pending_user_actions": [
-    "Approve separately scoped cache-policy correction and its PR"
-  ],
+  "site_published": true,
+  "pending_user_actions": [],
   "public_matrix_started": true,
-  "status": "native_and_ghcr_live_all_clients_pass_cache_fix_approval_pending_release_site_held",
+  "status": "phase1_publication_complete_verified",
   "native_promotion_manifest": "9666cd83a8f480b46af502ce230532050c28aa6bb412ed455959df682162b7c5",
   "public_native_file_count": 214,
   "public_native_results": [
@@ -434,7 +381,7 @@
     "transport_result": "passed",
     "cache_policy_result": "failed: mutable metadata max-age=172800"
   },
-  "http_cache_policy": "mismatch: max-age=172800 on mutable metadata; trusted correction prepared, approval pending",
+  "http_cache_policy": "resolved: all 106 native files revalidate, no Expires, explicit metadata MIME types",
   "omarchy_public": {
     "status": "passed",
     "platform": "Omarchy 4.5.0 x86_64 existing VM",
@@ -456,48 +403,68 @@
     "guest_exit": 0
   },
   "cache_correction": {
-    "approved": false,
-    "source": "markovd.com/repo-tools/hosting/repos.htaccess",
-    "commit": "829ccb6",
+    "approved_sha256": "77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f",
     "target": "/home/tannerjc/markovd.com/repos/.htaccess",
-    "sha256": "77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f",
-    "local_test": {
-      "config_sha256": "77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f",
-      "listen": "loopback only",
-      "parent_default": "2-day expiry",
-      "syntax": "passed",
-      "checks": [
-        {
-          "file": "InRelease",
-          "cache_control": [
-            "no-cache, max-age=0, must-revalidate"
-          ],
-          "content_type": "text/plain"
-        },
-        {
-          "file": "markov.db",
-          "cache_control": [
-            "no-cache, max-age=0, must-revalidate"
-          ],
-          "content_type": "application/octet-stream"
-        },
-        {
-          "file": "repomd.xml.asc",
-          "cache_control": [
-            "no-cache, max-age=0, must-revalidate"
-          ],
-          "content_type": "application/pgp-signature"
-        },
-        {
-          "file": "markov_0.2.0_amd64.rpm",
-          "cache_control": [
-            "no-cache, max-age=0, must-revalidate"
-          ],
-          "content_type": "application/x-rpm"
-        }
-      ],
-      "result": "passed"
-    },
-    "target_preflight": "absent; repo resolves to approved docroot; root config/authorized_keys unchanged"
-  }
+    "status": "verified",
+    "public_files_verified": 106,
+    "all_revalidate": true,
+    "no_expires": true,
+    "signed_bytes_unchanged": true,
+    "baseline_site_config_keys_unchanged": true,
+    "config_http_access_denied": true,
+    "approved": true,
+    "pr": {
+      "number": 4,
+      "url": "https://github.com/vokramd/markovd.com/pull/4",
+      "head": "829ccb67519086fcd98febfb62978b2ef1e65002",
+      "merged": true,
+      "merge_sha": "9de6291c4a2a0a27c17000bd93205ceb2816d3ee"
+    }
+  },
+  "site_acceptance": {
+    "status": "passed",
+    "three_file_manifest_sha256": "a32d452ae204d737a9819039485424615085ff7cab1c4134b90c859b60732a13",
+    "urls": [
+      {
+        "url": "https://markovd.com/",
+        "status": 200,
+        "sha256": "56c6a90b50e36130af73b12acce41958b3a57a99d31480a58a15ceb44c8d7fd9",
+        "content_type": "text/html",
+        "cache_control": "max-age=0"
+      },
+      {
+        "url": "https://markovd.com/index.html",
+        "status": 200,
+        "sha256": "56c6a90b50e36130af73b12acce41958b3a57a99d31480a58a15ceb44c8d7fd9",
+        "content_type": "text/html",
+        "cache_control": "max-age=0"
+      },
+      {
+        "url": "https://markovd.com/install/",
+        "status": 200,
+        "sha256": "a57c371e517cf0a75c73662240a9c627d0643bfc935a35f3f1ce079204a76984",
+        "content_type": "text/html",
+        "cache_control": "max-age=0"
+      },
+      {
+        "url": "https://markovd.com/install/index.html",
+        "status": 200,
+        "sha256": "a57c371e517cf0a75c73662240a9c627d0643bfc935a35f3f1ce079204a76984",
+        "content_type": "text/html",
+        "cache_control": "max-age=0"
+      },
+      {
+        "url": "https://markovd.com/sitemap.xml",
+        "status": 200,
+        "sha256": "6a3b917e8d7cc278c455582f110b5f5131828d245be8979f65ebda51a228622b",
+        "content_type": "application/xml",
+        "cache_control": "max-age=172800"
+      }
+    ],
+    "unrelated_site_root_config_authorized_keys_unchanged": true,
+    "repo_operator_config_sha256": "77d5925dd263704ec01d790f839bbbada63b14c8a1b9d07c06ff570dfaf3ef3f"
+  },
+  "public_release_url": "https://github.com/vokramd/markov/releases/tag/v0.2.0",
+  "public_install_url": "https://markovd.com/install/",
+  "maintenance_fixture_tests": 66
 }

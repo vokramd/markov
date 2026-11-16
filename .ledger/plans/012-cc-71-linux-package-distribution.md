@@ -372,3 +372,7 @@ Selected simpler phase 1: p15 signs and validates the LOCAL signed bundle direct
 ## Local signing checkpoint — 2026-11-15
 
 Host-only signing preparation is complete with disposable keys: [evidence](../notes/cc-71-host-signing.md). Actual release signing, clean-tag/native-Arm CI and outward publication remain gated. Next review requests branch pushes and draft PRs only.
+
+## Phase 1 live
+
+The human approved publication and the discovered cache-policy exception. Native repositories, public certificate, v0.2.0 GitHub Release, GHCR image and install page are live and verified. [Final evidence](../notes/cc-71-phase1-live.md) and exact JSON records supersede earlier pending checkpoints. Eleven public package rows, public Omarchy package checks and both public image architectures passed, with documented emulation/desktop limits. Source tag is unchanged; later distro expansion/admission stays deferred. No change to CC itself.
