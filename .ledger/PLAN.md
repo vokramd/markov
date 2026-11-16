@@ -23,8 +23,6 @@
 
 ## Active Tasks
 
-
-
 ## Pending Tasks
 
 - [CC-71 phase-2 distro expansion](tasks/pending/cc-71-phase2-distro-expansion.md) — deferred.
