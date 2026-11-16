@@ -19,19 +19,22 @@
 - [Two audiences: repeated agent jobs, and evals](plans/011-ops-jobs-and-evals.md) — proposed (2026-11-07): who Markov is for after the competitive research, and what would make it compelling: measured codify and eval stories, a run budget, fallback to the agent for codified steps, evals as a first-class use (results, comparison, pass@k, fresh workspaces, graders, record/replay), and agent-written workflows.
 - [First users](plans/010-first-users.md) — phase 1 done (2026-11-07, v0.1.0 released); phase 2, the Codify tutorial (measured, with a Claude Code workflow comparison, honest comparisons and an auth FAQ), next; positioning in [notes/competitive-positioning.md](notes/competitive-positioning.md): make the first five minutes work (releases, a laptop Quick Start, GitHub metadata), a Codify tutorial, launch with the markov-harness story, a Claude Code plugin, and the first ten users by hand.
 
-- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — local pilot and Omarchy VM completed; engine only; production staging, credentials and publication remain gated.
+- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — phase 1 live: v0.2.0 native repositories, signed Release and GHCR; [live evidence](notes/cc-71-phase1-live.md). Phase 2/admission deferred.
 
 ## Active Tasks
 
-- [CC-71 host-only signing preparation](tasks/done/cc-71-host-signing.md) — local implementation and disposable-key verification complete; production signing gated.
-
-- [CC-71 production readiness](tasks/current/cc-71-production-readiness.md) — archive/deploy backups and replacement inbox acceptance complete; stopped for review, production publication gated.
-
 ## Pending Tasks
+
+- [CC-71 phase-2 distro expansion](tasks/pending/cc-71-phase2-distro-expansion.md) — deferred.
+- [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 host-only signing preparation](tasks/done/cc-71-host-signing.md) — completed; real subkey signing and public verification recorded in the release evidence.
+- [CC-71 production readiness](tasks/done/cc-71-production-readiness.md) — backups, signing, publication and public acceptance complete for phase 1.
+- [CC-71 launch](tasks/done/cc-71-publication-review.md) — [v0.2.0 live](notes/cc-71-phase1-live.md).
 
 - [CC-71 non-web inbox/p15 acceptance](tasks/done/cc-71-nonweb-inbox-acceptance.md) — cleanup, 2 restricted keys/backups, real isolation tests and local promotion/rollback passed; [evidence](notes/cc-71-nonweb-inbox-acceptance.md).
 
@@ -103,8 +106,12 @@
 - [ADR-0005: In-memory debugger with a stdin control protocol](decisions/ADR-0005-in-memory-debugger-and-control-protocol.md)
 - [ADR-0006: Workflow hot reload with an explicit reload_workflow step](decisions/ADR-0006-workflow-hot-reload.md)
 
-- [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; approved real signing and native-client verification complete; public publication gated.
+## CC-71 Release Evidence
+
+- [CC-71 v0.2.0 candidate review](notes/cc-71-v0.2.0-candidate.md) — approved tag, clean-tag/native Arm CI and local preparation passed; approved real signing and native-client verification complete; phase-1 publication complete.
 
 - [Archive passphrase change and refreshed recovery](notes/cc-71-signing-passphrase-change.md) — private GUI confirmation/visibility, uncached typed unlock, refreshed off-machine restore and live signing verified; identity unchanged.
 
-- [CC-71 v0.2.0 publication review](tasks/current/cc-71-publication-review.md) — final install page, release notes and exact publication checklist prepared; local checks passed, outward launch approval pending.
+- [CC-71 v0.2.0 publication review](tasks/done/cc-71-publication-review.md) — completed; public services and checks recorded in live evidence.
+
+- [Repository metadata cache policy](bugs/fixed/cc-71-repository-metadata-cache.md) — fixed with separately approved repo-only operator config; live acceptance passed.
