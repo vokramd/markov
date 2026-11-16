@@ -216,8 +216,30 @@
     "image": "ghcr.io/vokramd/markov:0.2.0",
     "index_digest": "sha256:af3d39587ab56c367f8366e7e50ae37ee893f0cb76d9266d6ceb2a0076f79b51",
     "both_architectures_verified": true,
-    "anonymous_access_verified": false,
-    "credential_persisted": false
+    "anonymous_access_verified": true,
+    "credential_persisted": false,
+    "visibility": "public",
+    "public_runtime_checks": [
+      {
+        "architecture": "amd64",
+        "anonymous_pull": true,
+        "digest_preserved": true,
+        "quickstart": "passed",
+        "host_owned_state_report": true,
+        "emulated_on_p15": false,
+        "seconds": 1.5
+      },
+      {
+        "architecture": "arm64",
+        "anonymous_pull": true,
+        "digest_preserved": true,
+        "quickstart": "passed",
+        "host_owned_state_report": true,
+        "emulated_on_p15": true,
+        "isolated_storage": true,
+        "initial_failure": "local restrictive umask produced inaccessible root directory; fresh public-image extraction uses 022"
+      }
+    ]
   },
   "hosting": {
     "filesystem_free_gb": 575,
@@ -230,9 +252,8 @@
   "native_repository_published": false,
   "site_published": false,
   "pending_user_actions": [
-    "GitHub package settings: make only vokramd/markov Public",
     "Confirm DreamHost account has at least 1 GB available or no quota"
   ],
   "public_matrix_started": false,
-  "status": "waiting_for_visibility_and_account_quota_prerequisites"
+  "status": "public_ghcr_verified_waiting_for_account_quota"
 }

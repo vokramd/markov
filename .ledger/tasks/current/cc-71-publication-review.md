@@ -13,3 +13,5 @@ Pending human approval: push/open/merge the two launch-review PRs, then perform 
 ## Approved execution checkpoint
 
 Launch approved; both PRs merged, Release staged with 26 verified assets, exact GHCR image uploaded privately. Public visibility and DreamHost account-quota confirmation need human action; native repositories/site not yet written. See [execution evidence](../../notes/cc-71-publication-progress.md). Earlier pending-approval text is historical.
+
+Public GHCR now verified anonymously on both architectures (arm64 emulated). Only DreamHost account quota remains pending; Release stays draft, native repositories/site unchanged. See execution evidence.
