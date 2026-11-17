@@ -103,3 +103,9 @@ Arch container validation and earlier Omarchy acceptance are distinct evidence.
 The snapshot OCI digest above belongs to 0.2.1-dev and must not be advertised
 as the final stable image digest. No fresh Omarchy VM or native macOS execution
 is claimed for this snapshot; earlier Omarchy acceptance remains historical.
+
+## Subsequent approved tag
+
+Human approved v0.2.1 tag creation; clean-tag CI and stable unsigned verification
+completed separately. Use [stable candidate review](release-v0.2.1-stable.md)
+for signing inputs; this snapshot document and its OCI digest remain historical.

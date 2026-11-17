@@ -141,3 +141,16 @@ home disk; no real-key use, tag, release/registry/site publication or VM changes
 [Review](release-v0.2.1-review.md), [receipt](release-v0.2.1-review.json).
 Next explicit gate is v0.2.1 tag at fcb6ce0 and clean-tag CI; snapshot bytes cannot
 become a production release. Fresh Omarchy VM validation is not claimed.
+
+## 2026-11-17 — Approved v0.2.1 tag and stable unsigned preparation
+
+Human explicitly approved v0.2.1 at reviewed fcb6ce0. Annotated tag d25141e
+pushed and peeled remotely to fcb6ce0; real signing key not used for Git tag.
+Clean-tag Actions run 44109044662 passed candidate and native Arm jobs. Artifact
+14340017702 safely downloaded; 29-file inventory/checksums, 6 SBOMs, 86 license
+records, OCI index/platform hashes verified. Host-only prepare retained all CI
+bytes in a private vault and captured RPM header requests without signing.
+Debian/Fedora/Arch stable old-to-new fixture checks and both final OCI identity/
+persisted-workspace checks passed. [Stable review](release-v0.2.1-stable.md).
+No real-key use, Release, GHCR, native public repo or site publication. Next
+gate is real-key signing approval with backup-custody revalidation before use.
