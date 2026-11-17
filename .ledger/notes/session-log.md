@@ -126,3 +126,52 @@ regressions, bounded-timeout/reconnection checks and state-store docs. Full
 suite, lint, state race tests and build passed; original-source negative control
 failed as expected. [Task](../tasks/done/sqlite-concurrent-state.md).
 Production keeps PostgreSQL; no deployment, release, push or signing performed.
+
+## 2026-11-17 — v0.2.1 unsigned snapshot preparation
+
+Human returned packaging to Actions plus manual p15 signing/promotion; no new
+markovd work. Actions run 44015543510 from merged fcb6ce0 passed candidate and
+native Arm jobs, producing 0.2.1-dev. Artifact 14299211967 safely downloaded and
+checksummed. 11 serial native upgrade/install/removal rows, apt/RPM/pacman
+signature/hash negatives, 6 SBOMs/86 source-license records, both OCI runtime
+platforms and exact image/binary identities passed. Eight concurrent candidate
+CLI processes shared a startup-locked SQLite file and all checkpoints completed.
+66 repository-tool and 5 digest-helper tests passed. All persistent outputs use
+home disk; no real-key use, tag, release/registry/site publication or VM changes.
+[Review](release-v0.2.1-review.md), [receipt](release-v0.2.1-review.json).
+Next explicit gate is v0.2.1 tag at fcb6ce0 and clean-tag CI; snapshot bytes cannot
+become a production release. Fresh Omarchy VM validation is not claimed.
+
+## 2026-11-17 — Approved v0.2.1 tag and stable unsigned preparation
+
+Human explicitly approved v0.2.1 at reviewed fcb6ce0. Annotated tag d25141e
+pushed and peeled remotely to fcb6ce0; real signing key not used for Git tag.
+Clean-tag Actions run 44109044662 passed candidate and native Arm jobs. Artifact
+14340017702 safely downloaded; 29-file inventory/checksums, 6 SBOMs, 86 license
+records, OCI index/platform hashes verified. Host-only prepare retained all CI
+bytes in a private vault and captured RPM header requests without signing.
+Debian/Fedora/Arch stable old-to-new fixture checks and both final OCI identity/
+persisted-workspace checks passed. [Stable review](release-v0.2.1-stable.md).
+No real-key use, Release, GHCR, native public repo or site publication. Next
+gate is real-key signing approval with backup-custody revalidation before use.
+
+## 2026-11-17 — Authorized v0.2.1 signing completed
+
+Human approved signing. Mounted m720q encrypted backup hash matched prior
+restored/private-sign-tested receipt; independent tag/CI/license/candidate checks
+repeated before private approval JSON/key access. Wayland Qt unlock and signing
+succeeded without reading stored passphrase, copying keys or changing identity.
+Public-only checksums/manifest, both RPM signatures and exact signed Debian/
+Fedora/Arch upgrades passed. Local package/site plans ready; site draft commit
+982caac. [Signed review](release-v0.2.1-signed.md). No publication authorized.
+
+## 2026-11-17 — Approved v0.2.1 publication complete
+
+Native repos, GHCR version/latest, Release 448891576 and one-file install page
+published after human approval. 214 native/history paths verified, 11 real public
+old-to-new upgrades passed, both anonymously downloaded image platforms passed,
+26 anonymous Release downloads/signature verified. All unrelated site/config/
+authorized_keys hashes preserved. No key transfer, credential persistence,
+server-config/DNS/daemon changes or fresh VM. [Closeout](release-v0.2.1-live.md).
+Source review branches remain local; publication approval listed services/content,
+not additional source branch pushes/PR merges. Phase 2/admission remain pending.

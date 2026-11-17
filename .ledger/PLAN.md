@@ -19,10 +19,9 @@
 - [Two audiences: repeated agent jobs, and evals](plans/011-ops-jobs-and-evals.md) — proposed (2026-11-07): who Markov is for after the competitive research, and what would make it compelling: measured codify and eval stories, a run budget, fallback to the agent for codified steps, evals as a first-class use (results, comparison, pass@k, fresh workspaces, graders, record/replay), and agent-written workflows.
 - [First users](plans/010-first-users.md) — phase 1 done (2026-11-07, v0.1.0 released); phase 2, the Codify tutorial (measured, with a Claude Code workflow comparison, honest comparisons and an auth FAQ), next; positioning in [notes/competitive-positioning.md](notes/competitive-positioning.md): make the first five minutes work (releases, a laptop Quick Start, GitHub metadata), a Codify tutorial, launch with the markov-harness story, a Claude Code plugin, and the first ten users by hand.
 
-- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — phase 1 live: v0.2.0 native repositories, signed Release and GHCR; [live evidence](notes/cc-71-phase1-live.md). Phase 2/admission deferred.
+- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — phase 1 live (initial v0.2.0, current v0.2.1): native repositories, signed Release and GHCR; [live evidence](notes/cc-71-phase1-live.md). Phase 2/admission deferred.
 
 ## Active Tasks
-
 
 ## Pending Tasks
 
@@ -32,6 +31,10 @@
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [v0.2.1 publication](tasks/done/release-v0.2.1-tag-and-publication.md) — live; [public verification](notes/release-v0.2.1-live.md).
+
+- [Prepare v0.2.1 candidates](tasks/done/release-v0.2.1-preparation.md) — snapshot/native Arm, 11 native rows, negatives and OCI checks passed; [review](notes/release-v0.2.1-review.md).
 
 - [Concurrent SQLite checkpoints](tasks/done/sqlite-concurrent-state.md)
 
@@ -120,3 +123,11 @@
 - [CC-71 v0.2.0 publication review](tasks/done/cc-71-publication-review.md) — completed; public services and checks recorded in live evidence.
 
 - [Repository metadata cache policy](bugs/fixed/cc-71-repository-metadata-cache.md) — fixed with separately approved repo-only operator config; live acceptance passed.
+
+## v0.2.1 stable release evidence
+
+- [Stable unsigned candidate/signing review](notes/release-v0.2.1-stable.md) — historical pre-signing checkpoint; inputs subsequently signed and published.
+
+- [v0.2.1 signed review](notes/release-v0.2.1-signed.md) — historical signed-artifact checkpoint; subsequent publication completed.
+
+- [v0.2.1 live closeout](notes/release-v0.2.1-live.md) — native repos, Release, GHCR version/latest and install page published; public acceptance passed.

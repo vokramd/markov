@@ -1,0 +1,85 @@
+{
+  "stage": "signed-and-verified",
+  "fixture": false,
+  "version": "0.2.1",
+  "primary": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+  "subkey": "B0BEFAA736416BC0118E5EC33CF4648EB2925C50",
+  "candidate_manifest_sha256": "05c8c2522f2c240cd76a0c4e1a7ad3eee97b0cd9e772c3550659e2fed2dfdfc4",
+  "signed_manifest_sha256": "17ab709e52f18670963eeb810476d65bc57adae3a6855871d5b749026246fe7e",
+  "signed_oci_index_digest": "sha256:76ab27b0a8b0e820b5925065267e419cc886f1a63115935d7fad7bec02515610",
+  "public_files": 106,
+  "tools_image": "sha256:ccba524bc3a9322c582e5c465d74870e075c958615ff1ff8ba5f472037a70476",
+  "real_signing_authorized": true,
+  "passphrase_input": "private Wayland Qt pinentry; signing completed without reading the stored passphrase file",
+  "public_only_final_verification": true,
+  "final_checksum_files": 23,
+  "native_clients": [
+    {
+      "row": {
+        "id": "arch-rolling-x86_64",
+        "distro": "arch",
+        "version": "rolling",
+        "arch": "x86_64",
+        "family": "pacman",
+        "image": "docker.io/library/archlinux:base@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.1/stable/signed-clients/arch-rolling-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+      "old": "0.2.0",
+      "new": "0.2.1"
+    },
+    {
+      "row": {
+        "id": "debian-13-amd64",
+        "distro": "debian",
+        "version": "13",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.1/stable/signed-clients/debian-13-amd64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+      "old": "0.2.0",
+      "new": "0.2.1"
+    },
+    {
+      "row": {
+        "id": "fedora-45-x86_64",
+        "distro": "fedora",
+        "version": "45",
+        "arch": "x86_64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:45@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.1/stable/signed-clients/fedora-45-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+      "old": "0.2.0",
+      "new": "0.2.1"
+    }
+  ],
+  "backup_ciphertext_sha256": "a6202eb165e595b4e5392a785cd8e5b8dd1667ce658f38840ea7833ccfa6d4d9",
+  "backup_volume_mounted": true,
+  "published": false,
+  "signed_native_sha256": {
+    "markov_0.2.1_amd64.deb": "44fb3eac2e2153cf0a9ddd91268ca0b1d930b1a164c579d4e9ad0a2113c21696",
+    "markov_0.2.1_arm64.deb": "9d13307ea6b6951cdfbccf6dd5588f72b5326ff6931eb3fe1f924cd3f3e30d83",
+    "markov-0.2.1-1-x86_64.pkg.tar.zst": "1a94963eb5a22bb123f7456068633b4d5220ec576808aac07bdbd613ad306609",
+    "markov_0.2.1_amd64.rpm": "0119cdc49c7051642ea1216ce7a19078f059129fecab20200ee206be7ad8e453",
+    "markov_0.2.1_arm64.rpm": "a0fb31d433335e68462eb0c95ecc99ef0336114cb201d2e84db08292eb8da17e"
+  },
+  "promotion_pass_counts": {
+    "history": 108,
+    "payloads": 62,
+    "indexes": 41,
+    "commit": 3
+  },
+  "site_manifest_sha256": "35eafe9d42b6090a858e9b195f9fd30d976095535ce7f9e76bcf74cadc2b6dee",
+  "site_source_commit": "982caac",
+  "publication_authorized": false
+}

@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "version": "0.2.1",
+  "commit": "fcb6ce06de57025f4a21ac9d10a11814fff78381",
+  "ci_run": "44109044662",
+  "ci_url": "https://github.com/vokramd/markov/actions/runs/44109044662",
+  "artifact_id": 14340017702,
+  "archive_sha256": "5245a4ca1691e5503fa8bc58cf3f4857268e62c0d32c28dff8876947992709e2",
+  "candidate_manifest_sha256": "05c8c2522f2c240cd76a0c4e1a7ad3eee97b0cd9e772c3550659e2fed2dfdfc4",
+  "candidate_files": 29,
+  "native_arm64_ci": "success",
+  "ref": "refs/tags/v0.2.1",
+  "snapshot": false,
+  "tag": "v0.2.1",
+  "real_signing": false,
+  "publication": false,
+  "oci_index_digest": "sha256:76ab27b0a8b0e820b5925065267e419cc886f1a63115935d7fad7bec02515610",
+  "license_modules": 86,
+  "unresolved_licenses": [],
+  "sbom_count": 6,
+  "preparation_stage": "prepared",
+  "rpm_header_requests": {
+    "markov_0.2.1_amd64.rpm": "1c7222083f06a5b31cdaf2a022890d0cc67cc53be4f31720d6ef0c6275af2fc3",
+    "markov_0.2.1_arm64.rpm": "68b6f130c713cb38477c7232225c2f0615c6067fc8b6310a898f6ca6a0b6b85f"
+  },
+  "metadata_image": "sha256:ccba524bc3a9322c582e5c465d74870e075c958615ff1ff8ba5f472037a70476",
+  "candidate_vault_retained": true,
+  "stable_fixture_rows": [
+    {
+      "row": {
+        "id": "arch-rolling-x86_64",
+        "distro": "arch",
+        "version": "rolling",
+        "arch": "x86_64",
+        "family": "pacman",
+        "image": "docker.io/library/archlinux:base@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.1/stable/fixture/arch-rolling-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "29090FED37226385BD73456D00387CBF3C51C613",
+      "old": "0.2.0",
+      "new": "0.2.1"
+    },
+    {
+      "row": {
+        "id": "debian-13-amd64",
+        "distro": "debian",
+        "version": "13",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.1/stable/fixture/debian-13-amd64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "29090FED37226385BD73456D00387CBF3C51C613",
+      "old": "0.2.0",
+      "new": "0.2.1"
+    },
+    {
+      "row": {
+        "id": "fedora-45-x86_64",
+        "distro": "fedora",
+        "version": "45",
+        "arch": "x86_64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:45@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.1/stable/fixture/fedora-45-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "29090FED37226385BD73456D00387CBF3C51C613",
+      "old": "0.2.0",
+      "new": "0.2.1"
+    }
+  ],
+  "completed_at_utc": "2026-11-17T15:09:35Z",
+  "oci_runtime": {
+    "amd64": {
+      "version": "markov version 0.2.1",
+      "binary_sha256": "474de557e80f31e8fb833eabaa2cc9eb8a8e7e4384c370c76532e535f3eae5e8",
+      "image_id": "df1158235b0abe917b0477aeeef4794be55864ee1bed2634762ff604b08a5c33",
+      "quickstart": "passed",
+      "host_user_workspace": "passed"
+    },
+    "arm64": {
+      "version": "markov version 0.2.1",
+      "binary_sha256": "c0c3c95e511c28db99f957920a4d72effffda47c67ff65a289871d1181586e2b",
+      "image_id": "bbf2f9426341f7e3eb7c92aae8dce48e1c2c14211ae496702ef4eeb6b3941049",
+      "quickstart": "passed",
+      "host_user_workspace": "passed"
+    }
+  }
+}

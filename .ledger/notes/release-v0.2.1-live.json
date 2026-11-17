@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "version": "0.2.1",
+  "status": "published-and-verified",
+  "completed_at_utc": "2026-11-17T16:46:03.670273+00:00",
+  "tag": "v0.2.1",
+  "source_commit": "fcb6ce06de57025f4a21ac9d10a11814fff78381",
+  "clean_tag_ci": "https://github.com/vokramd/markov/actions/runs/44109044662",
+  "signing_primary": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+  "signing_subkey": "B0BEFAA736416BC0118E5EC33CF4648EB2925C50",
+  "signed_manifest_sha256": "17ab709e52f18670963eeb810476d65bc57adae3a6855871d5b749026246fe7e",
+  "native_repository": {
+    "base": "https://markovd.com/repos/",
+    "all_promotion_hashes_verified": true,
+    "passes": {
+      "history": 108,
+      "payloads": 62,
+      "indexes": 41,
+      "commit": 3
+    },
+    "old_versions_retained": true,
+    "public_upgrade_rows": [
+      {
+        "row": "debian-13-amd64",
+        "platform": "linux/amd64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "debian-13-arm64",
+        "platform": "linux/arm64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "ubuntu-24.04-amd64",
+        "platform": "linux/amd64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "ubuntu-24.04-arm64",
+        "platform": "linux/arm64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "ubuntu-26.04-amd64",
+        "platform": "linux/amd64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "ubuntu-26.04-arm64",
+        "platform": "linux/arm64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "fedora-44-x86_64",
+        "platform": "linux/amd64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "fedora-44-aarch64",
+        "platform": "linux/arm64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "fedora-45-x86_64",
+        "platform": "linux/amd64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "fedora-45-aarch64",
+        "platform": "linux/arm64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      },
+      {
+        "row": "arch-rolling-x86_64",
+        "platform": "linux/amd64",
+        "old_public_history": "0.2.0",
+        "new_public_repo": "0.2.1",
+        "install_upgrade_remove_quickstart": "passed"
+      }
+    ]
+  },
+  "github_release": {
+    "url": "https://github.com/vokramd/markov/releases/tag/v0.2.1",
+    "id": 448891576,
+    "asset_count": 26,
+    "anonymous_downloads": {
+      "count": 26,
+      "anonymous": true,
+      "all_sha256_match": true,
+      "public_only_signature_verified": true,
+      "draft_asset_urls_refreshed_after_publication": true
+    }
+  },
+  "ghcr": {
+    "tags": [
+      "ghcr.io/vokramd/markov:0.2.1",
+      "ghcr.io/vokramd/markov:latest"
+    ],
+    "index_digest": "sha256:76ab27b0a8b0e820b5925065267e419cc886f1a63115935d7fad7bec02515610",
+    "anonymous_runtime": [
+      {
+        "architecture": "amd64",
+        "anonymous_pull": true,
+        "version": "markov version 0.2.1",
+        "binary_sha256": "474de557e80f31e8fb833eabaa2cc9eb8a8e7e4384c370c76532e535f3eae5e8",
+        "host_user_persisted_quickstart": "passed",
+        "emulated_on_p15": false
+      },
+      {
+        "architecture": "arm64",
+        "anonymous_pull": true,
+        "version": "markov version 0.2.1",
+        "binary_sha256": "c0c3c95e511c28db99f957920a4d72effffda47c67ff65a289871d1181586e2b",
+        "host_user_persisted_quickstart": "passed",
+        "emulated_on_p15": true
+      }
+    ],
+    "credential_persisted": false
+  },
+  "install_page": {
+    "url": "https://markovd.com/install/",
+    "version": "0.2.1",
+    "sha256": "6c4a3c2109eaeddc234ee1aac41ba277328856940e0eeb36ec70feba35656da8",
+    "reviewed_bytes_match": true,
+    "unrelated_site_config_authorized_keys_unchanged": true
+  },
+  "http_acceptance": {
+    "checks": [
+      {
+        "path": "repos/keys/markov-archive.asc",
+        "content_type": "application/pgp-keys",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "sha256_matches": true
+      },
+      {
+        "path": "repos/debian/13/dists/stable/InRelease",
+        "content_type": "text/plain",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "sha256_matches": true
+      },
+      {
+        "path": "repos/fedora/45/stable/x86_64/repodata/repomd.xml",
+        "content_type": "application/xml",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "sha256_matches": true
+      },
+      {
+        "path": "repos/arch/rolling/stable/x86_64/markov.db",
+        "content_type": "application/octet-stream",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "sha256_matches": true
+      },
+      {
+        "path": "repos/debian/13/pool/main/m/markov/markov_0.2.1_amd64.deb",
+        "range_status": 206,
+        "content_range": "bytes 0-31/19831756",
+        "content_type": "application/vnd.debian.binary-package",
+        "cache_control": "no-cache, max-age=0, must-revalidate"
+      }
+    ],
+    "policy": "existing approved phase-one revalidation for all repo files",
+    "test_expectation_corrected_without_hosting_changes": true
+  },
+  "fresh_omarchy_vm": false,
+  "fresh_native_macos_execution": false,
+  "dns_hosting_config_authorized_keys_changed": false,
+  "source_review_branches_local": true
+}
