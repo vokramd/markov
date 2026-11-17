@@ -4,7 +4,7 @@ Status: proposed, 2026-11-17. Planning is authorized; implementation and new pub
 
 ## Recommended decisions
 
-1. Validate the existing signed RPMs on Rocky/Alma first; do not rebuild per distro.
+1. Validate the existing signed RPMs on RHEL (using UBI), Rocky and Alma first; do not rebuild per distro.
 2. Cover majors 9 and 10, latest supported minor only, on x86_64 and aarch64. Gate each image on its actual CPU requirements.
 3. Verify Leap 16.1 lifecycle and runnable images before selecting it; retain 16.0 as a candidate only if it remains maintained. Add Tumbleweed separately as rolling.
 4. Add Alpine 3.24 after proving native package/index format and signing compatibility with the pinned tools.
@@ -25,15 +25,18 @@ All rows are candidates until acceptance passes. Major/minor roots below are sta
 
 | Sequence | Distro/root version | Architectures | Package source | Added smoke rows |
 |---|---|---|---|---:|
+| A | rhel/9, rhel/10 (UBI validation) | x86_64, aarch64 | Existing RPM per arch | 4 |
 | A | rocky/9, rocky/10 | x86_64, aarch64 | Existing RPM per arch | 4 |
 | A | almalinux/9, almalinux/10 | x86_64, aarch64 | Same RPMs | 4 |
 | B | opensuse/16.1, subject to lifecycle gate | x86_64, aarch64 | Same RPMs, if compatible | 2 |
 | B | opensuse/rolling, Tumbleweed | x86_64, aarch64 | Same RPMs, if compatible | 2 |
 | C | alpine/3.24 | x86_64, aarch64 | Two new native APKs from existing binaries | 2 |
 
-Full proposal adds 14 container rows to the existing 11; Omarchy retains its separate VM acceptance. Native package count becomes seven, not one build per row. If Leap 16.0 is also requested and maintained, it adds two validation rows, not new RPMs. Do not implicitly add it alongside 16.1. No EL8, Alpine edge, i686, ARMv7, ppc64le, s390x or riscv64 support is proposed.
+Full proposal adds 18 container rows to the existing 11; Omarchy retains its separate VM acceptance. Native package count becomes seven, not one build per row. If Leap 16.0 is also requested and maintained, it adds two validation rows, not new RPMs. Do not implicitly add it alongside 16.1. No EL8, Alpine edge, i686, ARMv7, ppc64le, s390x or riscv64 support is proposed.
 
 Research checked 2026-11-17:
+
+- Human addition: include RHEL 9 and 10 using freely available UBI images. [Red Hat documents](https://access.redhat.com/articles/4238681) unauthenticated access through registry.access.redhat.com and subscription-free UBI repositories containing a subset of RHEL RPMs. Use the standard `registry.access.redhat.com/ubi9/ubi` and `registry.access.redhat.com/ubi10/ubi` images as candidate inputs; resolve and pin their actual per-platform digests before testing. Verify bash, CA certificates and DNF trust options using only UBI repositories plus the Markov fixture repository, with no subscription credentials or host entitlement mounts. Report these rows as “RHEL 9/10 — UBI container validated”; they establish userspace/package compatibility, not full RHEL host, SELinux, FIPS, certification or Red Hat support coverage. Record CPU baselines and available manifests for both architectures before accepting the rows.
 
 - [Rocky release guide](https://docs.rockylinux.org/releases/) lists 9.9/10.3 and supports the latest minor in each major. Rocky 9 requires x86-64-v2; Rocky 10 requires v3. Major 9 ends support in 2032 and 10 in 2035. Test host/runner CPU and official image availability before scheduling those rows; a GOAMD64=v1 executable does not lower the operating system baseline.
 - [Alma release notes](https://wiki.almalinux.org/release-notes/) list 9.9/10.3, with major support through 2032/2035 and latest-minor transitions. Alma 10 also lists an x86_64_v2 variant: select and record the exact image/variant rather than assuming every x86_64 image has the same baseline.
@@ -46,6 +49,8 @@ Research checked 2026-11-17:
 Proposed RPM roots are exactly:
 
 ```
+https://markovd.com/repos/rhel/9/stable/<arch>/
+https://markovd.com/repos/rhel/10/stable/<arch>/
 https://markovd.com/repos/rocky/9/stable/<arch>/
 https://markovd.com/repos/rocky/10/stable/<arch>/
 https://markovd.com/repos/almalinux/9/stable/<arch>/
@@ -76,7 +81,7 @@ Use only `stable` initially. Any future `testing` channel requires a separately 
 
 ## Work phases and estimates
 
-A, about 2–3 engineering days after images are obtainable: enumerate digest-pinned official images and runner CPU requirements; extend RPM root generation/allowlists; run eight clean rows using the existing RPM bytes. Check older RPM readers, compression/signature compatibility, dependency names, repository signature enforcement and version ordering. If byte reuse fails, present the concrete incompatibility before introducing a format variant. Produce a local signed fixture using only a throwaway key and an installation-doc draft.
+A, about 3–4 engineering days after images are obtainable: enumerate digest-pinned official images and runner CPU requirements; extend RPM root generation/allowlists; run twelve clean rows using the existing RPM bytes. Check older RPM readers, compression/signature compatibility, dependency names, repository signature enforcement and version ordering. If byte reuse fails, present the concrete incompatibility before introducing a format variant. Produce a local signed fixture using only a throwaway key and an installation-doc draft.
 
 B, about 1–2 days after lifecycle/image evidence: choose the maintained Leap version; add its two rows and two Tumbleweed rows. Validate zypper repository and package trust, snapshot churn and architecture mapping. Rolling support is best-effort; keep the previous passing snapshot digest as evidence, without instructing users to pin their entire OS to it.
 
