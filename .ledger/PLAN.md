@@ -24,7 +24,10 @@
 ## Active Tasks
 
 
+
 ## Pending Tasks
+
+- [v0.2.1 tag/signing/publication](tasks/pending/release-v0.2.1-tag-and-publication.md) — awaiting explicit approvals.
 
 - [CC-71 phase-2 distro expansion](tasks/pending/cc-71-phase2-distro-expansion.md) — deferred.
 - [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
@@ -32,6 +35,8 @@
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [Prepare v0.2.1 candidates](tasks/done/release-v0.2.1-preparation.md) — snapshot/native Arm, 11 native rows, negatives and OCI checks passed; [review](notes/release-v0.2.1-review.md).
 
 - [Concurrent SQLite checkpoints](tasks/done/sqlite-concurrent-state.md)
 

@@ -126,3 +126,18 @@ regressions, bounded-timeout/reconnection checks and state-store docs. Full
 suite, lint, state race tests and build passed; original-source negative control
 failed as expected. [Task](../tasks/done/sqlite-concurrent-state.md).
 Production keeps PostgreSQL; no deployment, release, push or signing performed.
+
+## 2026-11-17 — v0.2.1 unsigned snapshot preparation
+
+Human returned packaging to Actions plus manual p15 signing/promotion; no new
+markovd work. Actions run 44015543510 from merged fcb6ce0 passed candidate and
+native Arm jobs, producing 0.2.1-dev. Artifact 14299211967 safely downloaded and
+checksummed. 11 serial native upgrade/install/removal rows, apt/RPM/pacman
+signature/hash negatives, 6 SBOMs/86 source-license records, both OCI runtime
+platforms and exact image/binary identities passed. Eight concurrent candidate
+CLI processes shared a startup-locked SQLite file and all checkpoints completed.
+66 repository-tool and 5 digest-helper tests passed. All persistent outputs use
+home disk; no real-key use, tag, release/registry/site publication or VM changes.
+[Review](release-v0.2.1-review.md), [receipt](release-v0.2.1-review.json).
+Next explicit gate is v0.2.1 tag at fcb6ce0 and clean-tag CI; snapshot bytes cannot
+become a production release. Fresh Omarchy VM validation is not claimed.
