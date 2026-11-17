@@ -23,6 +23,7 @@
 
 ## Active Tasks
 
+
 ## Pending Tasks
 
 - [CC-71 phase-2 distro expansion](tasks/pending/cc-71-phase2-distro-expansion.md) — deferred.
@@ -31,6 +32,8 @@
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [Concurrent SQLite checkpoints](tasks/done/sqlite-concurrent-state.md)
 
 - [CC-71 host-only signing preparation](tasks/done/cc-71-host-signing.md) — completed; real subkey signing and public verification recorded in the release evidence.
 - [CC-71 production readiness](tasks/done/cc-71-production-readiness.md) — backups, signing, publication and public acceptance complete for phase 1.
@@ -83,6 +86,8 @@
 - [A load_artifact step's data is lost on resume](bugs/open/load-artifact-step-lost-on-resume.md)
 
 ## Fixed Bugs
+
+- [Concurrent SQLite process locks](bugs/fixed/sqlite-concurrent-processes-busy.md) — source fixed, not released.
 
 - [Whitespace around an exact expression, and around set_fact strings, is dropped](bugs/fixed/exact-expression-drops-surrounding-whitespace.md)
 - [A secret restored on resume inside a sub-workflow is not masked](bugs/fixed/restored-sub-run-secret-unmasked.md)

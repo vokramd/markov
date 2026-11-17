@@ -117,3 +117,12 @@ checked at once (it must keep the run's workflow) and answered with `reload_queu
 `reload_unchanged` or `reload_failed`; it is swapped in just before the next sub-workflow call,
 through the same swap, record and `workflow_reloaded` event as the step (`swapDefinition`). The
 IDE's Run → Reload Running Workflow uses it.
+
+## 2026-11-17 — Concurrent SQLite checkpoint source fix
+
+Implemented and verified in isolated `fix/sqlite-concurrent-state` worktree.
+Bounded busy handler on every connection, atomic startup migration, subprocess
+regressions, bounded-timeout/reconnection checks and state-store docs. Full
+suite, lint, state race tests and build passed; original-source negative control
+failed as expected. [Task](../tasks/done/sqlite-concurrent-state.md).
+Production keeps PostgreSQL; no deployment, release, push or signing performed.

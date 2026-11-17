@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -14,7 +16,30 @@ type SQLiteStore struct {
 }
 
 func NewSQLiteStore(path string) (*SQLiteStore, error) {
-	db, err := sql.Open("sqlite", path)
+	// Apply the timeout on every connection, including pool replacements.
+	separator := "?"
+	if strings.Contains(path, "?") {
+		separator = "&"
+	}
+	dsn := path
+	query := ""
+	if _, tail, found := strings.Cut(path, "?"); found {
+		query = tail
+	}
+	params, err := url.ParseQuery(query)
+	if err != nil {
+		return nil, fmt.Errorf("parsing sqlite options: %w", err)
+	}
+	configured := false
+	for _, pragma := range params["_pragma"] {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(pragma)), "busy_timeout") {
+			configured = true
+		}
+	}
+	if !configured {
+		dsn += separator + "_pragma=" + url.QueryEscape("busy_timeout=5000")
+	}
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("opening sqlite db: %w", err)
 	}
@@ -27,7 +52,25 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 }
 
 func migrate(db *sql.DB) error {
-	_, err := db.Exec(`
+	// Serialize inspection and legacy ALTERs across processes before reading schema.
+	conn, err := db.Conn(context.Background())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if _, err := conn.ExecContext(context.Background(), "BEGIN IMMEDIATE"); err != nil {
+		return fmt.Errorf("locking schema migration: %w", err)
+	}
+	defer conn.ExecContext(context.Background(), "ROLLBACK")
+	if err := migrateSQLiteSchema(conn); err != nil {
+		return err
+	}
+	_, err = conn.ExecContext(context.Background(), "COMMIT")
+	return err
+}
+
+func migrateSQLiteSchema(db *sql.Conn) error {
+	_, err := db.ExecContext(context.Background(), `
 		CREATE TABLE IF NOT EXISTS runs (
 			run_id          TEXT PRIMARY KEY,
 			workflow_file   TEXT NOT NULL,
@@ -94,8 +137,8 @@ func migrate(db *sql.DB) error {
 	return nil
 }
 
-func ensureSQLiteColumn(db *sql.DB, table, column, definition string) error {
-	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+func ensureSQLiteColumn(db *sql.Conn, table, column, definition string) error {
+	rows, err := db.QueryContext(context.Background(), "PRAGMA table_info("+table+")")
 	if err != nil {
 		return fmt.Errorf("checking %s columns: %w", table, err)
 	}
@@ -115,7 +158,7 @@ func ensureSQLiteColumn(db *sql.DB, table, column, definition string) error {
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("checking %s columns: %w", table, err)
 	}
-	if _, err := db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition); err != nil {
+	if _, err := db.ExecContext(context.Background(), "ALTER TABLE "+table+" ADD COLUMN "+column+" "+definition); err != nil {
 		return fmt.Errorf("adding %s.%s: %w", table, column, err)
 	}
 	return nil

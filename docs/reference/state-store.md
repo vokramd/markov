@@ -309,3 +309,18 @@ This walks the run tree (parent and children) and produces a Mermaid-formatted o
 ## Jev support
 
 Inline and gate decisions persist internal `__jev__/...` step receipts, including skipped-condition decisions. The prefix is reserved and these records are not restored as ordinary template variables. See [Jev decisions](jev.md).
+
+### Concurrent SQLite processes
+
+Each SQLite connection waits up to five seconds for a database lock, including
+connections reopened by the pool. Schema inspection and legacy migrations run
+under one immediate transaction so concurrent CLI startups cannot race an
+`ALTER TABLE`. Checkpoint writes wait for short competing writes; a lock held
+past the timeout still returns an error. Workflow steps are never replayed by
+this lock handling. An explicit SQLite URI `_pragma=busy_timeout%3D<ms>` overrides
+the default.
+
+Use SQLite on a local disk for small deployments. Writes remain serialized;
+this change does not add distributed locking or make shared network filesystems
+suitable for SQLite. Use PostgreSQL for sustained concurrent daemon workloads,
+with an engine database separate from markovd's application database.
