@@ -47,3 +47,9 @@ publication covers native repos, GitHub Release assets/notes, exact GHCR
 :0.2.1 plus :latest, and one install-page file. No DNS, server configuration,
 private-key transfer, deploy-key or production-daemon changes are included.
 Recheck immutable conflicts/current origin state immediately before execution.
+
+## Subsequent approved publication
+
+Human separately approved all listed targets; publication and public acceptance
+are complete. See [live closeout](release-v0.2.1-live.md). This signed-review
+packet records the earlier pre-publication checkpoint.

@@ -164,3 +164,14 @@ succeeded without reading stored passphrase, copying keys or changing identity.
 Public-only checksums/manifest, both RPM signatures and exact signed Debian/
 Fedora/Arch upgrades passed. Local package/site plans ready; site draft commit
 982caac. [Signed review](release-v0.2.1-signed.md). No publication authorized.
+
+## 2026-11-17 — Approved v0.2.1 publication complete
+
+Native repos, GHCR version/latest, Release 448891576 and one-file install page
+published after human approval. 214 native/history paths verified, 11 real public
+old-to-new upgrades passed, both anonymously downloaded image platforms passed,
+26 anonymous Release downloads/signature verified. All unrelated site/config/
+authorized_keys hashes preserved. No key transfer, credential persistence,
+server-config/DNS/daemon changes or fresh VM. [Closeout](release-v0.2.1-live.md).
+Source review branches remain local; publication approval listed services/content,
+not additional source branch pushes/PR merges. Phase 2/admission remain pending.

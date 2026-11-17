@@ -21,3 +21,18 @@ contract. Phase 2 and official-distro admission remain deferred.
 Human approved signing; GUI entry succeeded. Exact signed native checks and
 local package/site plans passed. [Signed review](../../notes/release-v0.2.1-signed.md).
 Only public publication remains pending. No outward writes authorized by signing.
+
+## Publication approved, in progress
+
+Human approved all reviewed outward targets. GHCR and native repos are live;
+Release draft and site update await public acceptance. See
+[publication checkpoint](../../notes/release-v0.2.1-publication.md).
+
+## Completed verification
+
+All approved publication steps complete: native repos/GHCR/Release/install page.
+All 11 real public upgrades, both anonymously downloaded image runtimes, 26
+anonymous Release downloads/public checksum signature, HTTP/cache/Range and
+unrelated protected baseline hashes passed. [Live closeout](../../notes/release-v0.2.1-live.md).
+Source review/closeout branches remain local; no source push/merge authorized by
+this publication's listed target scope. No VM/DNS/hosting-config/daemon changes.
