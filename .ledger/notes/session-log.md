@@ -175,3 +175,8 @@ authorized_keys hashes preserved. No key transfer, credential persistence,
 server-config/DNS/daemon changes or fresh VM. [Closeout](release-v0.2.1-live.md).
 Source review branches remain local; publication approval listed services/content,
 not additional source branch pushes/PR merges. Phase 2/admission remain pending.
+
+
+## 2026-11-17 — CC-71 source closeout and phase-2 plan
+
+Prepared plan 013 on an isolated documentation branch after the approved v0.2.1/source closeout. Proposed RPM reuse across EL/openSUSE before two new APK artifacts; recorded CPU, lifecycle and native signing gates. Implementation, new keys and new outward publication await review. Site source closeout PR #6 merged as cdfe5365a1ed975189461ef1f60a0f49f821efb8. Engine source closeout PR #6 merged as 1ca19f2d8c9541c439192fc0275569508c45bd72 after test, unsigned candidate and native-arm64 checks all passed. No unrelated work changed.
