@@ -1,6 +1,6 @@
 # CC-71 phase 2: extend first-party Linux repositories
 
-Status: proposed, 2026-11-17. Planning is authorized; implementation and new publication await review. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
+Status: phase-A local implementation authorized, 2026-11-17. RHEL/UBI, Rocky and Alma local RPM validation passed; [phase-A evidence](../tasks/done/cc-71-phase2-rpm-pilot.md). New publication remains gated. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
 
 ## Recommended decisions
 

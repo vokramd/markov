@@ -185,3 +185,8 @@ Prepared plan 013 on an isolated documentation branch after the approved v0.2.1/
 ## 2026-11-17 — RHEL via UBI added to phase-2 plan
 
 Human requested RHEL 9 and 10 using free UBI images. Added four x86_64/aarch64 rows, exact proposed rhel/9 and rhel/10 roots, subscription-free validation and explicit UBI-versus-full-host evidence limits. Phase 2 now proposes 18 additional container rows (29 total), with the same seven native artifacts after Alpine. Planning only; no images pulled or packages published.
+
+
+## 2026-11-17 — CC-71 phase-A RPM pilot passed
+
+Implemented site tooling on feat/cc-71-phase2-rpm at be4951f. Twelve RHEL/UBI, Rocky and Alma rows passed install/upgrade/removal/version/quickstart/state-preservation, plus twelve signature/hash negative rows and 69 tooling tests. Existing RPMs reused; fixture-only disposable key; original manifests reverified. Arm64 emulated on p15. Home-disk evidence, loopback origin stopped. No real-key operations, public changes or pushes. Phase B/C remain; source/evidence review is the next checkpoint.

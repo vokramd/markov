@@ -21,18 +21,21 @@
 
 - [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — phase 1 live (initial v0.2.0, current v0.2.1): native repositories, signed Release and GHCR; [live evidence](notes/cc-71-phase1-live.md). Phase 2 planning ready; implementation/admission deferred.
 
-- [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — proposed matrix and RPM-first sequencing; implementation awaits review.
+- [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — phase A local pilot passed; openSUSE/Alpine next; publication gated.
 
 ## Active Tasks
 
+- [CC-71 phase-2 distro expansion](tasks/current/cc-71-phase2-distro-expansion.md) — phase A passed; openSUSE/Alpine remain.
+
 ## Pending Tasks
 
-- [CC-71 phase-2 distro expansion](tasks/pending/cc-71-phase2-distro-expansion.md) — plan ready; implementation awaits review.
 - [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 phase-A enterprise RPM pilot](tasks/done/cc-71-phase2-rpm-pilot.md) — 12 positive rows, 12 rejection rows, 69 tooling tests.
 
 - [v0.2.1 publication](tasks/done/release-v0.2.1-tag-and-publication.md) — live; [public verification](notes/release-v0.2.1-live.md).
 
