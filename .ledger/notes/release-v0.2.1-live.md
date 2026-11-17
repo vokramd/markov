@@ -41,9 +41,9 @@ all-revalidation policy; no hosting change was used to satisfy a test assumption
 [Structured receipt](release-v0.2.1-live.json) holds all row/asset/digest details.
 Private operational receipts, unsigned vault and signed artifacts remain under
 ~/.cache/cc71/v0.2.1/stable/ . No fresh Omarchy VM or native macOS execution is
-claimed; historical Omarchy acceptance remains separate. Review/closeout source
-branches are committed locally and have not been pushed or merged as part of
-this publication scope.
+claimed; historical Omarchy acceptance remains separate. At the publication checkpoint, source-review branches were committed locally.
+The human subsequently authorized source closeout through reviewed PRs; this
+document retains the publication-time evidence.
 
 Rollback retains all immutable versions. A new increasing release is preferred
 for engine rollback; back up workflow state before downgrade. Previous install
