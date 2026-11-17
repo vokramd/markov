@@ -154,3 +154,13 @@ Debian/Fedora/Arch stable old-to-new fixture checks and both final OCI identity/
 persisted-workspace checks passed. [Stable review](release-v0.2.1-stable.md).
 No real-key use, Release, GHCR, native public repo or site publication. Next
 gate is real-key signing approval with backup-custody revalidation before use.
+
+## 2026-11-17 — Authorized v0.2.1 signing completed
+
+Human approved signing. Mounted m720q encrypted backup hash matched prior
+restored/private-sign-tested receipt; independent tag/CI/license/candidate checks
+repeated before private approval JSON/key access. Wayland Qt unlock and signing
+succeeded without reading stored passphrase, copying keys or changing identity.
+Public-only checksums/manifest, both RPM signatures and exact signed Debian/
+Fedora/Arch upgrades passed. Local package/site plans ready; site draft commit
+982caac. [Signed review](release-v0.2.1-signed.md). No publication authorized.

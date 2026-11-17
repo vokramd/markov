@@ -15,3 +15,9 @@ Do not reuse or relabel the 0.2.1-dev snapshot as stable. Signing requires its o
 approval/current verified key backup; publishing Release/GHCR/native repos/site
 requires separate outward approval. Keep all versions and existing native URL
 contract. Phase 2 and official-distro admission remain deferred.
+
+## Signing completed
+
+Human approved signing; GUI entry succeeded. Exact signed native checks and
+local package/site plans passed. [Signed review](../../notes/release-v0.2.1-signed.md).
+Only public publication remains pending. No outward writes authorized by signing.

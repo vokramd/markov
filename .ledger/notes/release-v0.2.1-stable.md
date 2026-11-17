@@ -58,3 +58,9 @@ No real-key use, package publication, Release, GHCR or website changes authorize
 Earlier 11-row snapshot/negatives/runtime evidence remains
 [separate](release-v0.2.1-review.md). Stable artifacts will never be substituted
 with relabeled snapshot bytes.
+
+## Subsequent authorized signing
+
+Human approved local real-key signing. GUI unlock, signing, public-only
+verification and exact signed native clients passed. See
+[signed review](release-v0.2.1-signed.md). Only publication approval remains.

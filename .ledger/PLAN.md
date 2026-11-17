@@ -27,7 +27,7 @@
 
 ## Pending Tasks
 
-- [v0.2.1 tag/signing/publication](tasks/pending/release-v0.2.1-tag-and-publication.md) — tag/clean-tag CI done; awaiting real signing/publication approvals.
+- [v0.2.1 tag/signing/publication](tasks/pending/release-v0.2.1-tag-and-publication.md) — tag/CI and authorized signing done; awaiting publication approval.
 
 - [CC-71 phase-2 distro expansion](tasks/pending/cc-71-phase2-distro-expansion.md) — deferred.
 - [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
@@ -129,3 +129,5 @@
 ## v0.2.1 stable release evidence
 
 - [Stable unsigned candidate/signing review](notes/release-v0.2.1-stable.md) — clean-tag/native Arm, three stable package families and both OCI platforms passed; no real signing or package publication.
+
+- [v0.2.1 signed review](notes/release-v0.2.1-signed.md) — GUI unlock and signed native checks passed; local plans ready, publication gated.
