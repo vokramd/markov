@@ -1,12 +1,12 @@
 # CC-71 phase 2: extend first-party Linux repositories
 
-Status: phase-A local implementation authorized, 2026-11-17. RHEL/UBI, Rocky and Alma local RPM validation passed; [phase-A evidence](../tasks/done/cc-71-phase2-rpm-pilot.md). New publication remains gated. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
+Status: local phase-A/B acceptance and phase-C format proof passed, 2026-11-17. All 18 new container rows passed; [current production work](../tasks/current/cc-71-phase2-distro-expansion.md) tracks the remaining native APK signing/candidate integration. No new public roots or real-key operations. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
 
 ## Recommended decisions
 
 1. Validate the existing signed RPMs on RHEL (using UBI), Rocky and Alma first; do not rebuild per distro.
 2. Cover majors 9 and 10, latest supported minor only, on x86_64 and aarch64. Gate each image on its actual CPU requirements.
-3. Verify Leap 16.1 lifecycle and runnable images before selecting it; retain 16.0 as a candidate only if it remains maintained. Add Tumbleweed separately as rolling.
+3. Use Leap 16.1 and Tumbleweed rolling: release/lifecycle and both image architectures are verified. Do not add 16.0 implicitly.
 4. Add Alpine 3.24 after proving native package/index format and signing compatibility with the pinned tools.
 5. Keep manual p15 signing/promotion, existing GitHub unsigned candidates, and all historical versions. No additional markovd service is needed.
 6. Review support evidence and installation text before publishing any new root. Official distro admission remains a separate later task.
@@ -28,7 +28,7 @@ All rows are candidates until acceptance passes. Major/minor roots below are sta
 | A | rhel/9, rhel/10 (UBI validation) | x86_64, aarch64 | Existing RPM per arch | 4 |
 | A | rocky/9, rocky/10 | x86_64, aarch64 | Existing RPM per arch | 4 |
 | A | almalinux/9, almalinux/10 | x86_64, aarch64 | Same RPMs | 4 |
-| B | opensuse/16.1, subject to lifecycle gate | x86_64, aarch64 | Same RPMs, if compatible | 2 |
+| B | opensuse/16.1 | x86_64, aarch64 | Same RPMs, if compatible | 2 |
 | B | opensuse/rolling, Tumbleweed | x86_64, aarch64 | Same RPMs, if compatible | 2 |
 | C | alpine/3.24 | x86_64, aarch64 | Two new native APKs from existing binaries | 2 |
 
@@ -40,7 +40,7 @@ Research checked 2026-11-17:
 
 - [Rocky release guide](https://docs.rockylinux.org/releases/) lists 9.9/10.3 and supports the latest minor in each major. Rocky 9 requires x86-64-v2; Rocky 10 requires v3. Major 9 ends support in 2032 and 10 in 2035. Test host/runner CPU and official image availability before scheduling those rows; a GOAMD64=v1 executable does not lower the operating system baseline.
 - [Alma release notes](https://wiki.almalinux.org/release-notes/) list 9.9/10.3, with major support through 2032/2035 and latest-minor transitions. Alma 10 also lists an x86_64_v2 variant: select and record the exact image/variant rather than assuming every x86_64 image has the same baseline.
-- The [openSUSE download origin](https://download.opensuse.org/distribution/leap/) contains both 16.0 and 16.1. Directory presence alone does not prove lifecycle, supported container architectures or a release's recommended status. The lifetime wiki was inaccessible during research: resolving these facts is a B entry gate. This supersedes plan 012's unverified 16.0 selection. Record the Tumbleweed snapshot date and digest for every run; do not invent a numeric rolling version.
+- Resolved in phase B: the [official announcement](https://news.opensuse.org/2026/11/03/leap-unites-traditional-and-immutable) confirms Leap 16.1 released 2026-11-03. Its [release notes](https://doc.opensuse.org/release-notes/x86_64/openSUSE/Leap/16.1/html/release-notes-leap-161/index.html) specify 24 months of community maintenance per minor. Official Leap 16.1 and Tumbleweed indexes expose amd64/arm64 manifests and are pinned in the site matrix. This supersedes plan 012's unverified 16.0 selection. Record Tumbleweed's actual VERSION_ID and image digest, keeping the public version token rolling.
 - [Alpine's branch table](https://www.alpinelinux.org/releases/) currently lists 3.24.4, with 3.24 main/community support and branch end 2028-06-01; community support changes at the next stable release. Recheck before implementation. Do not preselect an unverified future 3.25 release.
 - [nFPM's APK configuration](https://nfpm.goreleaser.com/docs/configuration/) uses an RSA PEM signing key and a public key filename under `/etc/apk/keys`; it does not use OpenPGP. This does not prove the pinned producer's package/index format is accepted by the selected Alpine client. Establish that experimentally before finalizing C.
 
@@ -75,7 +75,7 @@ gpgkey=https://markovd.com/repos/keys/markov-archive.asc
 
 The archive-key URL matches the current install-page source; verify its fingerprint before trusting it. openSUSE gets a tested zypper `.repo` example with both package and repository verification enforced; do not assume DNF-specific options alone enforce zypper policy. Document fingerprint verification before trust, then install/refresh/update/remove commands for each client.
 
-For Alpine, propose `https://markovd.com/repos/alpine/3.24/stable/<arch>/` with native APK metadata. If the selected producer/client uses APK v2, publish `APKINDEX.tar.gz` with its native signature; if v3 is required, determine its exact metadata names and signing protocol first. This is an explicit unresolved format gate, not a directory of downloads. Alpine's repositories file normally takes the root without the architecture suffix; test automatic architecture selection. Publish a separately named native public key and verification digest only after human approval. Never use `--allow-untrusted` in installation instructions.
+For Alpine, propose `https://markovd.com/repos/alpine/3.24/stable/<arch>/` with native APK metadata. The local nFPM v2.49.0 / apk-tools 3.0.9 proof accepts APK v2 and `APKINDEX.tar.gz` with RSA256 native signatures on both architectures; this resolves the format gate. Native production signing/candidate integration is still pending. Alpine's repositories file normally takes the root without the architecture suffix; test automatic architecture selection. Publish a separately named native public key and verification digest only after human approval. Never use `--allow-untrusted` in installation instructions.
 
 Use only `stable` initially. Any future `testing` channel requires a separately validated root and explicit opt-in; no alias silently follows prereleases. Existing apt, Arch and Omarchy URLs remain unchanged. Keep apt Valid-Until deferred as decided in phase 1.
 

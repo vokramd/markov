@@ -190,3 +190,8 @@ Human requested RHEL 9 and 10 using free UBI images. Added four x86_64/aarch64 r
 ## 2026-11-17 — CC-71 phase-A RPM pilot passed
 
 Implemented site tooling on feat/cc-71-phase2-rpm at be4951f. Twelve RHEL/UBI, Rocky and Alma rows passed install/upgrade/removal/version/quickstart/state-preservation, plus twelve signature/hash negative rows and 69 tooling tests. Existing RPMs reused; fixture-only disposable key; original manifests reverified. Arm64 emulated on p15. Home-disk evidence, loopback origin stopped. No real-key operations, public changes or pushes. Phase B/C remain; source/evidence review is the next checkpoint.
+
+
+## 2026-11-17 — CC-71 openSUSE and Alpine local acceptance
+
+Site 90bcc4d: Leap 16.1 and Tumbleweed shared RPMs, four positive/four rejection rows. Site 7f7241f: Alpine APK v2/RSA256 proof with reused binaries, two positive/two corrected cryptographic rejection rows; final suite 76 tests. Original bundles independently verified. x86_64 native/Arm64 emulated; loopback servers stopped. Added unsigned APK GoReleaser format and validated config, but production signer refuses APK-bearing candidates pending encrypted-native-key integration. No source pushes, new clean CI run, real keys/backups/signatures or publication. Production integration is a separate pending task; do not describe this proof as release-ready APK support.

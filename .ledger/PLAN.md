@@ -21,19 +21,24 @@
 
 - [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — phase 1 live (initial v0.2.0, current v0.2.1): native repositories, signed Release and GHCR; [live evidence](notes/cc-71-phase1-live.md). Phase 2 planning ready; implementation/admission deferred.
 
-- [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — phase A local pilot passed; openSUSE/Alpine next; publication gated.
+- [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — all 18 new local rows passed; Alpine production signing integration remains; publication gated.
 
 ## Active Tasks
 
-- [CC-71 phase-2 distro expansion](tasks/current/cc-71-phase2-distro-expansion.md) — phase A passed; openSUSE/Alpine remain.
+- [CC-71 phase-2 distro expansion](tasks/current/cc-71-phase2-distro-expansion.md) — local pilots passed; production APK integration remains.
 
 ## Pending Tasks
+
+- [CC-71 Alpine production signing](tasks/pending/cc-71-alpine-production-signing.md) — encrypted native key adapter and seven-artifact integration, following local proof.
 
 - [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 openSUSE pilot](tasks/done/cc-71-phase2-opensuse-pilot.md) — four positive/rejection rows.
+- [CC-71 Alpine format proof](tasks/done/cc-71-phase2-alpine-format-proof.md) — two positive/rejection rows; production integration pending.
 
 - [CC-71 phase-A enterprise RPM pilot](tasks/done/cc-71-phase2-rpm-pilot.md) — 12 positive rows, 12 rejection rows, 69 tooling tests.
 
