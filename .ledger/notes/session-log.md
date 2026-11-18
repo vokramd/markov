@@ -195,3 +195,8 @@ Implemented site tooling on feat/cc-71-phase2-rpm at be4951f. Twelve RHEL/UBI, R
 ## 2026-11-17 — CC-71 openSUSE and Alpine local acceptance
 
 Site 90bcc4d: Leap 16.1 and Tumbleweed shared RPMs, four positive/four rejection rows. Site 7f7241f: Alpine APK v2/RSA256 proof with reused binaries, two positive/two corrected cryptographic rejection rows; final suite 76 tests. Original bundles independently verified. x86_64 native/Arm64 emulated; loopback servers stopped. Added unsigned APK GoReleaser format and validated config, but production signer refuses APK-bearing candidates pending encrypted-native-key integration. No source pushes, new clean CI run, real keys/backups/signatures or publication. Production integration is a separate pending task; do not describe this proof as release-ready APK support.
+
+
+## 2026-11-18 — encrypted native signer completed while human away
+
+Site dc88afb: encrypted host-only RSA256 adapter, independent identity/backup approvals, GUI protocol and FD-only password handoff, full seven-artifact curation/manifest/checksum/SBOM integration. Staged hash maps now explicitly bind to the approved candidate; regression recorded as fixed bug. Fresh local unsigned 0.2.2 fixture build found and fixed missing APK revision through APK-only r0 override. Two encrypted-key fixture bundles, five positive/five negative native-client rows and 93 safety tests passed; binary/archive/SBOM lineage independently verified. No production keys or GUI prompts, m720q/backups, pushes/hosted CI/tags/publication. Loopback server stopped. Human-present key/backup steps and pending receipts documented; rollout review is next.

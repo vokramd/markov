@@ -1,6 +1,6 @@
 # CC-71 phase 2: extend first-party Linux repositories
 
-Status: local phase-A/B acceptance and phase-C format proof passed, 2026-11-17. All 18 new container rows passed; [current production work](../tasks/current/cc-71-phase2-distro-expansion.md) tracks the remaining native APK signing/candidate integration. No new public roots or real-key operations. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
+Status: local phase-A/B acceptance and phase-C format proof passed, 2026-11-17. All 18 new container rows passed; [current production work](../tasks/current/cc-71-phase2-distro-expansion.md) tracks the remaining source/CI and production review after local native signing/candidate integration. No new public roots or real-key operations. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
 
 ## Recommended decisions
 
@@ -75,7 +75,7 @@ gpgkey=https://markovd.com/repos/keys/markov-archive.asc
 
 The archive-key URL matches the current install-page source; verify its fingerprint before trusting it. openSUSE gets a tested zypper `.repo` example with both package and repository verification enforced; do not assume DNF-specific options alone enforce zypper policy. Document fingerprint verification before trust, then install/refresh/update/remove commands for each client.
 
-For Alpine, propose `https://markovd.com/repos/alpine/3.24/stable/<arch>/` with native APK metadata. The local nFPM v2.49.0 / apk-tools 3.0.9 proof accepts APK v2 and `APKINDEX.tar.gz` with RSA256 native signatures on both architectures; this resolves the format gate. Native production signing/candidate integration is still pending. Alpine's repositories file normally takes the root without the architecture suffix; test automatic architecture selection. Publish a separately named native public key and verification digest only after human approval. Never use `--allow-untrusted` in installation instructions.
+For Alpine, propose `https://markovd.com/repos/alpine/3.24/stable/<arch>/` with native APK metadata. The local nFPM v2.49.0 / apk-tools 3.0.9 proof accepts APK v2 and `APKINDEX.tar.gz` with RSA256 native signatures on both architectures; this resolves the format gate. The host-only encrypted native signing/candidate integration now passes local disposable-key acceptance; real native identity and rollout review remain pending. Alpine's repositories file normally takes the root without the architecture suffix; test automatic architecture selection. Publish a separately named native public key and verification digest only after human approval. Never use `--allow-untrusted` in installation instructions.
 
 Use only `stable` initially. Any future `testing` channel requires a separately validated root and explicit opt-in; no alias silently follows prereleases. Existing apt, Arch and Omarchy URLs remain unchanged. Keep apt Valid-Until deferred as decided in phase 1.
 
