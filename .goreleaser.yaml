@@ -37,7 +37,10 @@ nfpms:
     maintainer: Markov <info@markovd.com>
     description: Declarative workflow engine for agents and native steps
     license: Apache-2.0
-    formats: [deb, rpm]
+    formats: [deb, rpm, apk]
+    overrides:
+      apk:
+        release: "0"
     bindir: /usr/bin
     dependencies: [ca-certificates, bash]
     contents:

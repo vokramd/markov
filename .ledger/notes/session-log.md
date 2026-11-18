@@ -175,3 +175,28 @@ authorized_keys hashes preserved. No key transfer, credential persistence,
 server-config/DNS/daemon changes or fresh VM. [Closeout](release-v0.2.1-live.md).
 Source review branches remain local; publication approval listed services/content,
 not additional source branch pushes/PR merges. Phase 2/admission remain pending.
+
+
+## 2026-11-17 — CC-71 source closeout and phase-2 plan
+
+Prepared plan 013 on an isolated documentation branch after the approved v0.2.1/source closeout. Proposed RPM reuse across EL/openSUSE before two new APK artifacts; recorded CPU, lifecycle and native signing gates. Implementation, new keys and new outward publication await review. Site source closeout PR #6 merged as cdfe5365a1ed975189461ef1f60a0f49f821efb8. Engine source closeout PR #6 merged as 1ca19f2d8c9541c439192fc0275569508c45bd72 after test, unsigned candidate and native-arm64 checks all passed. No unrelated work changed.
+
+
+## 2026-11-17 — RHEL via UBI added to phase-2 plan
+
+Human requested RHEL 9 and 10 using free UBI images. Added four x86_64/aarch64 rows, exact proposed rhel/9 and rhel/10 roots, subscription-free validation and explicit UBI-versus-full-host evidence limits. Phase 2 now proposes 18 additional container rows (29 total), with the same seven native artifacts after Alpine. Planning only; no images pulled or packages published.
+
+
+## 2026-11-17 — CC-71 phase-A RPM pilot passed
+
+Implemented site tooling on feat/cc-71-phase2-rpm at be4951f. Twelve RHEL/UBI, Rocky and Alma rows passed install/upgrade/removal/version/quickstart/state-preservation, plus twelve signature/hash negative rows and 69 tooling tests. Existing RPMs reused; fixture-only disposable key; original manifests reverified. Arm64 emulated on p15. Home-disk evidence, loopback origin stopped. No real-key operations, public changes or pushes. Phase B/C remain; source/evidence review is the next checkpoint.
+
+
+## 2026-11-17 — CC-71 openSUSE and Alpine local acceptance
+
+Site 90bcc4d: Leap 16.1 and Tumbleweed shared RPMs, four positive/four rejection rows. Site 7f7241f: Alpine APK v2/RSA256 proof with reused binaries, two positive/two corrected cryptographic rejection rows; final suite 76 tests. Original bundles independently verified. x86_64 native/Arm64 emulated; loopback servers stopped. Added unsigned APK GoReleaser format and validated config, but production signer refuses APK-bearing candidates pending encrypted-native-key integration. No source pushes, new clean CI run, real keys/backups/signatures or publication. Production integration is a separate pending task; do not describe this proof as release-ready APK support.
+
+
+## 2026-11-18 — encrypted native signer completed while human away
+
+Site dc88afb: encrypted host-only RSA256 adapter, independent identity/backup approvals, GUI protocol and FD-only password handoff, full seven-artifact curation/manifest/checksum/SBOM integration. Staged hash maps now explicitly bind to the approved candidate; regression recorded as fixed bug. Fresh local unsigned 0.2.2 fixture build found and fixed missing APK revision through APK-only r0 override. Two encrypted-key fixture bundles, five positive/five negative native-client rows and 93 safety tests passed; binary/archive/SBOM lineage independently verified. No production keys or GUI prompts, m720q/backups, pushes/hosted CI/tags/publication. Loopback server stopped. Human-present key/backup steps and pending receipts documented; rollout review is next.
