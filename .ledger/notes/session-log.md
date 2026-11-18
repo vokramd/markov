@@ -200,3 +200,8 @@ Site 90bcc4d: Leap 16.1 and Tumbleweed shared RPMs, four positive/four rejection
 ## 2026-11-18 — encrypted native signer completed while human away
 
 Site dc88afb: encrypted host-only RSA256 adapter, independent identity/backup approvals, GUI protocol and FD-only password handoff, full seven-artifact curation/manifest/checksum/SBOM integration. Staged hash maps now explicitly bind to the approved candidate; regression recorded as fixed bug. Fresh local unsigned 0.2.2 fixture build found and fixed missing APK revision through APK-only r0 override. Two encrypted-key fixture bundles, five positive/five negative native-client rows and 93 safety tests passed; binary/archive/SBOM lineage independently verified. No production keys or GUI prompts, m720q/backups, pushes/hosted CI/tags/publication. Loopback server stopped. Human-present key/backup steps and pending receipts documented; rollout review is next.
+
+
+## 2026-11-18 — merge/publication authorized; v0.2.2 clean candidate prepared
+
+Merged both PR #7 at tested heads; pushed annotated v0.2.2 for engine merge 4b84e8a. Run 44349390140 candidate/native-Arm green. Downloaded artifact 14448626271, verified seven artifacts, six SBOMs, licenses/static ELF/OCI/provenance, and prepared unsigned signing requests. Native production identity absent; human p15 availability question pending. Site 3a312c3 prepares confirmed GUI key initializer and install draft, 98 local tests plus six-width Playwright. No real key creation/backup/signing, m720q/DreamHost contact or package/site/Release/GHCR publication.

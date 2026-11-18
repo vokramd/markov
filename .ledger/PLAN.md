@@ -25,6 +25,8 @@
 
 ## Active Tasks
 
+- [v0.2.2 publication](tasks/current/release-v0.2.2-publication.md) — merged/tagged; clean candidate and native Arm green; waiting for human key/signing prompts.
+
 - [CC-71 phase-2 distro expansion](tasks/current/cc-71-phase2-distro-expansion.md) — local implementation/acceptance passed; rollout review pending.
 
 ## Pending Tasks
