@@ -210,3 +210,8 @@ Merged both PR #7 at tested heads; pushed annotated v0.2.2 for engine merge 4b84
 ## 2026-11-18 — native key created; backup GUI pending
 
 Human ready at p15: encrypted RSA4096 key created with matching double GUI entry and decryption verification. No password file. Confirmed m720q mounted /mnt/wdc_16tb/BACKUPS and matching migrated archive-backup ciphertext. Native backup helper self-test passed, but first real backup prompt cancelled/unavailable before encryption/remote writes. Readiness question sent; native key remains unbacked, no signing/publication. Preserve it and reopen backup only after reply.
+
+
+## 2026-11-18 — native backup bytes verified; key-password decision pending
+
+Backup outer password verified and encrypted copy on 16-TB retrieved/decrypted; original encrypted private/public hashes matched. Native-key password unlock failed twice, including visible-entry retry. Preserved encrypted restore for key-only retry; no verified receipt fabricated. Asked retry/fresh-native-key/pause; no silent rekey. Archive GPG unchanged, no real release signing/publication.

@@ -5,3 +5,6 @@ Current: merges and publication authorized, both PRs merged, clean v0.2.2 tag/ca
 Human was ready and created the encrypted native identity successfully. [Key setup checkpoint](../../notes/release-v0.2.2-key-setup.md): backup GUI did not complete, so backup/restore verification remains pending. Reopen only the backup dialog after readiness reply; never regenerate/overwrite the existing key or infer a verified backup receipt. Release signing/publication have not begun.
 
 Then: independently review source/CI/native identity approval; sign and validate real candidate; clean install/update/remove/negative tests for agreed matrix; freeze install page with actual native hash/digest; ordered native repository/Release/GHCR publication and anonymous verification. Keep every old version and existing v0.2.1 endpoints until promotion. No markovd/harness packaging or official distro submission.
+
+
+Latest: native backup copied/retrieved/decrypted and file hashes verified, but native-key password re-entry failed twice. [Partial checkpoint](../../notes/release-v0.2.2-backup-password-pending.md). Waiting for explicit choice: key-only retry, fresh unpublished native key with visible/uncached verification, or pause. No publication or verified native backup receipt.
