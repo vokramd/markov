@@ -11,7 +11,7 @@ Status: first-party implementation and publication complete through v0.2.2 (2026
 - Encrypted vault/native-key backup on mounted m720q `/mnt/wdc_16tb/BACKUPS/` was retrieved and restore/sign verified; archive/deploy backup history is preserved under CC-48/CC-70. Original unpublished Alpine identity retained. Old plaintext GPG password source removed after explicit approval.
 - GHCR authenticity uses the GPG-signed release manifest/checksums covering the exact OCI index digest. A separate Cosign key/signature/attestation scheme was proposed but is not deployed; it remains optional future hardening.
 - Historical versions retained. Signing and live publication still require authorization for each future release; prior releases do not grant standing approval for new outward actions.
-- Remaining: official distro admission research; routine maintenance/rolling checks; optional host isolation and registry-native signatures. The original design and dated checkpoints below are preserved as history where they differ from this implemented state.
+- Remaining: official distro readiness/possible admission implementation; routine maintenance/rolling checks; optional host isolation and registry-native signatures. Admission research is complete in [report 014](014-cc-71-distro-admission-research.md). The original design and dated checkpoints below are preserved as history where they differ from this implemented state.
 
 
 ## Original recommended decisions (implemented; historical baseline)
@@ -117,4 +117,8 @@ Retain the previous complete signed metadata snapshot for rollback. Restore meta
 
 Approve the proposed major/version/architecture matrix and the A→B→C order. Resolve Leap lifecycle/version and Alma 10 image variant in the first implementation research checkpoint. Approve native Alpine key custody/backup only after format proof. New public roots, real signing/public keys, tags, releases, GHCR changes and deployment remain separately gated; this plan authorizes none of them.
 
-After first-party expansion, resume [official distro admission research](../tasks/pending/cc-71-distro-admission-research.md): verify Fedora review/sponsorship and Go bundling rules, Debian ITP/sponsor then Ubuntu syncing, and Omarchy acceptance versus Arch official/AUR. Audit `third_party/pongo2`, license/source completeness, reproducible release tarballs, man page and maintainer capacity first. No first-party root or PPA is described as an official distro repository, and no submission/contact is part of this plan.
+After first-party expansion, resume [official distro admission research](../tasks/done/cc-71-distro-admission-research.md): verify Fedora review/sponsorship and Go bundling rules, Debian ITP/sponsor then Ubuntu syncing, and Omarchy acceptance versus Arch official/AUR. Audit `third_party/pongo2`, license/source completeness, reproducible release tarballs, man page and maintainer capacity first. No first-party root or PPA is described as an official distro repository, and no submission/contact is part of this plan.
+
+## Admission research checkpoint — 2026-11-19
+
+[Report 014](014-cc-71-distro-admission-research.md) completes the separately assigned policy/gap research. Fedora now requires vendored dependencies for new Go packages; Debian follows its own source/dependency policy. Initial local prototype/readiness tasks are proposed, not implementation or submission authorizations. Source/publications remain unchanged.

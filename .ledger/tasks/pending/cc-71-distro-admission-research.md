@@ -1,3 +1,0 @@
-# CC-71 later phase: official distro admission research
-
-Pending; first-party phase 1 is live, but this does not authorize contacts/submissions. Reverify Omarchy package-repo contribution acceptance and distinguish it from Arch official/AUR; Fedora package review/sponsorship and current Go bundling rules; Debian ITP/sponsorship route into Ubuntu (PPA is not official). Audit license/source tarballs, vendored third_party/pongo2 replacement/unbundling, stable releases, man page and maintainership requirements. Existing plan 012 has initial primary-source research; update it before implementation. Never call first-party repositories distro-endorsed. No agents, issues, sponsorship messages, AUR/distro review submissions or public publication without explicit assignment.

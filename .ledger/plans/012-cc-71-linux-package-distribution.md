@@ -11,7 +11,7 @@ Status: first-party implementation and publication complete through v0.2.2 (2026
 - Encrypted vault/native-key backup on mounted m720q `/mnt/wdc_16tb/BACKUPS/` was retrieved and restore/sign verified; archive/deploy backup history is preserved under CC-48/CC-70. Original unpublished Alpine identity retained. Old plaintext GPG password source removed after explicit approval.
 - GHCR authenticity uses the GPG-signed release manifest/checksums covering the exact OCI index digest. A separate Cosign key/signature/attestation scheme was proposed but is not deployed; it remains optional future hardening.
 - Historical versions retained. Signing and live publication still require authorization for each future release; prior releases do not grant standing approval for new outward actions.
-- Remaining: official distro admission research; routine maintenance/rolling checks; optional host isolation and registry-native signatures. The original design and dated checkpoints below are preserved as history where they differ from this implemented state.
+- Remaining: official distro readiness/possible admission implementation; routine maintenance/rolling checks; optional host isolation and registry-native signatures. Admission research is complete in [report 014](014-cc-71-distro-admission-research.md). The original design and dated checkpoints below are preserved as history where they differ from this implemented state.
 
 Research: 2026-11-14 on p15.lab.net, umbrella workspace `/home/jtanner/workspace/github/vokramd`.
 
@@ -27,17 +27,17 @@ Approved first delivery: package `markov` for Arch/Omarchy x86_64, Debian 13, Ub
 
 ## Decision summary
 
-Human decisions relayed by cc-coordinator; these approve design direction, not implementation or outward publication.
+Original human decisions, with subsequent delivery/custody outcomes reconciled below. New releases or external submissions still need their own approval.
 
 | # | Decision | Recorded decision |
 |---|---|---|
 | 1 | Deliverables | Approved: `markov` engine native packages plus `ghcr.io/vokramd/markov`; no daemon/client/UI/harness packages. |
 | 2 | Phase 1 | Approved: five shared artifacts (deb amd64/arm64, rpm x86_64/aarch64, pacman x86_64) for Arch, Omarchy, Debian 13, Ubuntu 24.04/26.04, Fedora 44/45; container smoke rows and one Omarchy VM. |
 | 3 | Maintenance | Best-effort now, human maintained. Future direction: scheduled Markov workflows on a local markovd instance for release checks/rolling smoke tests; operations idea only, no daemon packaging or schedule implementation. |
-| 4 | Hosting | Approved replacement: separate NON-WEB `~/markov-uploads/{site,packages}` inboxes, two restricted rrsync identities, p15-only private snapshot/validation/manual promotion with existing admin desktop agent. Phase-1 manual packages skip inbox round trip; no server promoter, routing/DNS change or direct-public-root upload key. Acceptance passed; public promotion still gated. |
-| 5 | Backup/custody | Signing stays on p15. Independent encrypted archive and both deploy-key backups on m720q `/mnt/seagate_8tb/BACKUPS/` retrieved/decrypted/restored and verified. Source site key protected on p15; unattended package key on m720q. Human retains backup/site secrets; CC-70 inventory/CC-48 migration apply. Production signing/publication remains separate. |
+| 4 | Hosting | Implemented: separate non-web inboxes and restricted keys; releases manually validated/promoted from p15 through the pinned admin agent, bypassing optional inbox upload. No server promoter or DNS/routing change. Released versions are public; future publication remains approval-gated. |
+| 5 | Backup/custody | Signing remains on p15 in the dedicated KeePassXC flow. Archive/deploy recovery receipts remain historical evidence; native key and vault copies on mounted m720q `/mnt/wdc_16tb/BACKUPS/` passed retrieval/restore/sign verification. Old plaintext GPG source removed after approval. Preserve retired key and backup/migration records under CC-48/CC-70. |
 | 6 | Retention | **Keep all versions**, including published package/image revisions, candidates and verification records. Keep disk/inode/quota checks; no automatic age/count deletion. |
-| 7 | Phase 2 | Approved as deferred: Rocky/Alma, openSUSE and Alpine; shared RPMs and two APK artifacts later. |
+| 7 | Phase 2 | Originally deferred; delivered in v0.2.2 with RHEL/UBI, Rocky/Alma, Leap/Tumbleweed and Alpine. Seven shared artifacts, 29 public container rows. |
 | 8 | Container | Approved: Debian 13 `trixie-slim`, runtime and Go builder pinned by digest. |
 
 Additional approved future scope: after first-party repositories work, research admission into Omarchy's package repository, Fedora and Ubuntu archives; record actual requirements/effort, then seek separate submission approval. No admission or timeline is promised.
@@ -75,7 +75,7 @@ Pre-existing work preserved: untracked `markov/examples/quickstart-report.md`, u
 
 Core owns package definitions, source tests, engine tags, release assets and container workflow. Site repository owns public install docs, key files and a proposed `repo-tools/` promotion/metadata toolchain accepting only allowlisted Markov releases/digests. No daemon or harness checkout changes. A new infrastructure repository is unnecessary initially.
 
-## Approved phase-1 matrix and deferred phase-2 candidates
+## Matrix evolution (historical phase-1/deferred design)
 
 Approval defines the target matrix; no row has been implemented or validated by this plan. Version tokens are exact public path names; OS security/minor updates stay in the same root. Compile the static engine once for Linux amd64 and arm64, then package once per format/architecture. Reuse the **same final signed package bytes** under every compatible distro/version root; only native repository indexes/views and install instructions vary. Record SHA-256 equality in the release manifest. No distro-specific rebuilds, package revisions or duplicate signing passes by default.
 
@@ -134,13 +134,13 @@ Install page includes Docker/Podman digest-pinned run examples, bind-mount/state
 
 ## Host and credential split
 
-Intended credential split, incorporating coordinator-supplied access findings; no new credential has been provisioned:
+Implemented credential split; historical access findings and original transfer proposal follow for context:
 
 | Host | Role / credential custody |
 |---|---|
 | GitHub Actions | Unsigned candidates/tests only; read-only source/artifact access. No private signing keys, DreamHost SSH key or release/registry publishing credentials. |
-| p15 | Existing private OpenPGP primary/signing subkey and local passphrase; later image-signing private key. Verify candidates, generate/sign final indexes and signed transfer manifest. Needs only read access to approved CI artifacts and authenticated LAN transfer to m720q; no DreamHost or GitHub/GHCR publisher credential required. |
-| m720q (`lan-192-168-1-3`) | Package publisher and backup destination. Coordinator reports existing personal id_ed25519 reaches markovd.com non-interactively; plan a new restricted package-only key, not reuse of that shell key. Later use minimally scoped GitHub Releases/GHCR upload credentials here (availability also unverified). Hold public verification keys and signed release output only; never import live private signing keys. Backup volume stores encrypted key backup ciphertext, with no decryption secret beside it. |
+| p15 | Live archive OpenPGP/native RSA private identities; dedicated encrypted vault. Validates CI candidates, signs, and manually publishes approved packages/site, Releases and GHCR using pinned admin SSH and designated GitHub token. No signing credentials in CI. |
+| m720q (`lan-192-168-1-3`) | Verified encrypted backup destination on the mounted 16-TB drive; restricted package uploader can stage to a non-web inbox for future automation. It is not the v0.2.2 release publisher and has no live archive private key. |
 | Human custody | Distinct backup decryption passphrase/private key in a separately recoverable secure store; explicit publication approval. Do not rely on the p15-adjacent passphrase or a sole credential copy on either host for recovery. |
 
 Coordinator reports both domains share account/server `tannerjc@pdx1-shared-a1-46`; exact host-key pins/aliases still need local verification before use. m720q's tannerjc.net known-host entry is absent and was not tested; use verified markovd.com trust rather than assuming hostname interchangeability. p15 already has agent-mediated read-only/admin access, not unattended deployment. These are supplied read-only findings; this agent has not contacted either host in this revision.
@@ -295,9 +295,11 @@ Rotation: publish new public certificate/key fingerprints before use; overlap at
 2. **Expansion: completed in v0.2.2.** RHEL/UBI, Rocky/Alma, Leap 16.1/Tumbleweed rolling and Alpine 3.24 are public. Seven shared native artifacts and 29 public container rows; four extra RHEL rows were added after the original 25-row estimate. See plan 013 and current release evidence.
 3. **Publication/recovery readiness: completed for released versions.** Real signed native metadata, vault/key restore, anonymous access, negative trust tests, staged promotion/rollback tooling, all-version retention and live browser/header checks passed. Both source/closeout PR sets merged. Fresh approval and checks remain necessary for each future release.
 4. **Operations: ongoing best-effort human maintenance.** Sign and publish from p15, preserve all versions, check quotas/key expiry and test recovery. Scheduled rolling/release monitoring is future work; GitHub Actions is sufficient and a local markovd scheduler is optional. A separate DreamHost user and registry-native signing/attestations are optional hardening, not completed work.
-5. **Distro admission research: next authorized work.** The human requested research after ledger reconciliation. Produce current-policy/gap/effort reports for Omarchy, Fedora and Debian/Ubuntu; do not submit, contact sponsors/maintainers, open upstream issues/PRs/ITPs or imply acceptance without separate approval.
+5. **Distro admission research: completed.** [Report 014](014-cc-71-distro-admission-research.md) verifies current requirements, accepted comparisons and local gaps. Proposed readiness/prototype work and any contacts/submissions need separate approval; no distro admission is claimed.
 
 ## Later phase: distro-maintained repository admission research
+
+Current finding: [report 014](014-cc-71-distro-admission-research.md) completes the assigned 2026-11-19 research and supersedes this original 2026-11-14 baseline, including its unresolved Fedora-policy access limit. The canonical current Go guidelines were successfully retrieved from p15 and require vendored dependencies for new Go packages. No submissions or admission implementation have started.
 
 Goal: eventually have **Markov itself** accepted into Omarchy's own package repository, Fedora's archive and Ubuntu's archive for credibility. This phase begins after first-party repos work; it does not block them or authorize a submission. Our markovd.com repositories remain **first-party**, never called official Fedora/Ubuntu/Omarchy repositories. Distro maintainers control acceptance, builds, signing and release timelines; existing signed binary packages do not themselves qualify for admission.
 
@@ -388,3 +390,7 @@ Host-only signing preparation is complete with disposable keys: [evidence](../no
 ## Phase 1 live
 
 The human approved publication and the discovered cache-policy exception. Native repositories, public certificate, v0.2.0 GitHub Release, GHCR image and install page are live and verified. [Final evidence](../notes/cc-71-phase1-live.md) and exact JSON records supersede earlier pending checkpoints. Eleven public package rows, public Omarchy package checks and both public image architectures passed, with documented emulation/desktop limits. Source tag is unchanged; later distro expansion/admission stays deferred. No change to CC itself.
+
+## Admission research checkpoint — 2026-11-19
+
+[Report 014](014-cc-71-distro-admission-research.md) completes the separately assigned policy/gap research. Fedora now requires vendored dependencies for new Go packages; Debian follows its own source/dependency policy. Initial local prototype/readiness tasks are proposed, not implementation or submission authorizations. Source/publications remain unchanged.

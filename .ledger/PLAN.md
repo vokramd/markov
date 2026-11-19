@@ -6,6 +6,8 @@
 
 ## Plans
 
+- [CC-71 official distro admission report](plans/014-cc-71-distro-admission-research.md) — research complete; Omarchy first, Fedora vendor/source proof next, Debian dependency closure audit before Ubuntu admission. No submissions.
+
 - [Directory Workflow Files Plan](plans/000-directory-workflow-files.md)
 - [Step-Through Debugging and Interactive Workflow Building](plans/001-step-through-debugging.md)
 - [Durable External Tasks and Orchestration Reliability](plans/002-durable-task-orchestration.md) — proposed; implementation not started.
@@ -19,7 +21,7 @@
 - [Two audiences: repeated agent jobs, and evals](plans/011-ops-jobs-and-evals.md) — proposed (2026-11-07): who Markov is for after the competitive research, and what would make it compelling: measured codify and eval stories, a run budget, fallback to the agent for codified steps, evals as a first-class use (results, comparison, pass@k, fresh workspaces, graders, record/replay), and agent-written workflows.
 - [First users](plans/010-first-users.md) — phase 1 done (2026-11-07, v0.1.0 released); phase 2, the Codify tutorial (measured, with a Claude Code workflow comparison, honest comparisons and an auth FAQ), next; positioning in [notes/competitive-positioning.md](notes/competitive-positioning.md): make the first five minutes work (releases, a laptop Quick Start, GitHub metadata), a Codify tutorial, launch with the markov-harness story, a Claude Code plugin, and the first ten users by hand.
 
-- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — first-party phases 1 and 2 complete at v0.2.2; 29 public container rows, signed native repositories/Release/GHCR and install page; [current evidence](notes/release-v0.2.2-live.md). Official distro admission research is next.
+- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — first-party phases 1 and 2 complete at v0.2.2; 29 public container rows, signed native repositories/Release/GHCR and install page; [current evidence](notes/release-v0.2.2-live.md). Official admission research is complete; source-readiness and submission work remain separate.
 
 - [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — completed and public in v0.2.2; 18 added distro rows, seven shared native artifacts, verified key/vault recovery and signed publication.
 
@@ -27,14 +29,21 @@
 
 
 
+
 ## Pending Tasks
 
+- [Shared distro readiness](tasks/pending/cc-71-distro-shared-readiness.md) — proposed, needs implementation approval.
+- [Omarchy local admission prototype](tasks/pending/cc-71-omarchy-admission-prototype.md) — proposed, no external PR authorized.
+- [Fedora source/vendor prototype](tasks/pending/cc-71-fedora-admission-prototype.md) — proposed, no review submission authorized.
+- [Debian dependency closure audit](tasks/pending/cc-71-debian-dependency-discovery.md) — proposed extended assessment before Debian/Ubuntu packaging.
 
-- [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
+
 
 - [Step source positions in events and errors](tasks/pending/step-source-positions.md)
 
 ## Completed Tasks
+
+- [CC-71 official distro admission research](tasks/done/cc-71-distro-admission-research.md) — primary-source requirements, accepted comparisons, readiness gaps and effort/decision report.
 
 - [v0.2.2 publication](tasks/done/release-v0.2.2-publication.md) — public; all 29 container rows, explicit Omarchy route and anonymous artifact/image/page verification passed.
 - [CC-71 phase-2 distro expansion](tasks/done/cc-71-phase2-distro-expansion.md) — expanded first-party matrix published.
@@ -160,3 +169,5 @@
 - [v0.2.2 live closeout](notes/release-v0.2.2-live.md) — native repositories, Release, GHCR and install page public; 29 rows plus Omarchy route verified; publication task completed.
 - [Cached matrix architecture selection](bugs/fixed/cc-71-cached-matrix-platform.md) — fail-closed image-ID selection and refreshed rolling test pin; 111 safety tests.
 - [Draft-to-public Release transition](bugs/fixed/cc-71-release-draft-transition.md) — explicit tag binding and fresh public asset URLs verified.
+
+- [Incomplete Pongo2 fork provenance](bugs/open/pongo2-patch-provenance-incomplete.md) — admission-readiness documentation gap; source behavior unchanged.

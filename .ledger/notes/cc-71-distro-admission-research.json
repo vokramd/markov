@@ -1,0 +1,351 @@
+{
+  "date_utc": "2026-11-19T14:08:53.943672+00:00",
+  "research_only": true,
+  "first_reconciliation_commit": "a67a8ad",
+  "reconciliation_pushed_before_research": true,
+  "source_commit": "718f611c2cba1b112d62382de6f2a63e1b7e94ba",
+  "released_tag": "v0.2.2",
+  "omarchy_tree": "ffba05a4e2bdddbd494a8a92218ad87a39c22c2b",
+  "pongo2": {
+    "upstream_version": "v6.0.0",
+    "archive_url": "https://proxy.golang.org/github.com/flosch/pongo2/v6/@v/v6.0.0.zip",
+    "archive_sha256": "f1735a69047132e9e9cfa719d2aa04e42fda0e36b90cbae1a10265e8e4d3d23d",
+    "changed_common_files": [
+      "parser_expression.go",
+      "variable.go"
+    ],
+    "local_only_files": [
+      "MARKOV_PATCHES.md"
+    ],
+    "omitted_upstream_files": [
+      "docs/examples.md",
+      "docs/filters.md",
+      "docs/index.md",
+      "docs/macros.md",
+      "docs/tags.md",
+      "docs/template_sets.md",
+      "docs/write_filters.md",
+      "docs/write_tags.md",
+      "pongo2_issues_test.go",
+      "pongo2_template_test.go",
+      "pongo2_test.go",
+      "template_tests/CHANGELOG",
+      "template_tests/autoescape.tpl",
+      "template_tests/autoescape.tpl.out",
+      "template_tests/base_dir_test/base.html",
+      "template_tests/base_dir_test/subdir/include.html",
+      "template_tests/base_dir_test/subdir/index.html",
+      "template_tests/base_dir_test/subdir/ssi.html",
+      "template_tests/block_render/block.tpl",
+      "template_tests/block_render/block.tpl.out",
+      "template_tests/block_render/deep.tpl",
+      "template_tests/block_render/deep.tpl.out",
+      "template_tests/block_render/split.tpl",
+      "template_tests/block_render/split.tpl.out",
+      "template_tests/comment.tpl",
+      "template_tests/comment.tpl.out",
+      "template_tests/complex.tpl",
+      "template_tests/complex.tpl.out",
+      "template_tests/complex_trim_blocks.tpl",
+      "template_tests/complex_trim_blocks.tpl.options",
+      "template_tests/complex_trim_blocks.tpl.out",
+      "template_tests/cycle.tpl",
+      "template_tests/cycle.tpl.out",
+      "template_tests/empty.tpl",
+      "template_tests/empty.tpl.out",
+      "template_tests/empty_trim_blocks.tpl",
+      "template_tests/empty_trim_blocks.tpl.options",
+      "template_tests/empty_trim_blocks.tpl.out",
+      "template_tests/expressions.tpl",
+      "template_tests/expressions.tpl.out",
+      "template_tests/extends.tpl",
+      "template_tests/extends.tpl.out",
+      "template_tests/extends_super.tpl",
+      "template_tests/extends_super.tpl.out",
+      "template_tests/extends_super2.tpl",
+      "template_tests/extends_super2.tpl.out",
+      "template_tests/extends_super3.tpl",
+      "template_tests/extends_super3.tpl.out",
+      "template_tests/extends_super4.tpl",
+      "template_tests/extends_super4.tpl.out",
+      "template_tests/filters-compilation.err",
+      "template_tests/filters-compilation.err.out",
+      "template_tests/filters-execution.err",
+      "template_tests/filters-execution.err.out",
+      "template_tests/filters.tpl",
+      "template_tests/filters.tpl.out",
+      "template_tests/firstof.tpl",
+      "template_tests/firstof.tpl.out",
+      "template_tests/for.tpl",
+      "template_tests/for.tpl.out",
+      "template_tests/function_calls_wrapper.tpl",
+      "template_tests/function_calls_wrapper.tpl.out",
+      "template_tests/if.tpl",
+      "template_tests/if.tpl.out",
+      "template_tests/ifchanged.tpl",
+      "template_tests/ifchanged.tpl.out",
+      "template_tests/includes.helper",
+      "template_tests/includes.tpl",
+      "template_tests/includes.tpl.out",
+      "template_tests/inheritance/base.tpl",
+      "template_tests/inheritance/base2.tpl",
+      "template_tests/inheritance/base3.tpl",
+      "template_tests/inheritance/base4.tpl",
+      "template_tests/inheritance/cycle_include.tpl",
+      "template_tests/inheritance/inheritance2/skeleton.tpl",
+      "template_tests/inheritance/inheritance3/skeleton.tpl",
+      "template_tests/issues.tpl",
+      "template_tests/issues.tpl.out",
+      "template_tests/lorem.tpl",
+      "template_tests/lorem.tpl.out",
+      "template_tests/macro-compilation.err",
+      "template_tests/macro-compilation.err.out",
+      "template_tests/macro-execution.err",
+      "template_tests/macro-execution.err.out",
+      "template_tests/macro.helper",
+      "template_tests/macro.tpl",
+      "template_tests/macro.tpl.out",
+      "template_tests/macro2.helper",
+      "template_tests/now.tpl",
+      "template_tests/now.tpl.out",
+      "template_tests/pongo2ctx.tpl",
+      "template_tests/pongo2ctx.tpl.out",
+      "template_tests/quotes.tpl",
+      "template_tests/quotes.tpl.out",
+      "template_tests/sandbox-compilation.err",
+      "template_tests/sandbox-compilation.err.out",
+      "template_tests/sandbox.tpl",
+      "template_tests/sandbox.tpl.out",
+      "template_tests/set.tpl",
+      "template_tests/set.tpl.out",
+      "template_tests/spaceless.tpl",
+      "template_tests/spaceless.tpl.out",
+      "template_tests/ssi.helper",
+      "template_tests/ssi.tpl",
+      "template_tests/ssi.tpl.out",
+      "template_tests/tag_filter.tpl",
+      "template_tests/tag_filter.tpl.out",
+      "template_tests/tags-compilation.err",
+      "template_tests/tags-compilation.err.out",
+      "template_tests/template_sets.tpl",
+      "template_tests/template_sets.tpl.out",
+      "template_tests/templatetag.tpl",
+      "template_tests/templatetag.tpl.out",
+      "template_tests/time.tpl",
+      "template_tests/time.tpl.out",
+      "template_tests/trim_blocks.tpl",
+      "template_tests/trim_blocks.tpl.options",
+      "template_tests/trim_blocks.tpl.out",
+      "template_tests/variables.tpl",
+      "template_tests/variables.tpl.out",
+      "template_tests/verbatim.tpl",
+      "template_tests/verbatim.tpl.out",
+      "template_tests/whitespace_control.tpl",
+      "template_tests/whitespace_control.tpl.out",
+      "template_tests/widthratio.tpl",
+      "template_tests/widthratio.tpl.out",
+      "template_tests/with.helper",
+      "template_tests/with.tpl",
+      "template_tests/with.tpl.out"
+    ]
+  },
+  "pongo2_latest": {
+    "Version": "v6.1.0",
+    "Time": "2026-05-02T14:27:18Z",
+    "Origin": {
+      "VCS": "git",
+      "URL": "https://github.com/flosch/pongo2",
+      "Hash": "0d8aa98add72a5076299f6af875f720c6957c7fb",
+      "Ref": "refs/tags/v6.1.0"
+    }
+  },
+  "module_graph_entries_including_main": 170,
+  "previous_linked_module_inventory_count": 86,
+  "debian_sqlite_archive_version_observed": "1.40.0+dfsg-2",
+  "markov_sqlite_requirement": "1.49.1",
+  "debian_go_default_observed": "2:1.27~1",
+  "local_findings": {
+    "published_source_has_license_mod_sum_and_pongo2": true,
+    "tracked_manpages_found": false,
+    "tracked_security_policy_found": false,
+    "pongo2_patch_record_omits_arithmetic_change": true
+  },
+  "existing_project_issues": [
+    {
+      "repo": "markov",
+      "has_issues": true,
+      "read": "all-state issues first page, 100 max, excluding PRs",
+      "returned_items": 8,
+      "issue_count": 0,
+      "pagination_complete": true,
+      "matches": []
+    },
+    {
+      "repo": "markovd.com",
+      "has_issues": true,
+      "read": "all-state issues first page, 100 max, excluding PRs",
+      "returned_items": 8,
+      "issue_count": 0,
+      "pagination_complete": true,
+      "matches": []
+    }
+  ],
+  "sources": [
+    {
+      "name": "fedora-golang",
+      "url": "https://docs.fedoraproject.org/en-US/packaging-guidelines/Golang/",
+      "bytes": 69334,
+      "denied": false,
+      "sha256": "ab396d2db4adc295d9d1b3fc94ac21aa71c1d656e1751e82556aae78dc000bb6"
+    },
+    {
+      "name": "fedora-new-contributor",
+      "url": "https://docs.fedoraproject.org/en-US/package-maintainers/New_Package_Process_for_New_Contributors/",
+      "bytes": 49432,
+      "denied": false,
+      "sha256": "48dea42e9c658fbe87de289ef62bd0d675789dbd7868f50b1a2051d8a9206f9b"
+    },
+    {
+      "name": "fedora-review",
+      "url": "https://docs.fedoraproject.org/en-US/package-maintainers/Package_Review_Process/",
+      "bytes": 49209,
+      "denied": false,
+      "sha256": "2040b4c421d6bccc7201f220f238eda972efdb49d5b23fa691c92e7b6f1316cb"
+    },
+    {
+      "name": "fedora-review-guidelines",
+      "url": "https://docs.fedoraproject.org/en-US/packaging-guidelines/ReviewGuidelines/",
+      "bytes": 53484,
+      "denied": false,
+      "sha256": "63adf2a932db13189efecb16cb3afd483f12dd667354090acfc5b054b5b1ad76"
+    },
+    {
+      "name": "omarchy-readme",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy-pkgs/ffba05a4e2bdddbd494a8a92218ad87a39c22c2b/README.md",
+      "bytes": 36037,
+      "sha256": "afdb308bc6c97825530259e24fadbeea080cea96fc6d9faace1332a75a0a4bb6"
+    },
+    {
+      "name": "omarchy-yay",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy-pkgs/ffba05a4e2bdddbd494a8a92218ad87a39c22c2b/pkgbuilds/yay/PKGBUILD",
+      "bytes": 1035,
+      "sha256": "dedc20a2147b8d9e2c22f827783cd1cd3c62e6ea7354e62cb7b87e29567176b7"
+    },
+    {
+      "name": "omarchy-yay-meta",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy-pkgs/ffba05a4e2bdddbd494a8a92218ad87a39c22c2b/pkgbuilds/yay/.omarchy/package.json",
+      "bytes": 243,
+      "sha256": "d1385fdd41b8f23cf7ae3befa57557c32777087d9c2bce6a16f13eb491978267"
+    },
+    {
+      "name": "omarchy-crush",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy-pkgs/ffba05a4e2bdddbd494a8a92218ad87a39c22c2b/pkgbuilds/crush-bin/PKGBUILD",
+      "bytes": 2473,
+      "sha256": "965e4a997144f4b1b061afd40bc09754e1e400d24cf34ec654fa3e7d539bf501"
+    },
+    {
+      "name": "omarchy-crush-meta",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy-pkgs/ffba05a4e2bdddbd494a8a92218ad87a39c22c2b/pkgbuilds/crush-bin/.omarchy/package.json",
+      "bytes": 285,
+      "sha256": "5b0996633825445e117318f5173937b5f681747f8baa2d16dd2ad7b7a24043cc"
+    },
+    {
+      "name": "fedora-gh-spec",
+      "url": "https://src.fedoraproject.org/rpms/gh/raw/rawhide/f/gh.spec",
+      "bytes": 2823,
+      "sha256": "deda240383c785cb9f1fb788046dacc2149961f033e3c7354548c61493fbd45f"
+    },
+    {
+      "name": "debian-gh-control",
+      "url": "https://sources.debian.org/data/main/g/gh/2.46.0-4/debian/control",
+      "bytes": 4585,
+      "sha256": "5418a5157561a6284647e2b7bcae84e549dd68c972598bf549f51996f752a770"
+    },
+    {
+      "name": "debian-gh-rules",
+      "url": "https://sources.debian.org/data/main/g/gh/2.46.0-4/debian/rules",
+      "bytes": 2055,
+      "sha256": "c974ca18b99871545c6554e61097ae037b5e0fad6e567705fb56b0bb126e6288"
+    },
+    {
+      "name": "debian-gh-copyright",
+      "url": "https://sources.debian.org/data/main/g/gh/2.46.0-4/debian/copyright",
+      "bytes": 3210,
+      "sha256": "f46ba0559aa2411019fbb8e473600140af9b9dc11050671ea5f4df0e59588d7f"
+    },
+    {
+      "name": "debian-markov-search",
+      "url": "https://packages.debian.org/search?keywords=markov&searchon=names&suite=all&section=all",
+      "bytes": 14122,
+      "sha256": "d0befeefcff525f40b2c46d8146e1d497e55631e63f9e774029f2ff0a6edcc9e"
+    },
+    {
+      "name": "debian-wnpp",
+      "url": "https://www.debian.org/devel/wnpp/being_packaged",
+      "bytes": 463059,
+      "sha256": "1a0ebf8f4a7fd4566574b69c1f685c3b618efc169d8fa38406218228c5750a73"
+    },
+    {
+      "name": "arch-aur",
+      "url": "https://wiki.archlinux.org/title/Arch_User_Repository",
+      "bytes": 100919,
+      "sha256": "ba3ee5945b400fff1cb569be14c16c70254e835bf61ce80a9a28cb199e9b74f5",
+      "blocked": false
+    },
+    {
+      "name": "arch-official",
+      "url": "https://wiki.archlinux.org/title/Official_repositories",
+      "bytes": 69958,
+      "sha256": "f078459f6f5a00acb2e04c965b65bb25e91899e72ca6494ec7118d26a809880a",
+      "blocked": false
+    },
+    {
+      "name": "arch-name",
+      "url": "https://archlinux.org/packages/search/json/?name=markov",
+      "bytes": 97,
+      "sha256": "c20e6cb6ca9188d9b7e47f676fd2de79caffdbf41cf5fc9690ecab9a1c9cb7ad",
+      "blocked": false
+    },
+    {
+      "name": "aur-name",
+      "url": "https://aur.archlinux.org/rpc/v5/info?arg[]=markov",
+      "bytes": 61,
+      "sha256": "aaae3256da0a851446e1d898b52f9ce4784d786d1ef859c7881d48804d7350b2",
+      "blocked": false
+    },
+    {
+      "name": "debian-openshell-search",
+      "url": "https://packages.debian.org/search?keywords=openshell&searchon=names&suite=sid&section=all",
+      "bytes": 13941,
+      "sha256": "afb2c1bca067cf83c8b15d767ab9678be04532f82286ee815b8439aa98324a91",
+      "blocked": false
+    },
+    {
+      "name": "fedora-markov",
+      "url": "https://packages.fedoraproject.org/pkgs/markov/",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "name": "ubuntu-markov",
+      "url": "https://packages.ubuntu.com/search?keywords=markov&searchon=names&suite=all&section=all",
+      "bytes": 9294,
+      "sha256": "0ba2052ccc79157f1e08266815450912a597b8376ab6031d757438c95960e56b",
+      "blocked": false
+    }
+  ],
+  "boundaries": {
+    "system_package_installation": false,
+    "recipe_generation": false,
+    "builds_or_tests_executed": false,
+    "external_accounts_or_forks": false,
+    "external_issues_prs_itps_submissions_contacts": false,
+    "engine_source_or_package_changes": false,
+    "package_release_key_or_site_publication": false
+  },
+  "policy_versions_observed": {
+    "Fedora_Golang_last_content_update": "2025-11-09",
+    "Fedora_review_process_last_content_update": "2026-08-24",
+    "Debian_policy": "4.7.4.1",
+    "Fedora_Forge_review_change": "proposal dated 2026-11-13, not assumed operative"
+  }
+}
