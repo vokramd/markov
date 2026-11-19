@@ -25,7 +25,7 @@
 
 ## Active Tasks
 
-- [v0.2.2 publication](tasks/current/release-v0.2.2-publication.md) — merged/tagged; clean candidate and native Arm green; waiting for human key/signing prompts.
+- [v0.2.2 publication](tasks/done/release-v0.2.2-publication.md) — merged/tagged; clean candidate and native Arm green; waiting for human key/signing prompts.
 
 - [CC-71 phase-2 distro expansion](tasks/current/cc-71-phase2-distro-expansion.md) — local implementation/acceptance passed; rollout review pending.
 
@@ -153,3 +153,7 @@
 ## v0.2.2 signed review
 
 - [Signed candidate and replacement-key recovery](notes/release-v0.2.2-signed.md) — signed artifacts, five positive and five negative native-client checks, final page browser validation passed; not published.
+
+- [v0.2.2 live closeout](notes/release-v0.2.2-live.md) — native repositories, Release, GHCR and install page public; 29 rows plus Omarchy route verified; publication task completed.
+- [Cached matrix architecture selection](bugs/fixed/cc-71-cached-matrix-platform.md) — fail-closed image-ID selection and refreshed rolling test pin; 111 safety tests.
+- [Draft-to-public Release transition](bugs/fixed/cc-71-release-draft-transition.md) — explicit tag binding and fresh public asset URLs verified.
