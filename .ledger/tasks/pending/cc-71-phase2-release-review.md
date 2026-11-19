@@ -5,3 +5,6 @@ Pending external review/authorization after local implementation. Engine branch 
 Next reviewable outward step: authorize source pushes/draft PRs and unsigned hosted/native-Arm CI. That does not need the human physically at p15. A clean tag/candidate for actual publication still needs a selected release version and separate approval; local 0.2.2 fixture is not a release proposal.
 
 Human-present steps, separately approved: create dedicated encrypted native RSA4096 key; verify local signing; independently encrypt/copy backup to the confirmed m720q destination and test restore; approve identity/backup receipts and source/CI candidate; perform real signing. New public key/repository roots, installation-page deployment and all outward publication remain gated. No official-distro submission is included.
+
+
+2026-11-18 update: both PR #7 merged after explicit authorization. v0.2.2 clean-tag/native-Arm CI passed; [release preparation](../../notes/release-v0.2.2-prepared.md) tracks the unsigned candidate and remaining human key/signing steps. No package/site publication yet.

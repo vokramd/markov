@@ -1,0 +1,688 @@
+{
+  "version": "0.2.2",
+  "published": true,
+  "date_utc": "2026-11-19T04:46:37.887360+00:00",
+  "release_url": "https://github.com/vokramd/markov/releases/tag/v0.2.2",
+  "release_asset_count": 28,
+  "anonymous_release_downloads": {
+    "count": 28,
+    "anonymous": true,
+    "all_sha256_match": true
+  },
+  "native_public_paths_verified": 416,
+  "native_clients": [
+    {
+      "row": "debian-13-amd64",
+      "platform": "linux/amd64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "debian-13-arm64",
+      "platform": "linux/arm64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "ubuntu-24.04-amd64",
+      "platform": "linux/amd64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "ubuntu-24.04-arm64",
+      "platform": "linux/arm64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "ubuntu-26.04-amd64",
+      "platform": "linux/amd64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "ubuntu-26.04-arm64",
+      "platform": "linux/arm64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "fedora-44-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "fedora-44-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "fedora-45-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "fedora-45-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "arch-rolling-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": "0.2.1",
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "upgrade",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rhel-9-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rhel-9-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rhel-10-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rhel-10-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rocky-9-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rocky-9-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rocky-10-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "rocky-10-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "almalinux-9-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "almalinux-9-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "almalinux-10-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "almalinux-10-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "opensuse-16.1-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": false,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "opensuse-16.1-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "emulated_on_p15": true,
+      "architecture_audit": "no Podman platform mismatch warning; native package selection and execution succeeded"
+    },
+    {
+      "row": "opensuse-rolling-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "checked_image_id": "f6c09efc892d8aafa5a77d121249e49252657ad23eb4e9dd6b1f6845fb680bec",
+      "image_reference": "registry.opensuse.org/opensuse/tumbleweed:latest@sha256:1f02d7bb849db90544a1f868b8f07ed97f8150ad64f6ae96a690ba1bb2c71b9f",
+      "emulated_on_p15": false
+    },
+    {
+      "row": "opensuse-rolling-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "checked_image_id": "468ab5c82e918974fe14af26d5d84eaaf22f6958d4ae4aa0dc53117ea06f678b",
+      "image_reference": "registry.opensuse.org/opensuse/tumbleweed:latest@sha256:1f02d7bb849db90544a1f868b8f07ed97f8150ad64f6ae96a690ba1bb2c71b9f",
+      "emulated_on_p15": true
+    },
+    {
+      "row": "alpine-3.24-x86_64",
+      "platform": "linux/amd64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "checked_image_id": "3ea06e4cb95e726ea6c6cc4377570ac4c4050d78710004cbd631ca809daf7e8e",
+      "image_reference": "docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf",
+      "emulated_on_p15": false
+    },
+    {
+      "row": "alpine-3.24-aarch64",
+      "platform": "linux/arm64",
+      "old_public_history": null,
+      "new_public_repo": "0.2.2",
+      "checks": [
+        "install",
+        "update-current",
+        "remove",
+        "version",
+        "quickstart",
+        "preserved-state"
+      ],
+      "status": "passed",
+      "checked_image_id": "abbc135a7d3909a5eb6a56aac4c769cf15be025e3c9e226b8660f2b2b378158b",
+      "image_reference": "docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf",
+      "emulated_on_p15": true
+    }
+  ],
+  "omarchy_route": {
+    "status": "passed",
+    "route": "https://markovd.com/repos/omarchy/rolling/",
+    "checks": [
+      "install",
+      "0.2.1-to-0.2.2-upgrade",
+      "quickstart",
+      "remove",
+      "preserved-state"
+    ],
+    "userspace": "pinned Arch container",
+    "new_omarchy_vm_test": false
+  },
+  "ghcr_version": {
+    "version": "0.2.2",
+    "tags": [
+      "0.2.2"
+    ],
+    "digest": "sha256:2e826c5e727b7cd034c732b53ad8a8e2e82891f49a228f363ac806cb7bc18fb5",
+    "anonymous_index_verified": true,
+    "credential_persisted": false
+  },
+  "ghcr_latest": {
+    "version": "0.2.2",
+    "tags": [
+      "latest"
+    ],
+    "digest": "sha256:2e826c5e727b7cd034c732b53ad8a8e2e82891f49a228f363ac806cb7bc18fb5",
+    "anonymous_index_verified": true,
+    "credential_persisted": false
+  },
+  "public_image_runtime": [
+    {
+      "architecture": "amd64",
+      "anonymous_pull": true,
+      "version": "markov version 0.2.2",
+      "binary_sha256": "757e3002fa7d52d0c42c744c3a4fabfc7e98a1c9d65cf86a6f71f51cb4e2923c",
+      "host_user_persisted_quickstart": "passed",
+      "emulated_on_p15": false
+    },
+    {
+      "architecture": "arm64",
+      "anonymous_pull": true,
+      "version": "markov version 0.2.2",
+      "binary_sha256": "c1f011afbd434d45ffb939b5972fc57023d312f931e8986674f5bb28007cf576",
+      "host_user_persisted_quickstart": "passed",
+      "emulated_on_p15": true
+    }
+  ],
+  "http": {
+    "headers": [
+      {
+        "url": "https://markovd.com/repos/debian/13/dists/stable/InRelease",
+        "content_type": "text/plain",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "redirect": false
+      },
+      {
+        "url": "https://markovd.com/repos/fedora/45/stable/x86_64/repodata/repomd.xml.asc",
+        "content_type": "application/pgp-signature",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "redirect": false
+      },
+      {
+        "url": "https://markovd.com/repos/arch/rolling/stable/x86_64/markov.db",
+        "content_type": "application/octet-stream",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "redirect": false
+      },
+      {
+        "url": "https://markovd.com/repos/keys/markov-apk.rsa.pub",
+        "content_type": "application/octet-stream",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "redirect": false
+      },
+      {
+        "url": "https://markovd.com/repos/alpine/3.24/stable/x86_64/APKINDEX.tar.gz",
+        "content_type": "application/octet-stream",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "redirect": false
+      },
+      {
+        "url": "https://markovd.com/repos/alpine/3.24/stable/aarch64/markov-0.2.2-r0.apk",
+        "content_type": "application/octet-stream",
+        "cache_control": "no-cache, max-age=0, must-revalidate",
+        "redirect": false
+      }
+    ],
+    "install_page_sha256": "7a561a53d8e3a13524f4fa6ce34771c71fbfb68ad5d7cc02a86c58fd50642ff3",
+    "unrelated_site_config_authorized_keys_unchanged": true
+  },
+  "public_browser": {
+    "draft": false,
+    "placeholdersRemain": false,
+    "viewports": [
+      {
+        "width": 390,
+        "scrollWidth": 390,
+        "sections": 11,
+        "blocks": 20,
+        "buttons": 20,
+        "platforms": 11,
+        "errors": [],
+        "anchors": true,
+        "allKeyboardCopy": true
+      },
+      {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "sections": 11,
+        "blocks": 20,
+        "buttons": 20,
+        "platforms": 11,
+        "errors": [],
+        "anchors": true,
+        "allKeyboardCopy": true
+      }
+    ],
+    "noJs": true
+  },
+  "retained_native_history": [
+    {
+      "version": "0.2.0",
+      "history_manifest_and_signature_exact": true,
+      "versioned_payload_paths_retained": 12,
+      "unique_package_hashes_verified": [
+        "repos/arch/rolling/stable/x86_64/markov-0.2.0-1-x86_64.pkg.tar.zst",
+        "repos/debian/13/pool/main/m/markov/markov_0.2.0_amd64.deb",
+        "repos/debian/13/pool/main/m/markov/markov_0.2.0_arm64.deb",
+        "repos/fedora/44/stable/aarch64/Packages/markov_0.2.0_arm64.rpm",
+        "repos/fedora/44/stable/x86_64/Packages/markov_0.2.0_amd64.rpm"
+      ]
+    },
+    {
+      "version": "0.2.1",
+      "history_manifest_and_signature_exact": true,
+      "versioned_payload_paths_retained": 12,
+      "unique_package_hashes_verified": [
+        "repos/arch/rolling/stable/x86_64/markov-0.2.1-1-x86_64.pkg.tar.zst",
+        "repos/debian/13/pool/main/m/markov/markov_0.2.1_amd64.deb",
+        "repos/debian/13/pool/main/m/markov/markov_0.2.1_arm64.deb",
+        "repos/fedora/44/stable/aarch64/Packages/markov_0.2.1_arm64.rpm",
+        "repos/fedora/44/stable/x86_64/Packages/markov_0.2.1_amd64.rpm"
+      ]
+    }
+  ],
+  "retained_ghcr_tags": {
+    "0.2.0": "sha256:af3d39587ab56c367f8366e7e50ae37ee893f0cb76d9266d6ceb2a0076f79b51",
+    "0.2.1": "sha256:76ab27b0a8b0e820b5925065267e419cc886f1a63115935d7fad7bec02515610"
+  },
+  "ci": {
+    "url": "https://github.com/vokramd/markov/actions/runs/44349390140",
+    "head_sha": "4b84e8ac5ccfd4b5a454a2ba07d5bec1dac77e14",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "candidate",
+        "conclusion": "success"
+      },
+      {
+        "name": "native-arm64",
+        "conclusion": "success"
+      }
+    ],
+    "site_check_runs": []
+  },
+  "safety_tests_passed": 111,
+  "source_commit": "4b84e8ac5ccfd4b5a454a2ba07d5bec1dac77e14",
+  "native_public_key_sha256": "0d33b6a9c939d34db37f1b48f66158c416aabf824f3923fc615bababe7d731ef",
+  "source_review_pr": "https://github.com/vokramd/markovd.com/pull/8",
+  "publication_gates_caught": [
+    "cached-opposite-platform-test-image",
+    "unavailable-old-rolling-test-image-pin",
+    "draft-release-tag-association",
+    "stale-pre-publication-asset-urls"
+  ]
+}

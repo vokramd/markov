@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "status": "native-key-created-backup-pending",
+  "fixture": false,
+  "public_key_sha256": "a932cb9214611c0aa41fb8b21db1e7f792375354776394d67fcfb4bfd97d7542",
+  "encrypted_private_sha256": "ceb0f007920610913cd6d44a960e47d8f61d92fb882e537b3421fdb24d5f03a9",
+  "encrypted_pkcs8": true,
+  "key_type": "RSA4096",
+  "password_verified_twice_and_decrypt": true,
+  "backup_verified": false,
+  "backup_prompt": "cancelled-or-unavailable before encryption/copy",
+  "archive_backup_current_16tb_ciphertext_verified": true,
+  "archive_backup_sha256": "a6202eb165e595b4e5392a785cd8e5b8dd1667ce658f38840ea7833ccfa6d4d9",
+  "real_release_signing": false,
+  "public_key_publication": false,
+  "package_publication": false
+}

@@ -1,0 +1,11 @@
+# v0.2.2 release preparation — 2026-11-18
+
+Human authorized merging and publication. Engine PR #7 merged as `4b84e8ac5ccfd4b5a454a2ba07d5bec1dac77e14`; site PR #7 merged as `a995ac1cbc2cebd7505624e1e1e7c3dc6ef02f92`. Exact PR heads had passed engine test, candidate and native-arm64 checks; site had 93 local tests/acceptance and no configured hosted CI.
+
+Annotated v0.2.2 tag `916a0c3823dd76c061568c25848791876d7cf5cf` points to the engine merge commit. Clean tag Actions run https://github.com/vokramd/markov/actions/runs/44349390140 passed candidate and native-arm64. Artifact 14448626271 downloaded with isolated token-to-API/signed-blob redirect handling and archive/hash/provenance validation. Seven native artifacts, six SBOMs, 86 licensed modules (no unresolved), static ELF on both arches and OCI index verified; exact receipt alongside this note.
+
+Unsigned production signing preparation is retained under `~/.cache/cc71/v0.2.2/stable/unsigned-signing-work`, with the complete candidate vault. No real key access or package signing. OCI digest: sha256:2e826c5e727b7cd034c732b53ad8a8e2e82891f49a228f363ac806cb7bc18fb5. No Release, GHCR push, native repository/site/key publication has occurred; v0.2.1 remains live.
+
+Required next: human at p15 for new native-key creation/verification, independent off-machine backup/restore and signing prompts. A text availability question was sent; no answer yet. Production Alpine identity directory was confirmed absent; do not infer an existing native key. No m720q/DreamHost contact or GUI prompt occurred in preparation.
+
+Site branch release/v0.2.2-publication local commit 3a312c3 prepares a twice-confirmed GUI initializer and an 11-platform install draft outside the publisher allowlist. 98 tooling tests passed with disposable keys only; Playwright passed six widths and all 20 copy controls/anchors/no-JS. Live install/index.html is unchanged; draft has an intentionally pending native hash. Preview server stopped. The native initializer requires explicit approved creation; it is not run for production. Finish exact key hash and final visual/public-install acceptance before deployment. Publication authorization stands; do not ask to reapprove the already authorized merges/tag/release unnecessarily, but required human passphrase entry cannot be inferred from silence.

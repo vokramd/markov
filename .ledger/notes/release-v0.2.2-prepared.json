@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "version": "0.2.2",
+  "commit": "4b84e8ac5ccfd4b5a454a2ba07d5bec1dac77e14",
+  "tag": "v0.2.2",
+  "tag_object": "916a0c3823dd76c061568c25848791876d7cf5cf",
+  "ci_run": "44349390140",
+  "ci_url": "https://github.com/vokramd/markov/actions/runs/44349390140",
+  "native_arm64_ci": "success",
+  "artifact_id": 14448626271,
+  "archive_sha256": "26b6f5844ba365b8f076f2143241224dd4954f4e91e52e6b68fc5b42117f5f15",
+  "candidate_manifest_sha256": "63bcd4108d2f8481cd8226dc08f734eea470fb39b34edcf80adc0e210affa86c",
+  "native_artifacts": [
+    "markov_0.2.2_amd64.deb",
+    "markov_0.2.2_arm64.deb",
+    "markov_0.2.2_amd64.rpm",
+    "markov_0.2.2_arm64.rpm",
+    "markov-0.2.2-1-x86_64.pkg.tar.zst",
+    "markov_0.2.2_amd64.apk",
+    "markov_0.2.2_arm64.apk"
+  ],
+  "unsigned_apk_info": {
+    "x86_64": {
+      "version": "0.2.2-r0",
+      "arch": "x86_64",
+      "checksum": "Q1mmCEALw1WBZXEYV9U9jhUxI2Dzc=",
+      "description": "Declarative workflow engine for agents and native steps",
+      "url": "https://markovd.com",
+      "maintainer": "Markov <info@markovd.com>",
+      "license": "Apache-2.0",
+      "installed_size": "65058498"
+    },
+    "aarch64": {
+      "version": "0.2.2-r0",
+      "arch": "aarch64",
+      "checksum": "Q1J8lNaLtSr2sSPKCOIrUadagrvd4=",
+      "description": "Declarative workflow engine for agents and native steps",
+      "url": "https://markovd.com",
+      "maintainer": "Markov <info@markovd.com>",
+      "license": "Apache-2.0",
+      "installed_size": "61511362"
+    }
+  },
+  "license_modules": 86,
+  "unresolved_licenses": [],
+  "sbom_count": 6,
+  "static_elf_both_architectures": true,
+  "oci_index_digest": "sha256:2e826c5e727b7cd034c732b53ad8a8e2e82891f49a228f363ac806cb7bc18fb5",
+  "preparation_stage": "prepared",
+  "candidate_vault_retained": true,
+  "real_key_access": false,
+  "real_signing": false,
+  "publication": false
+}
