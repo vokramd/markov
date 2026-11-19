@@ -152,6 +152,8 @@
 
 ## v0.2.2 signed review
 
+- [Approved review merges and password cleanup](notes/release-v0.2.2-merged-and-cleanup.md) — both PRs merged; verified encrypted recovery copies retained; old plaintext GPG password source removed.
+
 - [Signed candidate and replacement-key recovery](notes/release-v0.2.2-signed.md) — signed artifacts, five positive and five negative native-client checks, final page browser validation passed; not published.
 
 - [v0.2.2 live closeout](notes/release-v0.2.2-live.md) — native repositories, Release, GHCR and install page public; 29 rows plus Omarchy route verified; publication task completed.
