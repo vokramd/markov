@@ -1,0 +1,218 @@
+{
+  "stage": "signed-and-verified",
+  "fixture": false,
+  "version": "0.2.2",
+  "primary": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+  "subkey": "B0BEFAA736416BC0118E5EC33CF4648EB2925C50",
+  "candidate_manifest_sha256": "63bcd4108d2f8481cd8226dc08f734eea470fb39b34edcf80adc0e210affa86c",
+  "signed_manifest_sha256": "cf745708efaeaf685c84559382ac3910117bdf8a1cb59a7542763a624016cf58",
+  "signed_oci_index_digest": "sha256:2e826c5e727b7cd034c732b53ad8a8e2e82891f49a228f363ac806cb7bc18fb5",
+  "public_files": 207,
+  "tools_image": "sha256:ccba524bc3a9322c582e5c465d74870e075c958615ff1ff8ba5f472037a70476",
+  "real_signing_authorized": true,
+  "passphrase_input": "dedicated KeePassXC; cached for release process only",
+  "public_only_final_verification": true,
+  "final_checksum_files": 25,
+  "native_clients": [
+    {
+      "row": {
+        "id": "alpine-3.24-aarch64",
+        "distro": "alpine",
+        "version": "3.24",
+        "arch": "aarch64",
+        "family": "apk",
+        "image": "docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
+      },
+      "status": "passed",
+      "platform": "linux/arm64",
+      "checks": [
+        "install",
+        "version",
+        "quickstart",
+        "remove",
+        "preserved-state"
+      ],
+      "upgrade": "first public Alpine release; separately tested with disposable two-version fixtures"
+    },
+    {
+      "row": {
+        "id": "alpine-3.24-x86_64",
+        "distro": "alpine",
+        "version": "3.24",
+        "arch": "x86_64",
+        "family": "apk",
+        "image": "docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
+      },
+      "status": "passed",
+      "platform": "linux/amd64",
+      "checks": [
+        "install",
+        "version",
+        "quickstart",
+        "remove",
+        "preserved-state"
+      ],
+      "upgrade": "first public Alpine release; separately tested with disposable two-version fixtures"
+    },
+    {
+      "row": {
+        "id": "arch-rolling-x86_64",
+        "distro": "arch",
+        "version": "rolling",
+        "arch": "x86_64",
+        "family": "pacman",
+        "image": "docker.io/library/archlinux:base@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.2/stable/signed-clients/arch-rolling-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+      "old": "0.2.1",
+      "new": "0.2.2"
+    },
+    {
+      "row": {
+        "id": "debian-13-amd64",
+        "distro": "debian",
+        "version": "13",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.2/stable/signed-clients/debian-13-amd64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+      "old": "0.2.1",
+      "new": "0.2.2"
+    },
+    {
+      "row": {
+        "id": "fedora-45-x86_64",
+        "distro": "fedora",
+        "version": "45",
+        "arch": "x86_64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:45@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496"
+      },
+      "status": "passed",
+      "log": "/home/jtanner/.cache/cc71/v0.2.2/stable/signed-clients/fedora-45-x86_64.log",
+      "platform": "linux/amd64",
+      "fixture_fingerprint": "F50B9360C2C9C876476017A33B8A1C64696AECEF",
+      "old": "0.2.1",
+      "new": "0.2.2"
+    },
+    {
+      "row": {
+        "id": "alpine-3.24-aarch64",
+        "distro": "alpine",
+        "version": "3.24",
+        "arch": "aarch64",
+        "family": "apk",
+        "image": "docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
+      },
+      "platform": "linux/arm64",
+      "status": "passed",
+      "checks": [
+        "metadata-signature",
+        "package-hash"
+      ]
+    },
+    {
+      "row": {
+        "id": "alpine-3.24-x86_64",
+        "distro": "alpine",
+        "version": "3.24",
+        "arch": "x86_64",
+        "family": "apk",
+        "image": "docker.io/library/alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
+      },
+      "platform": "linux/amd64",
+      "status": "passed",
+      "checks": [
+        "metadata-signature",
+        "package-hash"
+      ]
+    },
+    {
+      "row": {
+        "id": "arch-rolling-x86_64",
+        "distro": "arch",
+        "version": "rolling",
+        "arch": "x86_64",
+        "family": "pacman",
+        "image": "docker.io/library/archlinux:base@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"
+      },
+      "platform": "linux/amd64",
+      "status": "passed",
+      "checks": [
+        "metadata-signature",
+        "package-hash"
+      ]
+    },
+    {
+      "row": {
+        "id": "debian-13-amd64",
+        "distro": "debian",
+        "version": "13",
+        "arch": "amd64",
+        "family": "apt",
+        "image": "docker.io/library/debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6"
+      },
+      "platform": "linux/amd64",
+      "status": "passed",
+      "checks": [
+        "metadata-signature",
+        "package-hash"
+      ]
+    },
+    {
+      "row": {
+        "id": "fedora-45-x86_64",
+        "distro": "fedora",
+        "version": "45",
+        "arch": "x86_64",
+        "family": "rpm",
+        "image": "registry.fedoraproject.org/fedora:45@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496"
+      },
+      "platform": "linux/amd64",
+      "status": "passed",
+      "checks": [
+        "metadata-signature",
+        "package-hash"
+      ]
+    }
+  ],
+  "native_backup": {
+    "schema": 1,
+    "fixture": false,
+    "status": "verified",
+    "public_key_sha256": "0d33b6a9c939d34db37f1b48f66158c416aabf824f3923fc615bababe7d731ef",
+    "encrypted_private_sha256": "adaea52909a6de8e4cb7e83bda5dc19260652862b9e8f2f224b2ea39a762f13d",
+    "test_restore_sign_verify": true,
+    "backup_encryption_independent": true,
+    "off_machine_backup": true,
+    "backup_location": "jtanner@192.168.1.3:/mnt/wdc_16tb/BACKUPS/markov-signing/vault-alpine-p15-20261119T035739Z-517f4a",
+    "ciphertext_sha256": "08d6cd2f85f95e636bb162fd0063321b1c00709c21015802a2e2cb782fe439b4",
+    "retrieved_sha256": "08d6cd2f85f95e636bb162fd0063321b1c00709c21015802a2e2cb782fe439b4",
+    "vault_sha256": "643ea9c76bd4a858f1afa5e64c1ad9736d06a2506cd090051e361f1e8bba0663",
+    "vault_restore_verified": true,
+    "vault_has_gpg_native_backup_passwords": true,
+    "references": [
+      "CC-48",
+      "CC-70"
+    ],
+    "date_utc": "2026-11-19T03:58:25.213026+00:00"
+  },
+  "published": false,
+  "signed_native_sha256": {
+    "markov_0.2.2_amd64.deb": "ddfb163c3951892d2e058fef599c909370cb55cc50fb553e87cee5a473131e86",
+    "markov_0.2.2_arm64.deb": "9045c8e10de8f31f1d4327dd6d57c00df14a9fab39bd053002fdaafc8b4cbe92",
+    "markov-0.2.2-1-x86_64.pkg.tar.zst": "7bdf9a9f6f07599018f81106521e6b4ca19ec4611c2880ee32d88afa394d138d",
+    "markov_0.2.2_amd64.rpm": "9eb515e22ba4cc6d7359b3b3b86788c4a25d3a48c1d62b9e2f061bbfc92cfd69",
+    "markov_0.2.2_arm64.rpm": "62ccaff60575a9c03018626bf150fcb7d9cca106474cbc2284cf3afcd2f1fe0a",
+    "markov_0.2.2_amd64.apk": "c46ba26b986465812f15994c98b1c6ed3ec0d2cbc6263df5db62ef338666fa4e",
+    "markov_0.2.2_arm64.apk": "b880a98da4bcc4595e36f288ac8acde3487ff6545aabf0fcf81c8865029d8a29"
+  },
+  "preserved_previous_identity": "/home/jtanner/.local/share/markov-signing/alpine-retired-unpublished-20261119T035639Z"
+}

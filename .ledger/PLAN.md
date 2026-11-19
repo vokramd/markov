@@ -140,8 +140,16 @@
 
 ## v0.2.1 stable release evidence
 
+- [v0.2.2 signing vault checkpoint](notes/release-v0.2.2-signing-vault.md) — isolated KeePassXC integration; replacement key and off-machine vault recovery verified.
+
+- [Signing-process credential cache](bugs/fixed/cc-71-vault-idle-during-signing.md) — fixed idle-lock interruption; failed workspace preserved, fresh signing required.
+
 - [Stable unsigned candidate/signing review](notes/release-v0.2.1-stable.md) — historical pre-signing checkpoint; inputs subsequently signed and published.
 
 - [v0.2.1 signed review](notes/release-v0.2.1-signed.md) — historical signed-artifact checkpoint; subsequent publication completed.
 
 - [v0.2.1 live closeout](notes/release-v0.2.1-live.md) — native repos, Release, GHCR version/latest and install page published; public acceptance passed.
+
+## v0.2.2 signed review
+
+- [Signed candidate and replacement-key recovery](notes/release-v0.2.2-signed.md) — signed artifacts, five positive and five negative native-client checks, final page browser validation passed; not published.

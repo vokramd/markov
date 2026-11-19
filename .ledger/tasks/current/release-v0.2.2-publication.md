@@ -8,3 +8,7 @@ Then: independently review source/CI/native identity approval; sign and validate
 
 
 Latest: native backup copied/retrieved/decrypted and file hashes verified, but native-key password re-entry failed twice. [Partial checkpoint](../../notes/release-v0.2.2-backup-password-pending.md). Waiting for explicit choice: key-only retry, fresh unpublished native key with visible/uncached verification, or pause. No publication or verified native backup receipt.
+
+Signing usability: [KeePassXC checkpoint](../../notes/release-v0.2.2-signing-vault.md). Dedicated vault created/unlocked; GPG credential imported and retrieval verified; opt-in signing integration and 104 safety tests passed. Vault backup/restore and the Alpine retry/replacement decision remain pending. No real signing or publication in this checkpoint.
+
+Latest signed checkpoint: [v0.2.2 signed review](../../notes/release-v0.2.2-signed.md). Replacement key and vault backed up/restored; real signed candidate passed public-only verification, five positive and five negative native clients; final install page browser checks passed. Next: outward publication and public acceptance. No outward publication has occurred.
