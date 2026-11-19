@@ -205,3 +205,8 @@ Site dc88afb: encrypted host-only RSA256 adapter, independent identity/backup ap
 ## 2026-11-18 — merge/publication authorized; v0.2.2 clean candidate prepared
 
 Merged both PR #7 at tested heads; pushed annotated v0.2.2 for engine merge 4b84e8a. Run 44349390140 candidate/native-Arm green. Downloaded artifact 14448626271, verified seven artifacts, six SBOMs, licenses/static ELF/OCI/provenance, and prepared unsigned signing requests. Native production identity absent; human p15 availability question pending. Site 3a312c3 prepares confirmed GUI key initializer and install draft, 98 local tests plus six-width Playwright. No real key creation/backup/signing, m720q/DreamHost contact or package/site/Release/GHCR publication.
+
+
+## 2026-11-18 — native key created; backup GUI pending
+
+Human ready at p15: encrypted RSA4096 key created with matching double GUI entry and decryption verification. No password file. Confirmed m720q mounted /mnt/wdc_16tb/BACKUPS and matching migrated archive-backup ciphertext. Native backup helper self-test passed, but first real backup prompt cancelled/unavailable before encryption/remote writes. Readiness question sent; native key remains unbacked, no signing/publication. Preserve it and reopen backup only after reply.
