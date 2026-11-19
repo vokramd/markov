@@ -19,19 +19,16 @@
 - [Two audiences: repeated agent jobs, and evals](plans/011-ops-jobs-and-evals.md) — proposed (2026-11-07): who Markov is for after the competitive research, and what would make it compelling: measured codify and eval stories, a run budget, fallback to the agent for codified steps, evals as a first-class use (results, comparison, pass@k, fresh workspaces, graders, record/replay), and agent-written workflows.
 - [First users](plans/010-first-users.md) — phase 1 done (2026-11-07, v0.1.0 released); phase 2, the Codify tutorial (measured, with a Claude Code workflow comparison, honest comparisons and an auth FAQ), next; positioning in [notes/competitive-positioning.md](notes/competitive-positioning.md): make the first five minutes work (releases, a laptop Quick Start, GitHub metadata), a Codify tutorial, launch with the markov-harness story, a Claude Code plugin, and the first ten users by hand.
 
-- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — phase 1 live (initial v0.2.0, current v0.2.1): native repositories, signed Release and GHCR; [live evidence](notes/cc-71-phase1-live.md). Phase 2 planning ready; implementation/admission deferred.
+- [CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories](plans/012-cc-71-linux-package-distribution.md) — first-party phases 1 and 2 complete at v0.2.2; 29 public container rows, signed native repositories/Release/GHCR and install page; [current evidence](notes/release-v0.2.2-live.md). Official distro admission research is next.
 
-- [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — all 18 new local rows passed; encrypted native signing integrated locally; source/CI/production review pending.
+- [CC-71 phase-2 distro expansion plan](plans/013-cc-71-phase2-distro-expansion.md) — completed and public in v0.2.2; 18 added distro rows, seven shared native artifacts, verified key/vault recovery and signed publication.
 
 ## Active Tasks
 
-- [v0.2.2 publication](tasks/done/release-v0.2.2-publication.md) — merged/tagged; clean candidate and native Arm green; waiting for human key/signing prompts.
 
-- [CC-71 phase-2 distro expansion](tasks/current/cc-71-phase2-distro-expansion.md) — local implementation/acceptance passed; rollout review pending.
 
 ## Pending Tasks
 
-- [CC-71 phase-2 rollout review](tasks/pending/cc-71-phase2-release-review.md) — source/CI approval, real native-key custody/backups and publication gates.
 
 - [CC-71 official distro admission research](tasks/pending/cc-71-distro-admission-research.md) — deferred, no submissions authorized.
 
@@ -39,10 +36,14 @@
 
 ## Completed Tasks
 
+- [v0.2.2 publication](tasks/done/release-v0.2.2-publication.md) — public; all 29 container rows, explicit Omarchy route and anonymous artifact/image/page verification passed.
+- [CC-71 phase-2 distro expansion](tasks/done/cc-71-phase2-distro-expansion.md) — expanded first-party matrix published.
+- [CC-71 phase-2 rollout review](tasks/done/cc-71-phase2-release-review.md) — approvals, recovery, signing, publication and follow-up PR merges completed.
+
 - [CC-71 encrypted native signing integration](tasks/done/cc-71-alpine-production-signing.md) — two seven-artifact bundles, five positive/five negative client rows and 93 safety tests.
 
 - [CC-71 openSUSE pilot](tasks/done/cc-71-phase2-opensuse-pilot.md) — four positive/rejection rows.
-- [CC-71 Alpine format proof](tasks/done/cc-71-phase2-alpine-format-proof.md) — two positive/rejection rows; production integration pending.
+- [CC-71 Alpine format proof](tasks/done/cc-71-phase2-alpine-format-proof.md) — historical format proof; production integration and public support completed in v0.2.2.
 
 - [CC-71 phase-A enterprise RPM pilot](tasks/done/cc-71-phase2-rpm-pilot.md) — 12 positive rows, 12 rejection rows, 69 tooling tests.
 

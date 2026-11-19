@@ -1,8 +1,20 @@
 # CC-71 phase 2: extend first-party Linux repositories
 
-Status: local phase-A/B acceptance and phase-C format proof passed, 2026-11-17. All 18 new container rows passed; [current production work](../tasks/current/cc-71-phase2-distro-expansion.md) tracks the remaining source/CI and production review after local native signing/candidate integration. No new public roots or real-key operations. Supplements [plan 012](012-cc-71-linux-package-distribution.md), whose phase-1 deliverables are live at v0.2.1. No additional packages, keys or public roots were created for this plan.
+Status: first-party implementation and publication complete through v0.2.2 (2026-11-19). [Live closeout](../notes/release-v0.2.2-live.md), [exact evidence](../notes/release-v0.2.2-live.json), and [merged reviews/approved password cleanup](../notes/release-v0.2.2-merged-and-cleanup.md) supersede the historical preparation gates below. Official distro admission research remains separate.
 
-## Recommended decisions
+## Reconciled current state — 2026-11-19
+
+- Scope: Markov engine only. First-party phases 1 and 2 are live; no daemon/harness packaging or official-distro endorsement.
+- Seven shared native artifacts (2 deb, 2 rpm, 1 pacman, 2 apk), 29 public container rows, additional Omarchy-route pacman upgrade and earlier recorded Omarchy VM evidence. No new v0.2.2 Omarchy VM claim.
+- RHEL/UBI, Rocky, AlmaLinux 9/10; Leap 16.1 and Tumbleweed `rolling`; Alpine 3.24 are implemented, not deferred candidates. Current matrix is site `repo-tools/matrix.json`.
+- CI builds unsigned candidates; p15 signs with the dedicated KeePassXC vault and manually publishes via pinned admin SSH/GitHub REST/GHCR. Restricted deploy keys target non-web inboxes only; m720q is not the current release publisher.
+- Encrypted vault/native-key backup on mounted m720q `/mnt/wdc_16tb/BACKUPS/` was retrieved and restore/sign verified; archive/deploy backup history is preserved under CC-48/CC-70. Original unpublished Alpine identity retained. Old plaintext GPG password source removed after explicit approval.
+- GHCR authenticity uses the GPG-signed release manifest/checksums covering the exact OCI index digest. A separate Cosign key/signature/attestation scheme was proposed but is not deployed; it remains optional future hardening.
+- Historical versions retained. Signing and live publication still require authorization for each future release; prior releases do not grant standing approval for new outward actions.
+- Remaining: official distro admission research; routine maintenance/rolling checks; optional host isolation and registry-native signatures. The original design and dated checkpoints below are preserved as history where they differ from this implemented state.
+
+
+## Original recommended decisions (implemented; historical baseline)
 
 1. Validate the existing signed RPMs on RHEL (using UBI), Rocky and Alma first; do not rebuild per distro.
 2. Cover majors 9 and 10, latest supported minor only, on x86_64 and aarch64. Gate each image on its actual CPU requirements.
@@ -11,7 +23,7 @@ Status: local phase-A/B acceptance and phase-C format proof passed, 2026-11-17. 
 5. Keep manual p15 signing/promotion, existing GitHub unsigned candidates, and all historical versions. No additional markovd service is needed.
 6. Review support evidence and installation text before publishing any new root. Official distro admission remains a separate later task.
 
-## Existing implementation and ownership
+## Existing implementation and ownership (pre-expansion baseline)
 
 The engine repository owns `.goreleaser.yaml`, `packaging/arch/`, the Dockerfile and release workflows. Current artifacts are two debs, two RPMs and one x86_64 pacman package. The Linux binaries use CGO_ENABLED=0, GOAMD64=v1 and GOARM64=v8.0; the existing release evidence confirms static ELF files. Native packages still require bash and CA certificates; optional workflow programs remain user-installed dependencies. A static executable does not establish package-manager compatibility by itself.
 
@@ -19,9 +31,9 @@ The site repository owns `repo-tools/` and `/install/`. Its actual index pipelin
 
 GoReleaser v2.20.2 and Syft v1.57.1 are already pinned; actions are pinned by SHA. Reuse this workflow and its native Arm checks. Verify the embedded nFPM version before relying on additional APK features. CI gets no signing or publishing secrets. GHCR remains the existing two-architecture image on digest-pinned trixie-slim; adding distro roots does not require additional images. Scope remains `markov` only, excluding markovd and harness packages.
 
-## Proposed support matrix
+## Approved support matrix (implemented in v0.2.2)
 
-All rows are candidates until acceptance passes. Major/minor roots below are stable interfaces, not claims of upstream endorsement.
+All rows passed public acceptance in v0.2.2; the candidate-era rationale below is historical. Major/minor roots below are stable interfaces, not claims of upstream endorsement.
 
 | Sequence | Distro/root version | Architectures | Package source | Added smoke rows |
 |---|---|---|---|---:|
@@ -101,7 +113,7 @@ Promotion remains manual on p15 over existing admin SSH. Restricted deploy keys,
 
 Retain the previous complete signed metadata snapshot for rollback. Restore metadata only to packages already present, test explicit downgrade separately, and never delete historical bytes or re-sign an old version in place. Keep package/index upload retries idempotent and fail closed on incomplete manifests. Extend allowlist/traversal/symlink/hardlink/config/script/race rejection tests for new formats without weakening them. Rotation needs documented overlap, trust-bootstrap and revocation steps for both OpenPGP and any Alpine-native key.
 
-## Human review and subsequent work
+## Historical rollout gates and subsequent work
 
 Approve the proposed major/version/architecture matrix and the A→B→C order. Resolve Leap lifecycle/version and Alma 10 image variant in the first implementation research checkpoint. Approve native Alpine key custody/backup only after format proof. New public roots, real signing/public keys, tags, releases, GHCR changes and deployment remain separately gated; this plan authorizes none of them.
 

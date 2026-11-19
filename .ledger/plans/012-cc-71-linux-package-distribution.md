@@ -1,6 +1,18 @@
 # CC-71: Markov engine Linux packages, GHCR image and markovd.com repositories
 
-Status: local pilot/Omarchy VM, archive/deploy backups and approved non-web inbox/p15 acceptance completed. Stopped for human review; production release/publication remains gated. See [pilot evidence](../notes/cc-71-phase0-and-pilot.md) and [Omarchy VM evidence/limits](../notes/cc-71-omarchy-vm.md).
+Status: first-party implementation and publication complete through v0.2.2 (2026-11-19). [Live closeout](../notes/release-v0.2.2-live.md), [exact evidence](../notes/release-v0.2.2-live.json), and [merged reviews/approved password cleanup](../notes/release-v0.2.2-merged-and-cleanup.md) supersede the historical preparation gates below. Official distro admission research remains separate.
+
+## Reconciled current state — 2026-11-19
+
+- Scope: Markov engine only. First-party phases 1 and 2 are live; no daemon/harness packaging or official-distro endorsement.
+- Seven shared native artifacts (2 deb, 2 rpm, 1 pacman, 2 apk), 29 public container rows, additional Omarchy-route pacman upgrade and earlier recorded Omarchy VM evidence. No new v0.2.2 Omarchy VM claim.
+- RHEL/UBI, Rocky, AlmaLinux 9/10; Leap 16.1 and Tumbleweed `rolling`; Alpine 3.24 are implemented, not deferred candidates. Current matrix is site `repo-tools/matrix.json`.
+- CI builds unsigned candidates; p15 signs with the dedicated KeePassXC vault and manually publishes via pinned admin SSH/GitHub REST/GHCR. Restricted deploy keys target non-web inboxes only; m720q is not the current release publisher.
+- Encrypted vault/native-key backup on mounted m720q `/mnt/wdc_16tb/BACKUPS/` was retrieved and restore/sign verified; archive/deploy backup history is preserved under CC-48/CC-70. Original unpublished Alpine identity retained. Old plaintext GPG password source removed after explicit approval.
+- GHCR authenticity uses the GPG-signed release manifest/checksums covering the exact OCI index digest. A separate Cosign key/signature/attestation scheme was proposed but is not deployed; it remains optional future hardening.
+- Historical versions retained. Signing and live publication still require authorization for each future release; prior releases do not grant standing approval for new outward actions.
+- Remaining: official distro admission research; routine maintenance/rolling checks; optional host isolation and registry-native signatures. The original design and dated checkpoints below are preserved as history where they differ from this implemented state.
+
 Research: 2026-11-14 on p15.lab.net, umbrella workspace `/home/jtanner/workspace/github/vokramd`.
 
 ## Requirements and recommended first slice
@@ -276,14 +288,14 @@ Runbook: check disk/inode/bandwidth/registry quotas before publication and perio
 
 Rotation: publish new public certificate/key fingerprints before use; overlap at least 60 days, distribute a signed keyring update and test old/new clients, then retire old signer. Compromise: freeze publication, revoke, notify through site/GitHub, inventory affected digests, replace trust through independently authenticated instructions. Do not ask users to bypass signatures to repair trust.
 
-## Phases, evidence and review gates
+## Phases, evidence and review gates — current status
 
-0. **Feasibility and decisions:** first task is the separately authorized read-only DreamHost/SSH feasibility check from m720q; record coordinator findings, finish read-only isolation/layout verification, and plan restricted keys with indexes-last publication. Record the approved decisions and verify current phase-1 distro lifecycle/package names and upstream overlap. Make/verify the separately authorized encrypted signing-key backup to m720q `/mnt/seagate_8tb` (CC-70; migrate under CC-48) before any public key/package/image publication. No contact or backup/export in this planning assignment.
-1. **Engine pilot:** two binaries, five native artifacts and two OCI platform images, from clean tags in candidate-only CI. Twelve smoke rows = eleven containers plus one Omarchy VM. Run format/architecture-wide deeper tests once, including signature negatives, file/license checks, static ELF and state compatibility. Implement p15-only signing, verified public-bundle transfer to m720q, local staging, final signed-artifact tests, trixie image and release runbook. No mandatory recurring apt refresh. Present artifacts/evidence for review; public publication is separately approved.
-2. **Expansion, after phase 1 is accepted:** reuse existing RPM bytes for Rocky/Alma and openSUSE; add two APKs after resolving native format/signing, for seven native artifacts total. Fourteen additional container smoke rows, no additional required VMs. Resolve current Leap/Alpine versions and crypto-policy/dependency compatibility here, not as phase-1 blockers. If portability assumptions fail, review exceptions before adding build variants.
-3. **Publication readiness (required for phase 1; repeat for phase-2 additions):** `/install/`, keys/fingerprints, local promotion tool/runbook, quotas/caching and selected hosting mode validated in separately approved staging. Test interruption, retained dependencies, fail-closed signature races, rollback, rotation and anonymous access. Verify off-machine backup evidence for signing and both SSH deploy keys, per-key staging acceptance and residual shared-account risk. Explicit publication/deployment approval precedes any public key, GitHub release, image, package upload or hosting/DNS change.
-4. **Operations after approval:** human-maintained, best-effort; sign on p15, publish verified output from m720q. Keep all versions, check disk/quotas, and maintain backup/recovery/migration and rollback runbooks. Future direction only: scheduled Markov workflows run release checks and rolling-distro smoke tests on a local markovd instance. Do not implement schedules or add markovd packaging under this plan.
-5. **Distro-maintained admission research, after first-party repos work:** research Omarchy, Fedora and Ubuntu paths below; deliver verified requirement/effort reports and readiness gaps. Admission submissions, external accounts/PRs/ITPs and sponsor contact require separate human approval. First-party repos remain the initial deliverable regardless of acceptance.
+0. **Feasibility/custody: completed.** DreamHost isolation checks, non-web inboxes, restricted deploy identities and recovered encrypted backups have evidence in the ledger. Actual release promotion is manual on p15. Backups now use the verified 16-TB destination; preserve migration history.
+1. **Engine pilot/first publication: completed.** Five shared packages, candidate-only Actions, native Arm CI, GHCR and phase-1 repositories/install docs shipped. Earlier Omarchy VM evidence remains historical validation, not a fresh v0.2.2 VM run.
+2. **Expansion: completed in v0.2.2.** RHEL/UBI, Rocky/Alma, Leap 16.1/Tumbleweed rolling and Alpine 3.24 are public. Seven shared native artifacts and 29 public container rows; four extra RHEL rows were added after the original 25-row estimate. See plan 013 and current release evidence.
+3. **Publication/recovery readiness: completed for released versions.** Real signed native metadata, vault/key restore, anonymous access, negative trust tests, staged promotion/rollback tooling, all-version retention and live browser/header checks passed. Both source/closeout PR sets merged. Fresh approval and checks remain necessary for each future release.
+4. **Operations: ongoing best-effort human maintenance.** Sign and publish from p15, preserve all versions, check quotas/key expiry and test recovery. Scheduled rolling/release monitoring is future work; GitHub Actions is sufficient and a local markovd scheduler is optional. A separate DreamHost user and registry-native signing/attestations are optional hardening, not completed work.
+5. **Distro admission research: next authorized work.** The human requested research after ledger reconciliation. Produce current-policy/gap/effort reports for Omarchy, Fedora and Debian/Ubuntu; do not submit, contact sponsors/maintainers, open upstream issues/PRs/ITPs or imply acceptance without separate approval.
 
 ## Later phase: distro-maintained repository admission research
 
